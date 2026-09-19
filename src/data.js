@@ -466,6 +466,211 @@ const buildInspectionExampleCollaterals = () => [
   };
 });
 
+const buildStage1CollateralTypeExamples = () => [
+  {
+    id: "COL-056",
+    type: "Плавучие сооружения",
+    description: "Сухогрузная баржа СТ-410, грузоподъемность 2 800 тонн",
+    region: "Нижний Новгород",
+    address: "Нижний Новгород, Стрелка, причал 4",
+    market: 870000000,
+    discount: 0.62,
+    appraisal: "Действует",
+    appraisalDue: "2027-03-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-03-12",
+    responsible: "Мария Петрова",
+    source: "Судовой реестр",
+    risk: 39,
+    pledgeType: "Залог судна",
+    fields: {
+      "Идентификационный номер": "RU-VSL-410056",
+      "Группа": "Суда, используемые для перевозки грузов и (или) буксировки, а также хранения грузов",
+      "Номер IMO": "IMO9041056",
+      "Номер ИМПС/MMSI": "273410056",
+      "Класс судна": "KM Ice2 R2-RSN",
+      "Год постройки": "2019",
+      "Регистровый номер": "РС-410056"
+    },
+    documents: ["Свидетельство о праве собственности на судно COL-056.pdf", "Выписка из судового реестра COL-056.pdf"]
+  },
+  {
+    id: "COL-057",
+    type: "Железнодорожный подвижной состав",
+    description: "Полувагон модели 12-132-03, номер 58824157",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 540000000,
+    discount: 0.64,
+    appraisal: "Действует",
+    appraisalDue: "2027-02-18",
+    insurance: "Оплачена",
+    insuranceDue: "2027-02-18",
+    responsible: "Мария Петрова",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 34,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    fields: {
+      "Заводской номер": "RW-12-132-410057",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "12-132-03",
+      "Номер вагона": "58824157",
+      "Год постройки": "2021"
+    },
+    documents: ["Паспорт вагона COL-057.pdf", "Акт технического состояния COL-057.pdf"]
+  },
+  {
+    id: "COL-058",
+    type: "Имущественные права (требования)",
+    description: "Права требования по договору поставки нефтехимической продукции",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, набережная Обводного канала, дом 92",
+    market: 1260000000,
+    discount: 0.55,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Не требуется",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Договорный пакет",
+    risk: 44,
+    pledgeType: "Залог имущественных прав",
+    fields: {
+      "Подвид": "Залог прав требования",
+      "Вид имущественных прав (требований)": "Права требования",
+      "Вид договора": "Договор поставки",
+      "Дата заключения договора": "2026-02-14",
+      "Номер договора": "PR-410/26"
+    },
+    documents: ["Договор поставки PR-410-26.pdf", "Уведомление должника COL-058.pdf"]
+  },
+  {
+    id: "COL-059",
+    type: "Прочие движимые вещи (однородные группы)",
+    description: "Партия промышленных контейнеров для хранения сырья, 120 единиц",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, пос. Шушары, складской комплекс Логопарк Север",
+    market: 310000000,
+    discount: 0.58,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Оплачена",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Складская ведомость",
+    risk: 37,
+    pledgeType: "Залог прочих движимых вещей",
+    fields: {
+      "Вид движимой вещи": "Готовая продукция",
+      "Партия": "Контейнеры серии ST-120",
+      "Количество": "120 единиц"
+    },
+    documents: ["Инвентаризационная ведомость COL-059.xlsx", "Акт наличия имущества COL-059.pdf"]
+  },
+  {
+    id: "COL-060",
+    type: "Прочие движимые вещи (объекты)",
+    description: "Промышленный 3D-сканер Creaform MetraSCAN 750",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, Лиговский проспект, дом 266, лаборатория 3",
+    market: 185000000,
+    discount: 0.6,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Оплачена",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Инвентарная карточка",
+    risk: 31,
+    pledgeType: "Залог прочей движимой вещи",
+    fields: {
+      "Инвентарный номер": "INV-ST-410060",
+      "Идентификационный признак (значение)": "MS750-22-410060",
+      "Идентификационный признак (наименование)": "Серийный номер"
+    },
+    documents: ["Инвентарная карточка COL-060.pdf", "Паспорт оборудования COL-060.pdf"]
+  }
+].map((item, index) => {
+  const pledge = Math.round(item.market * item.discount);
+  return {
+    id: item.id,
+    type: item.type,
+    description: item.description,
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    clientType: "ЮЛ",
+    gsz: "ГСЗ Северный Терминал",
+    region: item.region,
+    address: item.address,
+    addressFields: {
+      "Код страны по ОКСМ": "643 - Российская Федерация",
+      "Код территории по ОКАТО": item.region === "Санкт-Петербург" ? "40278565000" : "22401000000",
+      "ФИАС GUID": item.region === "Санкт-Петербург" ? "c2deb16a-0330-4f05-821f-1d09c93331e6" : "555e7d61-d9a7-4ba6-9770-6caa8198c483",
+      "Город": item.region,
+      "Почтовый индекс": item.region === "Санкт-Петербург" ? "196240" : "603000",
+      "Адрес в неструктурированном виде": item.address
+    },
+    contractIds: ["CTR-2026-0410"],
+    marketValue: item.market,
+    pledgeValue: pledge,
+    allocatedValue: pledge,
+    appraisalStatus: item.appraisal,
+    appraisalDue: item.appraisalDue,
+    insuranceStatus: item.insurance,
+    insuranceDue: item.insuranceDue,
+    status: "В залоге",
+    crossPledge: false,
+    responsible: item.responsible,
+    updatedAt: "2026-06-21 14:25",
+    source: item.source,
+    riskScore: item.risk,
+    riskState: item.risk >= 42 ? "Удовлетворительное" : "Хорошее",
+    risks: risks(item.risk >= 42 ? ["ok", "warn", "ok", "warn", "ok", "ok", "ok", "ok"] : ["ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok"]),
+    fields: item.fields,
+    monitoring: {
+      lastInspection: "2026-06-15",
+      inspector: item.responsible,
+      condition: "Документы и наличие подтверждены",
+      nextInspection: "2026-12-15",
+      periodicity: "Раз в полгода",
+      completed: true,
+      schedule: [
+        { date: "2026-06-15", type: "Первичный осмотр", result: "Без критических замечаний", inspector: item.responsible, status: "Завершен" },
+        { date: "2026-12-15", type: "Плановый мониторинг", result: "Запланирован", inspector: item.responsible, status: "Запланирован" }
+      ]
+    },
+    evaluations: [
+      { date: "2026-03-12", appraiser: "Внутренняя оценка Банка", market: item.market, pledge, method: item.type === "Имущественные права (требования)" ? "Доходный" : "Сравнительный и затратный", status: item.appraisal }
+    ],
+    insurance: {
+      company: item.insurance === "Не требуется" ? "Не требуется" : "СОГАЗ",
+      policy: item.insurance === "Не требуется" ? "" : `ST-410-${item.id.replace("COL-", "")}`,
+      from: "2026-03-12",
+      to: item.insuranceDue,
+      amount: pledge,
+      premiumStatus: item.insurance,
+      source: "АБС"
+    },
+    encumbrances: [
+      { number: `ZL-ST-26/410-${index + 1}`, date: "2026-03-14", type: item.pledgeType, amount: pledge, contract: "ST-26/410", allocated: pledge, ltv: Math.round((pledge / item.market) * 100), status: "Зарегистрировано" }
+    ],
+    pledgors: [
+      { share: "100%", name: "АО Северный Терминал", idn: "781 204 7710", role: "Залогодатель", check: "Проверен" }
+    ],
+    externalData: {
+      "Источник": item.source,
+      "Дата проверки": "2026-06-21 14:25",
+      "Право / принадлежность": "Подтверждено",
+      "Ограничения": "Не выявлены",
+      "Актуальность данных": "Проверено по документам"
+    },
+    documents: item.documents.map((name) => ({ name, type: "Право", required: true, status: "Получен", date: "2026-03-12" })),
+    history: [
+      { date: "2026-06-21 14:25", user: "Система", field: "Вид залога", oldValue: "-", newValue: item.type, reason: "Наполнение примерами этапа 1", source: "Тестовые данные" }
+    ]
+  };
+});
+
 export const initialData = {
   contracts: [
     {
@@ -673,6 +878,32 @@ export const initialData = {
       participants: [
         { role: "Заемщик", name: "АО АэроТех Лизинг", idn: "772 604 1180", share: "100%", contact: "Подтвержден" },
         { role: "Залогодатель", name: "АО АэроТех Лизинг", idn: "772 604 1180", share: "Имущество", contact: "Актуален" }
+      ]
+    },
+    {
+      id: "CTR-2026-0410",
+      number: "ST-26/410",
+      startDate: "2026-03-12",
+      endDate: "2029-03-12",
+      product: "Кредитная линия под смешанное промышленное обеспечение",
+      currency: "RUB",
+      limit: 3200000000,
+      debt: 2360000000,
+      marketValue: 3165000000,
+      allocatedValue: 2192000000,
+      ltv: 74,
+      coverageStatus: "Полное",
+      status: "Активен",
+      loanQuality: "2 класс",
+      reserve: 94400000,
+      clientType: "ЮЛ",
+      clientName: "АО Северный Терминал",
+      inn: "781 204 7710",
+      gsz: "ГСЗ Северный Терминал",
+      collateralIds: ["COL-056", "COL-057", "COL-058", "COL-059", "COL-060"],
+      participants: [
+        { role: "Заемщик", name: "АО Северный Терминал", idn: "781 204 7710", share: "100%", contact: "Подтвержден" },
+        { role: "Залогодатель", name: "АО Северный Терминал", idn: "781 204 7710", share: "Имущество", contact: "Актуален" }
       ]
     }
   ],
@@ -1570,7 +1801,8 @@ export const initialData = {
       ]
     },
     ...buildDemoAutoFleetCollaterals(),
-    ...buildInspectionExampleCollaterals()
+    ...buildInspectionExampleCollaterals(),
+    ...buildStage1CollateralTypeExamples()
   ],
   tasks: [
     // Generated extended demo task queue.

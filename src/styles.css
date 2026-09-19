@@ -7046,6 +7046,26 @@ tbody tr:hover {
   font-weight: 650;
 }
 
+.document-table-file-row.is-readonly {
+  background: #f8fafc;
+}
+
+.document-readonly-name,
+.document-readonly-relation {
+  display: block;
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.document-readonly-relation {
+  color: var(--muted);
+  font-weight: 650;
+}
+
 .editable-field input:focus,
 .editable-field select:focus,
 .editable-field textarea:focus {
@@ -7069,6 +7089,66 @@ tbody tr:hover {
   margin-bottom: 12px;
 }
 
+.collateral-overview-view .editable-field-grid {
+  grid-template-columns: repeat(2, minmax(390px, 1fr));
+  gap: 8px 26px;
+  align-items: start;
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.collateral-overview-view .editable-field {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.collateral-overview-view .editable-field span {
+  margin: 0;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.collateral-overview-view .editable-field input,
+.collateral-overview-view .editable-field select,
+.collateral-overview-view .editable-field textarea {
+  min-height: 32px;
+  font-size: 13px;
+  border-color: var(--line-strong);
+  border-radius: 3px;
+}
+
+.collateral-overview-view .editable-field input,
+.collateral-overview-view .editable-field select {
+  padding: 5px 7px;
+}
+
+.collateral-overview-view .editable-field textarea {
+  min-height: 56px;
+  padding: 6px 7px;
+}
+
+.collateral-overview-view .editable-field .collateral-checkbox-control {
+  min-height: 32px;
+  padding: 5px 7px;
+  border-color: var(--line-strong);
+  border-radius: 3px;
+}
+
+.collateral-overview-view .readonly-field.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.19fr) minmax(0, 1fr);
+}
+
 .full-span {
   grid-column: 1 / -1;
 }
@@ -7082,6 +7162,15 @@ tbody tr:hover {
   .overview-metrics,
   .readonly-field-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .collateral-overview-view .editable-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .readonly-field.wide {
+    grid-column: span 1;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
   }
 
   .overview-metrics {
@@ -7098,6 +7187,18 @@ tbody tr:hover {
 
   .readonly-field.wide {
     grid-column: span 1;
+  }
+
+  .collateral-overview-view .editable-field {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .editable-field span {
+    text-align: left;
+  }
+
+  .collateral-overview-view .readonly-field.wide {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -10808,13 +10909,13 @@ td {
   border-color: #d4dae1;
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 12px;
 }
 
-.collateral-main-field-grid .editable-field,
-.collateral-main-field-grid .editable-field.wide {
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide {
   grid-column: span 3;
   min-height: 62px;
   padding: 8px 10px;
@@ -10822,148 +10923,271 @@ td {
   border-color: #d9e0e7;
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Наименование"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Наименование"] {
   grid-column: span 6;
   order: 6;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"] {
   grid-column: span 3;
   order: 1;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"] {
   grid-column: span 3;
   order: 2;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Вид залога"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Вид залога"] {
   grid-column: span 6;
   order: 3;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Описание"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Описание"] {
   grid-column: span 6;
   order: 7;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Категория качества"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория качества"] {
   grid-column: span 3;
   order: 4;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"] {
   grid-column: span 3;
   order: 5;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"] {
   grid-column: span 4;
   order: 8;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"] {
   grid-column: span 4;
   order: 9;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
   grid-column: span 4;
   order: 10;
 }
 
-.collateral-main-field-grid .editable-field textarea {
+.collateral-overview-view .collateral-main-field-grid .editable-field textarea {
   min-height: 62px;
 }
 
 @media (max-width: 1180px) {
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"],
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"],
-  .collateral-main-field-grid .editable-field[data-field-name="Вид залога"],
-  .collateral-main-field-grid .editable-field[data-field-name="Категория качества"],
-  .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"],
-  .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"],
-  .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"],
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Вид залога"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория качества"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
     grid-column: span 6;
   }
 }
 
 @media (max-width: 760px) {
-  .collateral-main-field-grid {
+  .collateral-overview-view .collateral-main-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide {
     grid-column: 1 / -1;
   }
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-main-field-grid .editable-field,
-.collateral-main-field-grid .editable-field.wide,
-.collateral-main-field-grid .editable-field[data-field-name] {
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name] {
   grid-column: span 1;
   min-height: 60px;
 }
 
-.collateral-address-field-grid {
+.collateral-overview-view .collateral-address-field-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-address-field-grid .editable-field,
-.collateral-address-field-grid .editable-field.wide {
+.collateral-overview-view .collateral-address-field-grid .editable-field,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide {
   grid-column: span 1;
   min-height: 60px;
   padding: 8px 10px;
 }
 
 @media (max-width: 1280px) {
-  .collateral-address-field-grid {
+  .collateral-overview-view .collateral-address-field-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1180px) {
-  .collateral-main-field-grid {
+  .collateral-overview-view .collateral-main-field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name] {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name] {
     grid-column: span 1;
   }
 }
 
 @media (max-width: 760px) {
-  .collateral-main-field-grid,
-  .collateral-address-field-grid {
+  .collateral-overview-view .collateral-main-field-grid,
+  .collateral-overview-view .collateral-address-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name],
-  .collateral-address-field-grid .editable-field,
-  .collateral-address-field-grid .editable-field.wide {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+  .collateral-overview-view .collateral-address-field-grid .editable-field,
+  .collateral-overview-view .collateral-address-field-grid .editable-field.wide {
     grid-column: 1 / -1;
+  }
+}
+
+.collateral-overview-view .collateral-field-grid {
+  grid-template-columns: repeat(2, minmax(390px, 1fr));
+  gap: 8px 26px;
+  align-items: start;
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field,
+.collateral-overview-view .collateral-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-field-grid .editable-field[data-field-name] {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  grid-column: auto;
+  min-height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.19fr) minmax(0, 1fr);
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field textarea {
+  min-height: 56px;
+}
+
+@media (max-width: 1180px) {
+  .collateral-overview-view .collateral-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .collateral-field-grid .editable-field.wide {
+    grid-column: auto;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .collateral-overview-view .collateral-field-grid .editable-field,
+  .collateral-overview-view .collateral-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-field-grid .editable-field[data-field-name] {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+
+.collateral-overview-view .collateral-main-field-grid,
+.collateral-overview-view .collateral-address-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+}
+
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+.collateral-overview-view .collateral-address-field-grid .editable-field,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-address-field-grid .editable-field[data-field-name] {
+  grid-column: auto;
+  order: 0;
+  min-height: 34px;
+  grid-template-columns: minmax(150px, 0.4fr) minmax(0, 1fr);
+}
+
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide {
+  grid-column: auto;
+  grid-template-columns: minmax(150px, 0.4fr) minmax(0, 1fr);
+}
+
+.collateral-type-fields-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.collateral-type-document-group {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #d8e0ea;
+}
+
+.collateral-type-document-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collateral-type-document-title h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.collateral-type-document-title span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .collateral-overview-view .collateral-main-field-grid,
+  .collateral-overview-view .collateral-address-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+  .collateral-overview-view .collateral-address-field-grid .editable-field,
+  .collateral-overview-view .collateral-address-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-address-field-grid .editable-field[data-field-name] {
+    grid-template-columns: 1fr;
   }
 }
 

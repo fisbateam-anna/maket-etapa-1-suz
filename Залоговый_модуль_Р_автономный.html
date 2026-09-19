@@ -1,11 +1,10 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Залоговый модуль Р</title>
-    <link rel="icon" href="data:," />
-    <style>:root {
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Залоговый модуль</title>
+  <style>:root {
   --bg: #f4f7fb;
   --surface: #ffffff;
   --surface-soft: #f8fafc;
@@ -7053,6 +7052,26 @@ tbody tr:hover {
   font-weight: 650;
 }
 
+.document-table-file-row.is-readonly {
+  background: #f8fafc;
+}
+
+.document-readonly-name,
+.document-readonly-relation {
+  display: block;
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.document-readonly-relation {
+  color: var(--muted);
+  font-weight: 650;
+}
+
 .editable-field input:focus,
 .editable-field select:focus,
 .editable-field textarea:focus {
@@ -7076,6 +7095,66 @@ tbody tr:hover {
   margin-bottom: 12px;
 }
 
+.collateral-overview-view .editable-field-grid {
+  grid-template-columns: repeat(2, minmax(390px, 1fr));
+  gap: 8px 26px;
+  align-items: start;
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.collateral-overview-view .editable-field {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.collateral-overview-view .editable-field span {
+  margin: 0;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.collateral-overview-view .editable-field input,
+.collateral-overview-view .editable-field select,
+.collateral-overview-view .editable-field textarea {
+  min-height: 32px;
+  font-size: 13px;
+  border-color: var(--line-strong);
+  border-radius: 3px;
+}
+
+.collateral-overview-view .editable-field input,
+.collateral-overview-view .editable-field select {
+  padding: 5px 7px;
+}
+
+.collateral-overview-view .editable-field textarea {
+  min-height: 56px;
+  padding: 6px 7px;
+}
+
+.collateral-overview-view .editable-field .collateral-checkbox-control {
+  min-height: 32px;
+  padding: 5px 7px;
+  border-color: var(--line-strong);
+  border-radius: 3px;
+}
+
+.collateral-overview-view .readonly-field.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.19fr) minmax(0, 1fr);
+}
+
 .full-span {
   grid-column: 1 / -1;
 }
@@ -7089,6 +7168,15 @@ tbody tr:hover {
   .overview-metrics,
   .readonly-field-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .collateral-overview-view .editable-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .readonly-field.wide {
+    grid-column: span 1;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
   }
 
   .overview-metrics {
@@ -7105,6 +7193,18 @@ tbody tr:hover {
 
   .readonly-field.wide {
     grid-column: span 1;
+  }
+
+  .collateral-overview-view .editable-field {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .editable-field span {
+    text-align: left;
+  }
+
+  .collateral-overview-view .readonly-field.wide {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -10815,13 +10915,13 @@ td {
   border-color: #d4dae1;
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 12px;
 }
 
-.collateral-main-field-grid .editable-field,
-.collateral-main-field-grid .editable-field.wide {
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide {
   grid-column: span 3;
   min-height: 62px;
   padding: 8px 10px;
@@ -10829,148 +10929,271 @@ td {
   border-color: #d9e0e7;
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Наименование"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Наименование"] {
   grid-column: span 6;
   order: 6;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"] {
   grid-column: span 3;
   order: 1;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"] {
   grid-column: span 3;
   order: 2;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Вид залога"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Вид залога"] {
   grid-column: span 6;
   order: 3;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Описание"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Описание"] {
   grid-column: span 6;
   order: 7;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Категория качества"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория качества"] {
   grid-column: span 3;
   order: 4;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"] {
   grid-column: span 3;
   order: 5;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"] {
   grid-column: span 4;
   order: 8;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"] {
   grid-column: span 4;
   order: 9;
 }
 
-.collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
   grid-column: span 4;
   order: 10;
 }
 
-.collateral-main-field-grid .editable-field textarea {
+.collateral-overview-view .collateral-main-field-grid .editable-field textarea {
   min-height: 62px;
 }
 
 @media (max-width: 1180px) {
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"],
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"],
-  .collateral-main-field-grid .editable-field[data-field-name="Вид залога"],
-  .collateral-main-field-grid .editable-field[data-field-name="Категория качества"],
-  .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"],
-  .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"],
-  .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"],
-  .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификатор в АБС"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Вид залога"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория качества"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Признак обеспечения"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Категория заложенного имущества"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Лицевой счет"],
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name="Идентификационный код группы"] {
     grid-column: span 6;
   }
 }
 
 @media (max-width: 760px) {
-  .collateral-main-field-grid {
+  .collateral-overview-view .collateral-main-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide {
     grid-column: 1 / -1;
   }
 }
 
-.collateral-main-field-grid {
+.collateral-overview-view .collateral-main-field-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-main-field-grid .editable-field,
-.collateral-main-field-grid .editable-field.wide,
-.collateral-main-field-grid .editable-field[data-field-name] {
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name] {
   grid-column: span 1;
   min-height: 60px;
 }
 
-.collateral-address-field-grid {
+.collateral-overview-view .collateral-address-field-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 6px;
 }
 
-.collateral-address-field-grid .editable-field,
-.collateral-address-field-grid .editable-field.wide {
+.collateral-overview-view .collateral-address-field-grid .editable-field,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide {
   grid-column: span 1;
   min-height: 60px;
   padding: 8px 10px;
 }
 
 @media (max-width: 1280px) {
-  .collateral-address-field-grid {
+  .collateral-overview-view .collateral-address-field-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1180px) {
-  .collateral-main-field-grid {
+  .collateral-overview-view .collateral-main-field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name] {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name] {
     grid-column: span 1;
   }
 }
 
 @media (max-width: 760px) {
-  .collateral-main-field-grid,
-  .collateral-address-field-grid {
+  .collateral-overview-view .collateral-main-field-grid,
+  .collateral-overview-view .collateral-address-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .collateral-main-field-grid .editable-field,
-  .collateral-main-field-grid .editable-field.wide,
-  .collateral-main-field-grid .editable-field[data-field-name],
-  .collateral-address-field-grid .editable-field,
-  .collateral-address-field-grid .editable-field.wide {
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+  .collateral-overview-view .collateral-address-field-grid .editable-field,
+  .collateral-overview-view .collateral-address-field-grid .editable-field.wide {
     grid-column: 1 / -1;
+  }
+}
+
+.collateral-overview-view .collateral-field-grid {
+  grid-template-columns: repeat(2, minmax(390px, 1fr));
+  gap: 8px 26px;
+  align-items: start;
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field,
+.collateral-overview-view .collateral-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-field-grid .editable-field[data-field-name] {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  grid-column: auto;
+  min-height: 34px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.19fr) minmax(0, 1fr);
+}
+
+.collateral-overview-view .collateral-field-grid .editable-field textarea {
+  min-height: 56px;
+}
+
+@media (max-width: 1180px) {
+  .collateral-overview-view .collateral-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collateral-overview-view .collateral-field-grid .editable-field.wide {
+    grid-column: auto;
+    grid-template-columns: minmax(150px, 0.38fr) minmax(190px, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .collateral-overview-view .collateral-field-grid .editable-field,
+  .collateral-overview-view .collateral-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-field-grid .editable-field[data-field-name] {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}
+
+.collateral-overview-view .collateral-main-field-grid,
+.collateral-overview-view .collateral-address-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+}
+
+.collateral-overview-view .collateral-main-field-grid .editable-field,
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+.collateral-overview-view .collateral-address-field-grid .editable-field,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-address-field-grid .editable-field[data-field-name] {
+  grid-column: auto;
+  order: 0;
+  min-height: 34px;
+  grid-template-columns: minmax(150px, 0.4fr) minmax(0, 1fr);
+}
+
+.collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+.collateral-overview-view .collateral-address-field-grid .editable-field.wide {
+  grid-column: auto;
+  grid-template-columns: minmax(150px, 0.4fr) minmax(0, 1fr);
+}
+
+.collateral-type-fields-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.collateral-type-document-group {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #d8e0ea;
+}
+
+.collateral-type-document-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collateral-type-document-title h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.collateral-type-document-title span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .collateral-overview-view .collateral-main-field-grid,
+  .collateral-overview-view .collateral-address-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .collateral-overview-view .collateral-main-field-grid .editable-field,
+  .collateral-overview-view .collateral-main-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-main-field-grid .editable-field[data-field-name],
+  .collateral-overview-view .collateral-address-field-grid .editable-field,
+  .collateral-overview-view .collateral-address-field-grid .editable-field.wide,
+  .collateral-overview-view .collateral-address-field-grid .editable-field[data-field-name] {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -11049,10 +11272,10 @@ td {
   }
 }
 </style>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
 const navItems = [
   { id: "tasksEvaluation", label: "Оценка", path: "/app/tasks/evaluation", permission: "evalTaskView" },
   { id: "tasksInspection", label: "Осмотр", path: "/app/tasks/inspection", permission: "inspectTaskView" },
@@ -11521,6 +11744,211 @@ const buildInspectionExampleCollaterals = () => [
   };
 });
 
+const buildStage1CollateralTypeExamples = () => [
+  {
+    id: "COL-056",
+    type: "Плавучие сооружения",
+    description: "Сухогрузная баржа СТ-410, грузоподъемность 2 800 тонн",
+    region: "Нижний Новгород",
+    address: "Нижний Новгород, Стрелка, причал 4",
+    market: 870000000,
+    discount: 0.62,
+    appraisal: "Действует",
+    appraisalDue: "2027-03-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-03-12",
+    responsible: "Мария Петрова",
+    source: "Судовой реестр",
+    risk: 39,
+    pledgeType: "Залог судна",
+    fields: {
+      "Идентификационный номер": "RU-VSL-410056",
+      "Группа": "Суда, используемые для перевозки грузов и (или) буксировки, а также хранения грузов",
+      "Номер IMO": "IMO9041056",
+      "Номер ИМПС/MMSI": "273410056",
+      "Класс судна": "KM Ice2 R2-RSN",
+      "Год постройки": "2019",
+      "Регистровый номер": "РС-410056"
+    },
+    documents: ["Свидетельство о праве собственности на судно COL-056.pdf", "Выписка из судового реестра COL-056.pdf"]
+  },
+  {
+    id: "COL-057",
+    type: "Железнодорожный подвижной состав",
+    description: "Полувагон модели 12-132-03, номер 58824157",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 540000000,
+    discount: 0.64,
+    appraisal: "Действует",
+    appraisalDue: "2027-02-18",
+    insurance: "Оплачена",
+    insuranceDue: "2027-02-18",
+    responsible: "Мария Петрова",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 34,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    fields: {
+      "Заводской номер": "RW-12-132-410057",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "12-132-03",
+      "Номер вагона": "58824157",
+      "Год постройки": "2021"
+    },
+    documents: ["Паспорт вагона COL-057.pdf", "Акт технического состояния COL-057.pdf"]
+  },
+  {
+    id: "COL-058",
+    type: "Имущественные права (требования)",
+    description: "Права требования по договору поставки нефтехимической продукции",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, набережная Обводного канала, дом 92",
+    market: 1260000000,
+    discount: 0.55,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Не требуется",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Договорный пакет",
+    risk: 44,
+    pledgeType: "Залог имущественных прав",
+    fields: {
+      "Подвид": "Залог прав требования",
+      "Вид имущественных прав (требований)": "Права требования",
+      "Вид договора": "Договор поставки",
+      "Дата заключения договора": "2026-02-14",
+      "Номер договора": "PR-410/26"
+    },
+    documents: ["Договор поставки PR-410-26.pdf", "Уведомление должника COL-058.pdf"]
+  },
+  {
+    id: "COL-059",
+    type: "Прочие движимые вещи (однородные группы)",
+    description: "Партия промышленных контейнеров для хранения сырья, 120 единиц",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, пос. Шушары, складской комплекс Логопарк Север",
+    market: 310000000,
+    discount: 0.58,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Оплачена",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Складская ведомость",
+    risk: 37,
+    pledgeType: "Залог прочих движимых вещей",
+    fields: {
+      "Вид движимой вещи": "Готовая продукция",
+      "Партия": "Контейнеры серии ST-120",
+      "Количество": "120 единиц"
+    },
+    documents: ["Инвентаризационная ведомость COL-059.xlsx", "Акт наличия имущества COL-059.pdf"]
+  },
+  {
+    id: "COL-060",
+    type: "Прочие движимые вещи (объекты)",
+    description: "Промышленный 3D-сканер Creaform MetraSCAN 750",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, Лиговский проспект, дом 266, лаборатория 3",
+    market: 185000000,
+    discount: 0.6,
+    appraisal: "Действует",
+    appraisalDue: "2027-01-25",
+    insurance: "Оплачена",
+    insuranceDue: "2027-01-25",
+    responsible: "Дмитрий Орлов",
+    source: "Инвентарная карточка",
+    risk: 31,
+    pledgeType: "Залог прочей движимой вещи",
+    fields: {
+      "Инвентарный номер": "INV-ST-410060",
+      "Идентификационный признак (значение)": "MS750-22-410060",
+      "Идентификационный признак (наименование)": "Серийный номер"
+    },
+    documents: ["Инвентарная карточка COL-060.pdf", "Паспорт оборудования COL-060.pdf"]
+  }
+].map((item, index) => {
+  const pledge = Math.round(item.market * item.discount);
+  return {
+    id: item.id,
+    type: item.type,
+    description: item.description,
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    clientType: "ЮЛ",
+    gsz: "ГСЗ Северный Терминал",
+    region: item.region,
+    address: item.address,
+    addressFields: {
+      "Код страны по ОКСМ": "643 - Российская Федерация",
+      "Код территории по ОКАТО": item.region === "Санкт-Петербург" ? "40278565000" : "22401000000",
+      "ФИАС GUID": item.region === "Санкт-Петербург" ? "c2deb16a-0330-4f05-821f-1d09c93331e6" : "555e7d61-d9a7-4ba6-9770-6caa8198c483",
+      "Город": item.region,
+      "Почтовый индекс": item.region === "Санкт-Петербург" ? "196240" : "603000",
+      "Адрес в неструктурированном виде": item.address
+    },
+    contractIds: ["CTR-2026-0410"],
+    marketValue: item.market,
+    pledgeValue: pledge,
+    allocatedValue: pledge,
+    appraisalStatus: item.appraisal,
+    appraisalDue: item.appraisalDue,
+    insuranceStatus: item.insurance,
+    insuranceDue: item.insuranceDue,
+    status: "В залоге",
+    crossPledge: false,
+    responsible: item.responsible,
+    updatedAt: "2026-06-21 14:25",
+    source: item.source,
+    riskScore: item.risk,
+    riskState: item.risk >= 42 ? "Удовлетворительное" : "Хорошее",
+    risks: risks(item.risk >= 42 ? ["ok", "warn", "ok", "warn", "ok", "ok", "ok", "ok"] : ["ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok"]),
+    fields: item.fields,
+    monitoring: {
+      lastInspection: "2026-06-15",
+      inspector: item.responsible,
+      condition: "Документы и наличие подтверждены",
+      nextInspection: "2026-12-15",
+      periodicity: "Раз в полгода",
+      completed: true,
+      schedule: [
+        { date: "2026-06-15", type: "Первичный осмотр", result: "Без критических замечаний", inspector: item.responsible, status: "Завершен" },
+        { date: "2026-12-15", type: "Плановый мониторинг", result: "Запланирован", inspector: item.responsible, status: "Запланирован" }
+      ]
+    },
+    evaluations: [
+      { date: "2026-03-12", appraiser: "Внутренняя оценка Банка", market: item.market, pledge, method: item.type === "Имущественные права (требования)" ? "Доходный" : "Сравнительный и затратный", status: item.appraisal }
+    ],
+    insurance: {
+      company: item.insurance === "Не требуется" ? "Не требуется" : "СОГАЗ",
+      policy: item.insurance === "Не требуется" ? "" : `ST-410-${item.id.replace("COL-", "")}`,
+      from: "2026-03-12",
+      to: item.insuranceDue,
+      amount: pledge,
+      premiumStatus: item.insurance,
+      source: "АБС"
+    },
+    encumbrances: [
+      { number: `ZL-ST-26/410-${index + 1}`, date: "2026-03-14", type: item.pledgeType, amount: pledge, contract: "ST-26/410", allocated: pledge, ltv: Math.round((pledge / item.market) * 100), status: "Зарегистрировано" }
+    ],
+    pledgors: [
+      { share: "100%", name: "АО Северный Терминал", idn: "781 204 7710", role: "Залогодатель", check: "Проверен" }
+    ],
+    externalData: {
+      "Источник": item.source,
+      "Дата проверки": "2026-06-21 14:25",
+      "Право / принадлежность": "Подтверждено",
+      "Ограничения": "Не выявлены",
+      "Актуальность данных": "Проверено по документам"
+    },
+    documents: item.documents.map((name) => ({ name, type: "Право", required: true, status: "Получен", date: "2026-03-12" })),
+    history: [
+      { date: "2026-06-21 14:25", user: "Система", field: "Вид залога", oldValue: "-", newValue: item.type, reason: "Наполнение примерами этапа 1", source: "Тестовые данные" }
+    ]
+  };
+});
+
 const initialData = {
   contracts: [
     {
@@ -11728,6 +12156,32 @@ const initialData = {
       participants: [
         { role: "Заемщик", name: "АО АэроТех Лизинг", idn: "772 604 1180", share: "100%", contact: "Подтвержден" },
         { role: "Залогодатель", name: "АО АэроТех Лизинг", idn: "772 604 1180", share: "Имущество", contact: "Актуален" }
+      ]
+    },
+    {
+      id: "CTR-2026-0410",
+      number: "ST-26/410",
+      startDate: "2026-03-12",
+      endDate: "2029-03-12",
+      product: "Кредитная линия под смешанное промышленное обеспечение",
+      currency: "RUB",
+      limit: 3200000000,
+      debt: 2360000000,
+      marketValue: 3165000000,
+      allocatedValue: 2192000000,
+      ltv: 74,
+      coverageStatus: "Полное",
+      status: "Активен",
+      loanQuality: "2 класс",
+      reserve: 94400000,
+      clientType: "ЮЛ",
+      clientName: "АО Северный Терминал",
+      inn: "781 204 7710",
+      gsz: "ГСЗ Северный Терминал",
+      collateralIds: ["COL-056", "COL-057", "COL-058", "COL-059", "COL-060"],
+      participants: [
+        { role: "Заемщик", name: "АО Северный Терминал", idn: "781 204 7710", share: "100%", contact: "Подтвержден" },
+        { role: "Залогодатель", name: "АО Северный Терминал", idn: "781 204 7710", share: "Имущество", contact: "Актуален" }
       ]
     }
   ],
@@ -12625,7 +13079,8 @@ const initialData = {
       ]
     },
     ...buildDemoAutoFleetCollaterals(),
-    ...buildInspectionExampleCollaterals()
+    ...buildInspectionExampleCollaterals(),
+    ...buildStage1CollateralTypeExamples()
   ],
   tasks: [
     // Generated extended demo task queue.
@@ -14664,6 +15119,7 @@ const marketAnalogs = [
   { type: "Скот", source: "Экспертный подбор", object: "Племенной скот, партия 300 голов", subtype: "КРС", workload: "300 голов, 460 кг", purpose: "Племенное поголовье", operatingTerms: "Племенное хозяйство, ветдокументы представлены", price: 548000000, correction: "-2.0%", result: 537040000, region: "Краснодар", condition: "Порода и продуктивность сопоставимы" }
 ];
 
+
 const app = document.getElementById("app");
 let registryFilterRenderTimer = null;
 
@@ -14693,7 +15149,15 @@ const INSPECTION_VISIT_METHOD_OPTIONS = [
   INSPECTION_VISIT_METHOD_WHITE_LIST,
   "Сотрудник залоговой службы"
 ];
-const PLEDGE_CHECK_STATUS_OPTIONS = ["Не проверено", "Пройдено", "Требует контроля", "Не пройдено", "Не применимо"];
+const PLEDGE_CHECK_STATUS_OPTIONS = ["Не проверено", "Пройдена", "Требует контроля", "Не пройдена", "Не применимо"];
+const COLLATERAL_CONTROL_EVENT_TYPES = [
+  "Документарная проверка",
+  "Первичный осмотр",
+  "Повторный осмотр",
+  "Плановый мониторинг",
+  "Внеплановый мониторинг",
+  "Оценка / переоценка"
+];
 const REGISTRATION_SCENARIO_MOVABLE = "Регистрация залога движимого имущества";
 const REGISTRATION_SCENARIO_REAL_ESTATE_VISIT = "Регистрация недвижимости (выезд)";
 const REGISTRATION_SCENARIO_REAL_ESTATE_ELECTRONIC = "Регистрация залога недвижимого имущества (электронная сделка)";
@@ -14776,9 +15240,11 @@ const FT_COLLATERAL_TYPE_OPTIONS = [
   "Прочие движимые вещи (однородные группы)",
   "Прочие движимые вещи (объекты)"
 ];
+const STAGE1_COLLATERAL_TYPE_SET = new Set(FT_COLLATERAL_TYPE_OPTIONS);
 const COLLATERAL_ADDRESS_FIELDS = [
   "Код страны по ОКСМ",
   "Код территории по ОКАТО",
+  "ФИАС GUID",
   "Город",
   "Почтовый индекс",
   "Улица (в том числе проспект, переулок, квартал)",
@@ -14788,6 +15254,16 @@ const COLLATERAL_ADDRESS_FIELDS = [
   "Номер квартиры (офиса, помещения, комнаты)",
   "Адрес в неструктурированном виде"
 ];
+const COLLATERAL_TYPE_DOCUMENT_FIELD_GROUPS = {
+  "Транспортные средства, прицепы (полуприцепы)": ["Тип документа", "Дата", "Серия", "Номер"],
+  "Транспортные средства (самоходная техника)": ["Тип документа", "Дата", "Серия", "Номер"],
+  "Имущественные права (требования)": ["Вид договора", "Дата заключения договора", "Номер договора"]
+};
+const COLLATERAL_TYPE_DOCUMENT_GROUP_TITLES = {
+  "Транспортные средства, прицепы (полуприцепы)": "Документ транспортного средства",
+  "Транспортные средства (самоходная техника)": "Документ самоходной техники",
+  "Имущественные права (требования)": "Документ-основание права требования"
+};
 const COLLATERAL_TYPE_FIELDS = {
   "Объекты недвижимости": [
     "Подвид",
@@ -14977,9 +15453,9 @@ const COLLATERAL_TYPE_FIELD_DISPLAY_ORDER = {
     "Мощность двигателя, кВт",
     "Объем двигателя, куб. см",
     "Тип документа",
+    "Дата",
     "Серия",
-    "Номер",
-    "Дата"
+    "Номер"
   ],
   "Транспортные средства (самоходная техника)": [
     "Подвид",
@@ -14996,9 +15472,9 @@ const COLLATERAL_TYPE_FIELD_DISPLAY_ORDER = {
     "Мощность двигателя, кВт",
     "Объем двигателя, куб. см",
     "Тип документа",
+    "Дата",
     "Серия",
-    "Номер",
-    "Дата"
+    "Номер"
   ],
   "Оборудование": ["Подвид", "Группа", "Марка", "Модель", "Заводской номер", "Инвентарный номер", "Год выпуска"],
   "Воздушные суда": [
@@ -15058,7 +15534,7 @@ const COLLATERAL_TYPE_FIELD_DISPLAY_ORDER = {
     "Размер доли (части доли) в уставном капитале общества с ограниченной ответственностью в виде дроби, числитель",
     "Размер доли (части доли) в уставном капитале общества с ограниченной ответственностью в виде дроби, знаменатель"
   ],
-  "Имущественные права (требования)": ["Подвид", "Вид имущественных прав (требований)", "Вид договора", "Номер договора", "Дата заключения договора"],
+  "Имущественные права (требования)": ["Подвид", "Вид имущественных прав (требований)", "Вид договора", "Дата заключения договора", "Номер договора"],
   "Аффинированные драгоценные металлы в слитках": ["Код драгоценного металла", "Количество слитков, штук", "Масса, г"],
   "Исключительные права на интеллектуальную собственность": ["Вид интеллектуальной собственности", "Номер документа, удостоверяющего исключительное право на результат интеллектуальной деятельности"],
   "Права по договору банковского счета": [
@@ -15088,6 +15564,7 @@ COLLATERAL_TYPE_FIELD_DISPLAY_ORDER["Ценные бумаги (Права тр�
 
 const COLLATERAL_COMMON_FIELD_OPTIONS = {
   "Вид залога": FT_COLLATERAL_TYPE_OPTIONS,
+  "Статус объекта": COLLATERAL_STATUS_OPTIONS,
   "Категория качества": ["I категория качества", "II категория качества", "Без категории качества"],
   "Признак обеспечения": ["Бланковый", "Не бланковый"],
   "Категория заложенного имущества": FT_COLLATERAL_TYPE_OPTIONS
@@ -15097,6 +15574,7 @@ const COLLATERAL_ADDRESS_FIELD_OPTIONS = {
   "Код территории по ОКАТО": [
     "03401000000 - Краснодар",
     "22401000000 - Нижний Новгород",
+    "40278565000 - Санкт-Петербург",
     "45286590000 - Москва, Хамовники",
     "46437000000 - Клин",
     "45000000000 - Московская область"
@@ -15220,7 +15698,7 @@ const IMPORT_TEMPLATE_COLUMNS = [
   "Код страны по ОКСМ",
   "Код территории по ОКАТО",
   "Город",
-  "Признак включения в учетные/отчетные данные",
+  "Признак включения в отчетные данные",
   "Категория качества",
   "Признак обеспечения",
   "Идентификационный код группы"
@@ -15268,7 +15746,7 @@ function getImportTemplateValue(row, column) {
     "Код страны по ОКСМ": row.countryCode,
     "Код территории по ОКАТО": row.okato,
     "Город": row.city || getCityFromAddress(row.address),
-    "Признак включения в учетные/отчетные данные": row.includeReportData || row.include310 || "Да",
+    "Признак включения в отчетные данные": row.includeReportData || row.include310 || "Да",
     "Категория качества": row.qualityCategory,
     "Признак обеспечения": row.pledgeSign,
     "Идентификационный код группы": row.groupCode
@@ -15311,6 +15789,18 @@ function readSavedApplicationState() {
   }
 }
 
+function readSavedCollateralState() {
+  try {
+    const raw = localStorage.getItem(TASK_STATE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.collaterals) ? parsed.collaterals.filter((item) => item?.id) : [];
+  } catch (error) {
+    console.warn("Не удалось прочитать сохраненное состояние залогов", error);
+    return [];
+  }
+}
+
 const SAVED_TASK_DEFAULT_OBJECT_FIELDS = ["inspectionAnswers", "inspectionChecklistComments", "inspectionResolutions"];
 
 function isPlainObject(value) {
@@ -15343,6 +15833,19 @@ function mergeSavedTaskWithBase(task, baseTask) {
   SAVED_TASK_DEFAULT_OBJECT_FIELDS.forEach((field) => {
     if (baseTask?.[field] !== undefined) {
       merged[field] = mergeSavedValueWithDefaults(baseTask[field], task[field]);
+    }
+  });
+  return merged;
+}
+
+function mergeSavedCollateralWithBase(collateral, baseCollateral) {
+  const merged = {
+    ...(baseCollateral || {}),
+    ...collateral
+  };
+  ["fields", "addressFields", "ftMainInfo", "monitoring", "externalData"].forEach((field) => {
+    if (baseCollateral?.[field] !== undefined || collateral?.[field] !== undefined) {
+      merged[field] = mergeSavedValueWithDefaults(baseCollateral?.[field] || {}, collateral?.[field] || {});
     }
   });
   return merged;
@@ -15393,6 +15896,15 @@ function normalizeDataApplicationSingleClient(data, application) {
 
 function buildRuntimeData() {
   const data = clone(initialData);
+  const savedCollaterals = readSavedCollateralState();
+  if (savedCollaterals.length) {
+    const baseById = new Map((data.collaterals || []).map((collateral) => [collateral.id, collateral]));
+    const savedIds = new Set(savedCollaterals.map((collateral) => collateral.id));
+    data.collaterals = [
+      ...savedCollaterals.map((collateral) => mergeSavedCollateralWithBase(collateral, baseById.get(collateral.id))),
+      ...(data.collaterals || []).filter((collateral) => !savedIds.has(collateral.id))
+    ];
+  }
   data.applications = data.applications || [];
   const savedApplications = readSavedApplicationState();
   if (savedApplications.length) {
@@ -16001,7 +16513,8 @@ function persistTaskState() {
     localStorage.setItem(TASK_STATE_STORAGE_KEY, JSON.stringify({
       savedAt: new Date().toISOString(),
       tasks: state.data.tasks,
-      applications: state.data.applications || []
+      applications: state.data.applications || [],
+      collaterals: state.data.collaterals || []
     }));
   } catch (error) {
     console.warn("Не удалось сохранить состояние задач", error);
@@ -16561,7 +17074,7 @@ function getTaskCollaterals(task) {
 }
 
 function getTaskCollateralIds(task) {
-  return task?.collateralIds?.length ? task.collateralIds : [task?.collateralId].filter(Boolean);
+  return uniqueItems([...(task?.collateralIds || []), task?.collateralId].filter(Boolean));
 }
 
 function getTaskActiveCollateral(task, collaterals) {
@@ -18820,7 +19333,7 @@ function renderInsurancePoliciesRegistry() {
         <thead><tr><th>Полис</th><th>Объект залога</th><th>Страхователь</th><th>Договор</th><th>Компания</th><th>Срок</th><th>Сумма</th><th>Премия</th><th>Статус</th><th>Источник</th></tr></thead>
         <tbody>${baseRows.map((row) => `
           <tr>
-            <td><a class="link registry-object-link" href="#/app/collaterals/${escapeHtml(row.collateral.id)}?tab=insurance">${escapeHtml(row.id)}</a></td>
+            <td><a class="link registry-object-link" href="#/app/collaterals/${escapeHtml(row.collateral.id)}?tab=documents">${escapeHtml(row.id)}</a></td>
             <td>${escapeHtml(row.collateral.id)}<br><small>${escapeHtml(row.collateral.description)}</small></td>
             <td>${escapeHtml(row.clientName)}<br><small>${escapeHtml(row.collateral.clientId)}</small></td>
             <td>${row.contract ? escapeHtml(row.contract.number) : "-"}</td>
@@ -21440,7 +21953,6 @@ function renderPledgeOperationBlock(task, collateral) {
           { label: "Основание операции", value: "Регистрация предметов залога по заявке и проверенному комплекту документов.", textarea: true, wide: true }
         ], "task-form-grid compact")}
       </section>
-      ${renderPledgeChecksTable(task, collateral)}
       ${renderPledgeRegistrationResultPanel(task, collateral, registrationStatus)}
       <section class="panel integration-call">
         <h2>Внешний контур регистрации</h2>
@@ -21449,10 +21961,6 @@ function renderPledgeOperationBlock(task, collateral) {
       </section>
     </section>
   `;
-}
-
-function renderPledgeChecksTable(task, collateral) {
-  return renderCollateralObjectCheckTable(task, collateral, { context: "registration", editable: true });
 }
 
 function getRegistrationExternalService(scenario, collateral, task = null) {
@@ -21585,68 +22093,42 @@ function getCollateralObjectCheckRows(task, collateral, context = "registration"
   const external = collateral?.externalData || {};
   const type = String(collateral?.type || "");
   const identifier = getCollateralObjectIdentifier(collateral) || collateral?.id || "-";
-  const ownerText = collateral?.clientName ? `${collateral.clientName}${collateral.clientId ? `, ИНН ${collateral.clientId}` : ""}` : "залогодатель не указан";
   const sourceRows = getCollateralExternalRows(collateral).filter((row) => row.applicable);
-  const row = (id, name, source, result, status = "Пройдено", options = {}) => ({
+  const row = (id, name, source, result, status = "Пройдена", options = {}) => ({
     id,
     name,
     source,
     result,
-    status,
-    note: options.note || "",
+    status: normalizePledgeCheckStatus(status),
+    note: [options.code ? `Код ${options.code}` : "", options.note || ""].filter(Boolean).join(" · "),
     comment: options.comment || "",
     checkedAt: options.checkedAt || getObjectCheckDate(task, collateral, sourceRows, source),
     evidence: options.evidence || getObjectCheckEvidence(task, collateral, context)
   });
   const rows = [];
 
-  if (context === "registration") {
-    rows.push(
-      row(
-        "abs-duplicate",
-        "Дубль карточки залога и связь с договором",
-        "АБС",
-        `По идентификатору ${identifier} дублирующая карточка не найдена; связь с договором проверяется перед передачей в АБС.`,
-        "Пройдено",
-        { checkedAt: getTaskObjectCheckDate(task, collateral), evidence: task?.id || "Задача регистрации" }
-      ),
-      row(
-        "infosphere-pledgor-risk",
-        "Залогодатель: статус, банкротство, исполнительные производства и существенные судебные споры",
-        "Инфосфера",
-        `По ${ownerText}: критичные субъектные риск-факторы для регистрации залога не выявлены.`,
-        "Пройдено",
-        {
-          note: "Проверка субъекта нужна для регистрации. В проверках предмета залога субъект используется только как способ поиска объекта, если идентификатор неуникален.",
-          evidence: task?.id || "Задача регистрации"
-        }
-      )
-    );
-  }
-
-  if (context === "collateral") {
-    rows.push(
-      row(
-        "external-last-sync",
-        "Актуальность внешних данных по объекту",
-        external["Источник"] || getObjectCheckSourceSummary(sourceRows) || "Внешние источники",
-        external["Дата проверки"] ? `Последняя проверка выполнена ${external["Дата проверки"]}.` : "Внешние данные по объекту доступны в карточке.",
-        hasRiskSignals(external, ["Признак двойного залога", "Ограничения", "Аресты", "Запреты", "Запрет регистрационных действий", "Сигнал мониторинга"]) ? "Требует контроля" : "Пройдено",
-        { checkedAt: external["Дата проверки"] || collateral?.updatedAt || "-", evidence: getObjectCheckEvidence(task, collateral, context) }
-      )
-    );
-  }
-
   if (isRealEstateCollateralType(type)) {
     addRealEstateObjectCheckRows(rows, row, collateral, external, context);
-  } else if (isVehicleLikeCollateralType(type)) {
+  } else if (isSelfPropelledCollateralType(type)) {
+    addSelfPropelledObjectCheckRows(rows, row, collateral, external);
+  } else if (isAutoVehicleCollateralType(type)) {
     addVehicleObjectCheckRows(rows, row, collateral, external, context, identifier);
-  } else if (type === "Оборудование") {
-    addEquipmentObjectCheckRows(rows, row, collateral, external, context);
-  } else if (type === "Воздушные суда") {
-    addAircraftObjectCheckRows(rows, row, collateral, external, context);
+  } else if (isEquipmentCollateralType(type)) {
+    addEquipmentObjectCheckRows(rows, row, collateral, external);
+  } else if (isGoodsCollateralType(type)) {
+    addGoodsObjectCheckRows(rows, row, collateral, external);
+  } else if (isRailwayCollateralType(type)) {
+    addRailwayObjectCheckRows(rows, row, collateral, external);
+  } else if (isAircraftCollateralType(type)) {
+    addAircraftObjectCheckRows(rows, row, collateral, external);
+  } else if (isVesselCollateralType(type)) {
+    addVesselObjectCheckRows(rows, row, collateral, external);
+  } else if (isAnimalCollateralType(type)) {
+    addAnimalObjectCheckRows(rows, row, collateral, external);
+  } else if (isPropertyRightsCollateralType(type)) {
+    addPropertyRightsObjectCheckRows(rows, row, collateral);
   } else {
-    addGenericObjectCheckRows(rows, row, external, context);
+    addOtherMovableObjectCheckRows(rows, row, collateral, external);
   }
 
   const displayTask = task || (context === "collateral" ? getLatestObjectCheckTask(collateral) : null);
@@ -21655,6 +22137,7 @@ function getCollateralObjectCheckRows(task, collateral, context = "registration"
 
 function addRealEstateObjectCheckRows(rows, row, collateral, external, context) {
   const fields = collateral?.fields || {};
+  const isBuildingLike = /здание|помещен|квартира|склад|окс/i.test(joinCheckResult([fields["Вид объекта"], fields["Подвид"], collateral?.description]));
   const identityResult = joinCheckResult([
     fields["Кадастровый номер"],
     collateral?.address
@@ -21672,199 +22155,569 @@ function addRealEstateObjectCheckRows(rows, row, collateral, external, context) 
   ]) || "Аресты, запреты и незаявленные обременения не выявлены.";
   rows.push(
     row(
-      "realty-owner",
+      "n-1-1",
       "Право собственности и правообладатель",
-      "ЕГРН",
-      external["Право собственности"] || "Право собственности подтверждено; правообладатель соответствует залогодателю."
+      "СКБ-Техно, выписка ЕГРН",
+      external["Право собственности"] || "Право собственности подтверждено; правообладатель соответствует залогодателю или согласованной схеме владения.",
+      "Пройдена",
+      { code: "Н-1.1" }
     ),
     row(
-      "realty-identity",
+      "n-1-2",
       "Кадастровый номер и адрес объекта",
-      "ЕГРН",
-      identityResult
+      "СКБ-Техно, выписка ЕГРН",
+      identityResult,
+      "Пройдена",
+      { code: "Н-1.2" }
     ),
     row(
-      "realty-parameters",
+      "n-1-3",
       "Площадь, назначение и характеристики объекта",
-      "ЕГРН",
-      parametersResult
+      "СКБ-Техно/ЕГРН, технические документы",
+      parametersResult,
+      "Пройдена",
+      { code: "Н-1.3" }
     ),
     row(
-      "realty-restrictions",
+      "n-1-4",
+      "Взаимная привязка ЗУ-ОКС и помещений",
+      "СКБ-Техно, выписки ЕГРН по связанным объектам",
+      external["Связанные объекты"] || "Связанные земельные участки, ОКС и помещения анализируются по выпискам ЕГРН; при большом составе исполнитель проводит ручной анализ.",
+      isRiskText(external["Связанные объекты"]) ? "Требует контроля" : "Пройдена",
+      { code: "Н-1.4" }
+    ),
+    row(
+      "n-2-1",
       "Обременения, аресты и запреты регистрационных действий",
-      "ЕГРН",
+      "СКБ-Техно, выписка ЕГРН",
       restrictionsResult,
-      hasRiskSignals(external, ["Аресты", "Запреты", "Ограничения", "Судебные ограничения"]) ? "Требует контроля" : "Пройдено"
+      hasRiskSignals(external, ["Аресты", "Запреты", "Ограничения", "Судебные ограничения"]) ? "Требует контроля" : "Пройдена",
+      { code: "Н-2.1" }
     ),
     row(
-      "realty-rent",
+      "n-2-2",
       context === "documentary" ? "Долгосрочная аренда и права пользования" : "Зарегистрированная аренда и права пользования",
-      "ЕГРН",
+      "СКБ-Техно/ЕГРН, документы аренды",
       external["Аренда"] || "Долгосрочная аренда и права пользования проверены по ЕГРН; критичные сведения не выявлены.",
-      isRiskText(external["Аренда"]) ? "Требует контроля" : "Пройдено"
+      isRiskText(external["Аренда"]) ? "Требует контроля" : "Пройдена",
+      { code: "Н-2.2" }
+    ),
+    row(
+      "n-2-3",
+      "Новые записи ЕГРН после даты договора ипотеки/залога",
+      "СКБ-Техно/ЕГРН, предыдущее заключение/карточка залога",
+      external["Сигнал мониторинга"] || (context === "registration"
+        ? "Для первичной регистрации строка носит информационный характер; дата договора используется после оформления залога."
+        : "Новые неотработанные записи после даты договора не выявлены."),
+      context === "registration" ? "Не применимо" : (isRiskText(external["Сигнал мониторинга"]) ? "Требует контроля" : "Пройдена"),
+      { code: "Н-2.3" }
+    ),
+    row(
+      "n-3",
+      "Комплект документов и дополнительные основания",
+      "Документы задачи, матрица обязательности документов",
+      "Проверяется наличие выписки ЕГРН, правоустанавливающих документов, документов оплаты, актов приема-передачи, технических документов и документов по обременениям.",
+      "Пройдена",
+      { code: "Н-3" }
+    ),
+    row(
+      "n-3-1",
+      "Наличие нежилых помещений в здании",
+      "СКБ-Техно/ЕГРН, выписка ЕГРН",
+      isBuildingLike
+        ? (external["Нежилые помещения"] || "Перечень кадастровых номеров помещений выводится по выписке ЕГРН здания при наличии связанных объектов.")
+        : "Проверка применяется к зданиям и помещениям.",
+      isBuildingLike ? "Пройдена" : "Не применимо",
+      { code: "Н-3.1" }
+    ),
+    row(
+      "n-4",
+      "Связанные объекты и группа оценки",
+      "Карточки залога, идентификационный код группы, документы объекта",
+      fields["Идентификационный код группы"] || collateral?.groupCode
+        ? `Группа ${fields["Идентификационный код группы"] || collateral.groupCode}: связанные объекты выводятся списком с гиперссылками.`
+        : "Единая группа обеспечения не указана; общий расчет стоимости группы на этапе 1 не выполняется.",
+      "Пройдена",
+      { code: "Н-4" }
     )
   );
-  if (context === "documentary") {
-    rows.push(row(
-      "realty-new-records",
-      "Новые записи ЕГРН после даты договора ипотеки/залога",
-      "ЕГРН",
-      external["Сигнал мониторинга"] || "Новые неотработанные ограничения после даты договора не выявлены.",
-      isRiskText(external["Сигнал мониторинга"]) ? "Требует контроля" : "Пройдено",
-      { note: "Старые согласованные обременения показываются как информация; красный флаг ставится по новым или неотработанным записям." }
-    ));
-  }
-  if (context !== "collateral") {
-    rows.push(row(
-      "realty-documents",
-      context === "documentary" ? "Комплект документов для документарной проверки" : "Комплект документов для регистрации ипотеки",
-      "Документы задачи",
-      context === "documentary"
-        ? "Выписка ЕГРН, правоустанавливающие документы, сведения об арендах и предыдущие заключения доступны в задаче."
-        : "Выписка ЕГРН, правоустанавливающие документы и документы-основания обременений отображены в блоке документов."
-    ));
-  }
 }
 
 function addVehicleObjectCheckRows(rows, row, collateral, external, context, identifier) {
-  const type = String(collateral?.type || "").toLowerCase();
-  const vehicleId = collateral?.fields?.VIN || collateral?.fields?.["Идентификационный номер самоходной машины"] || identifier;
+  const vehicleId = collateral?.fields?.VIN || collateral?.fields?.["ПИН"] || collateral?.fields?.["Номер шасси"] || identifier;
   rows.push(
     row(
-      "vehicle-identity-restrictions",
-      "VIN/ПИН/номер шасси: регистрация, аресты, запреты и розыск",
-      type.includes("самоход") ? "ПСМ / реестровые документы / SpectrumData" : "SpectrumData",
+      "ts-1",
+      "Идентификация и регистрационные признаки",
+      "SpectrumData, ПТС/ЭПТС, СТС, документы задачи",
       joinCheckResult([
         `Идентификатор ${vehicleId}`,
         external["Регистрация ТС"],
+        collateral?.fields?.["Марка/модель"],
+        collateral?.fields?.["Госномер"]
+      ]) || "Идентификатор, марка/модель, год выпуска, госномер, категория и регистрационный статус сверены.",
+      "Пройдена",
+      { code: "ТС-1" }
+    ),
+    row(
+      "ts-1-1",
+      "Статус ЭПТС и отметки электронного паспорта",
+      "SpectrumData, выписка ЭПТС, ручной контур ЭПТС",
+      external["Статус ЭПТС"] || "Статус электронного паспорта, таможенные ограничения и отметка об утилизационном сборе проверяются при наличии ЭПТС.",
+      isRiskText(external["Статус ЭПТС"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТС-1.1" }
+    ),
+    row(
+      "ts-2",
+      "Ограничения, аресты, запреты, розыск, ДТП",
+      "SpectrumData или аналогичный подтвержденный источник",
+      joinCheckResult([
         external["Аресты"],
         external["Запрет регистрационных действий"] || external["Запреты"],
-        external["Розыск"]
-      ]) || "Идентификатор и регистрационные ограничения проверены.",
-      hasRiskSignals(external, ["Аресты", "Запрет регистрационных действий", "Запреты", "Розыск"]) ? "Требует контроля" : "Пройдено"
+        external["Розыск"],
+        external["ДТП"]
+      ]) || "Регистрационные ограничения, аресты, розыск, ДТП и существенные внешние негативные сведения не выявлены.",
+      hasRiskSignals(external, ["Аресты", "Запрет регистрационных действий", "Запреты", "Розыск", "ДТП"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТС-2" }
     ),
     row(
-      "vehicle-fnp-leasing",
-      "Действующие залоги третьих лиц и признаки лизинга",
-      "ФНП / Федресурс",
-      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "По идентификатору объекта и залогодателю незаявленные залоги и лизинг не выявлены.",
-      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдено"
+      "ts-3",
+      "Залоги третьих лиц и признаки лизинга",
+      "FNP-блок SpectrumData, ручная ФНП/Федресурс при необходимости, документы задачи",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "По идентификатору предмета незаявленные залоги и лизинг не выявлены; поиск по ИНН/ОГРН используется только если идентификатор не позволяет однозначно проверить предмет.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТС-3" }
+    ),
+    row(
+      "ts-4",
+      "Право собственности и изменения регистрационных записей",
+      "ПТС/ЭПТС, СТС, договор приобретения, документы задачи, SpectrumData",
+      external["Право собственности"] || "Собственник, основание приобретения, регистрационные документы и изменения записей сверены с документами по предмету.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТС-4", note: context === "documentary" ? "В документарном мониторинге субъектная проверка залогодателя не дублируется." : "" }
+    ),
+    row(
+      "ts-5",
+      "Комплектность документов и стоимость приобретения",
+      "Документы задачи, платежные документы, внутренние/внешние рыночные источники",
+      "ПТС/ЭПТС, СТС, договор приобретения, акт приема-передачи и платежные документы проверяются по матрице; цена приобретения сопоставляется с рынком при необходимости.",
+      "Пройдена",
+      { code: "ТС-5" }
+    ),
+    row(
+      "ts-6",
+      "Статус электронной ПТС (или выписка из ЭПТС)",
+      "SpectrumData",
+      external["Статус электронной ПТС"] || external["Статус ЭПТС"] || "Для электронного ПТС фиксируется статус: действующий, незавершенный, погашен, а также наличие таможенных ограничений.",
+      isRiskText(external["Статус электронной ПТС"] || external["Статус ЭПТС"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТС-6" }
     )
   );
-  if (context === "documentary") {
-    rows.push(row(
-      "vehicle-owner-changes",
-      "Собственник и изменения регистрационных записей",
-      "SpectrumData + ПТС/СТС/ПСМ",
-      "Собственник и изменения записей сверяются с последними документами по объекту.",
-      "Пройдено",
-      { note: "Субъектные проверки не дублируются как клиентские. Поиск по ИНН/ОГРН допустим, если внешний реестр использует собственника для проверки самого предмета." }
-    ));
-  }
-  if (context !== "collateral") {
-    rows.push(row(
-      "vehicle-documents",
-      context === "documentary" ? "Комплект документов для документарного контроля" : "Комплект документов для регистрации залога движимого имущества",
-      "Документы задачи",
-      type.includes("самоход")
-        ? "ПСМ/ЭПСМ, свидетельство регистрации, документ-основание права собственности и акт приема-передачи отображены в блоке документов."
-        : "ПТС/ЭПТС, СТС, договор приобретения и подтверждение оплаты отображены в блоке документов."
-    ));
-  }
 }
 
-function addEquipmentObjectCheckRows(rows, row, collateral, external, context) {
+function addSelfPropelledObjectCheckRows(rows, row, collateral, external) {
+  const machineId = collateral?.fields?.["Идентификационный номер самоходной машины"] || collateral?.fields?.["Заводской номер"] || getCollateralObjectIdentifier(collateral);
   rows.push(
     row(
-      "equipment-identity",
-      "Заводской/серийный номер, состав и местонахождение оборудования",
-      "Документы задачи",
+      "sm-1",
+      "Идентификация и регистрационные признаки",
+      "ПСМ/ЭПСМ, документы задачи, карточка залога, ручной профильный источник",
       joinCheckResult([
-        collateral?.fields?.["Серийный номер"] || collateral?.fields?.["Заводской номер"],
+        machineId ? `Идентификатор ${machineId}` : "",
+        collateral?.fields?.["ПСМ"],
+        collateral?.fields?.["Государственный регистрационный знак"],
+        collateral?.fields?.["Марка/модель"]
+      ]) || "Идентификатор, регистрационные признаки и документы учета сверяются вручную; SpectrumData не используется.",
+      machineId ? "Пройдена" : "Требует контроля",
+      { code: "СМ-1" }
+    ),
+    row(
+      "sm-2",
+      "Постановка на учет и профильные регистрационные сведения",
+      "Документы учета, справка/сведения Минсельхоза или иного профильного контура",
+      external["Регистрация"] || external["Регистрация ТС"] || "Постановка на учет и соответствие регистрационных сведений документам задачи проверяются вручную.",
+      isRiskText(external["Регистрация"] || external["Регистрация ТС"]) ? "Требует контроля" : "Пройдена",
+      { code: "СМ-2" }
+    ),
+    row(
+      "sm-3",
+      "Залоги третьих лиц, лизинг и обременения",
+      "Ручная ФНП/Федресурс, документы задачи, ИНН/ОГРН собственника при неуникальном идентификаторе",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Проверка выполняется вручную по идентификатору предмета; поиск по ИНН/ОГРН используется как дополнительный способ при неуникальном номере.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "СМ-3" }
+    ),
+    row(
+      "sm-4",
+      "Право собственности и документы-основания",
+      "ПСМ/ЭПСМ, договор приобретения, акт приема-передачи, документы учета",
+      external["Право собственности"] || "Собственник, основание приобретения и комплект правоустанавливающих документов сверены.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "СМ-4" }
+    ),
+    row(
+      "sm-5",
+      "Комплектность документов и местонахождение",
+      "Документы задачи, акт осмотра, фото, справка о местонахождении",
+      joinCheckResult([collateral?.fields?.["Место хранения"], collateral?.fields?.["Состояние"]]) || "Комплект документов, фактическое местонахождение и состояние предмета проверены по документам и результату осмотра.",
+      "Пройдена",
+      { code: "СМ-5" }
+    )
+  );
+}
+
+function addEquipmentObjectCheckRows(rows, row, collateral, external) {
+  const serialNumber = collateral?.fields?.["Серийный номер"] || collateral?.fields?.["Заводской номер"] || collateral?.fields?.["Инвентарный номер"];
+  rows.push(
+    row(
+      "ob-1",
+      "Идентификация предмета или группы",
+      "Карточка залога, документы задачи, реестр/перечень",
+      joinCheckResult([
+        serialNumber,
+        collateral?.fields?.["Группа"],
         collateral?.fields?.["Местонахождение"] || collateral?.address,
         collateral?.fields?.["Техническое состояние"]
-      ]) || "Идентификационные признаки оборудования сверены с документами задачи."
+      ]) || "Проверяются заводской, серийный или инвентарный номер, состав группы, местонахождение, количество и единица учета.",
+      serialNumber ? "Пройдена" : "Требует контроля",
+      { code: "ОБ-1" }
     ),
     row(
-      "equipment-fnp",
-      "Действующие залоги третьих лиц по идентификатору или собственнику",
-      "ФНП",
-      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Незаявленные залоги третьих лиц не выявлены. Если серийный/инвентарный номер неуникален, допускается поиск по ИНН/ОГРН собственника как способ проверки предмета залога.",
-      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдено"
+      "ob-2",
+      "Право собственности и документы-основания",
+      "Договор приобретения, акт приема-передачи, инвойс, правоустанавливающий документ, документы учета",
+      external["Право собственности"] || "Собственник/залогодатель и документы-основания соответствуют согласованной схеме.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ОБ-2" }
+    ),
+    row(
+      "ob-3",
+      "Залоги третьих лиц, лизинг и ограничения",
+      "Ручная ФНП, Федресурс, документы задачи, ИНН/ОГРН собственника как параметр поиска",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Ручная проверка фиксируется статусом, комментарием и документом-основанием; поиск по ИНН/ОГРН допускается только при неуникальном серийном номере.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ОБ-3" }
+    ),
+    row(
+      "ob-4",
+      "Учет, баланс и местонахождение",
+      "Выписка по счету 01/реестр ОС, складская справка, документы учета, акт осмотра",
+      joinCheckResult([collateral?.fields?.["Местонахождение"], collateral?.address]) || "Инвентарные данные, местонахождение и учет на балансе сверяются вручную; интеграция с учетной системой клиента не выполняется.",
+      "Пройдена",
+      { code: "ОБ-4" }
+    ),
+    row(
+      "ob-5",
+      "Состояние, комплектность и пригодность для дальнейшей работы",
+      "Акт осмотра, фото, технические документы, комментарий исполнителя",
+      collateral?.fields?.["Техническое состояние"] || collateral?.fields?.["Состояние"] || "Фактическое состояние, комплектность, дефекты и достаточность данных проверяются по осмотру и документам.",
+      isRiskText(collateral?.fields?.["Техническое состояние"] || collateral?.fields?.["Состояние"]) ? "Требует контроля" : "Пройдена",
+      { code: "ОБ-5" }
     )
   );
-  if (context !== "collateral") {
-    rows.push(
-      row(
-        "equipment-rights",
-        context === "documentary" ? "Право собственности и учет на балансе / счет 01" : "Право собственности по договору поставки, инвойсу и акту ввода",
-        "Документы задачи",
-        external["Право собственности"] || "Право собственности подтверждается договором приобретения, инвойсом, актом приема-передачи/ввода в эксплуатацию."
-      ),
-      row(
-        "equipment-storage",
-        "Правовые основания места хранения оборудования",
-        "Документы задачи",
-        "Адрес хранения, договор аренды/ответственного хранения или право собственности на площадку приложены и сверяются с карточкой объекта."
-      )
-    );
-  }
 }
 
-function addAircraftObjectCheckRows(rows, row, collateral, external, context) {
+function addGoodsObjectCheckRows(rows, row, collateral, external) {
   rows.push(
     row(
-      "aircraft-registration",
-      "Опознавательный знак, серийный номер и свидетельство регистрации воздушного судна",
-      "Реестр воздушных судов / документы задачи",
+      "tmc-1",
+      "Идентификация предмета или группы",
+      "Карточка залога, документы задачи, реестр/перечень",
+      joinCheckResult([collateral?.fields?.["Номенклатура"], collateral?.fields?.["Количество"], collateral?.fields?.["Место хранения"] || collateral?.address]) || "Определяются идентификаторы группы/партии, местонахождение, количество, единица учета и состав перечня.",
+      "Пройдена",
+      { code: "ТМЦ-1" }
+    ),
+    row(
+      "tmc-2",
+      "Право собственности и документы-основания",
+      "Договор приобретения, акт приема-передачи, инвойс, документы учета",
+      external["Право собственности"] || "Документ-основание и соответствие собственника/залогодателя согласованной схеме проверены.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТМЦ-2" }
+    ),
+    row(
+      "tmc-3",
+      "Обременения, ограничения, залоги или лизинг аналогичного имущества",
+      "Ручная ФНП/Федресурс, поиск по ИНН/ОГРН собственника/залогодателя, документы задачи",
+      external["Внешний залоговый реестр"] || "Исполнитель вручную проверяет наличие залога, лизинга или ограничения по аналогичному типу имущества у собственника/залогодателя.",
+      isRiskText(external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТМЦ-3" }
+    ),
+    row(
+      "tmc-4",
+      "Учет, баланс и местонахождение",
+      "Реестр ТМЦ, складская справка, документы учета, акт осмотра",
+      joinCheckResult([collateral?.fields?.["Место хранения"], collateral?.address]) || "Учетные данные, местонахождение и наличие партии/группы сверяются вручную; интеграция с учетной системой клиента не выполняется.",
+      "Пройдена",
+      { code: "ТМЦ-4" }
+    ),
+    row(
+      "tmc-5",
+      "Неснижаемый и фактический остаток",
+      "Договор залога, складская справка, реестр ТМЦ, акт осмотра",
+      external["Неснижаемый остаток"] || "Неснижаемый остаток по договору, остаток по справке/реестру и фактический остаток на дату осмотра сопоставлены.",
+      isRiskText(external["Неснижаемый остаток"]) ? "Требует контроля" : "Пройдена",
+      { code: "ТМЦ-5" }
+    ),
+    row(
+      "tmc-6",
+      "Соблюдение условий договора и достаточность обеспечения",
+      "Договор, реестр ТМЦ, складская справка, расчет стоимости, комментарий специалиста",
+      "Текущий состав ТМЦ достаточен для покрытия обязательств, условия хранения и замены не нарушены.",
+      "Пройдена",
+      { code: "ТМЦ-6" }
+    )
+  );
+}
+
+function addRailwayObjectCheckRows(rows, row, collateral, external) {
+  rows.push(
+    row(
+      "zd-1",
+      "Идентификация подвижного состава",
+      "Карточка залога, документы задачи, реестр/перечень",
+      joinCheckResult([collateral?.fields?.["Номер вагона"], collateral?.fields?.["Состав группы"], collateral?.fields?.["Местонахождение"]]) || "Определяются номера единиц подвижного состава, состав группы, количество, местонахождение и иные идентификаторы.",
+      "Пройдена",
+      { code: "ЖД-1" }
+    ),
+    row(
+      "zd-2",
+      "Справка из личного кабинета РЖД",
+      "Справка/выгрузка Excel из ЛК РЖД, предоставленная клиентом/собственником",
+      "Исполнитель проверяет текущее состояние, местонахождение, маршрут/движение и операции с вагоном; прямая интеграция с РЖД не выполняется.",
+      "Пройдена",
+      { code: "ЖД-2" }
+    ),
+    row(
+      "zd-3",
+      "Право собственности и документы-основания",
+      "Договор приобретения, акт приема-передачи, правоустанавливающий документ, документы учета",
+      external["Право собственности"] || "Документ-основание и собственник/залогодатель сверены с согласованной схемой.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ЖД-3" }
+    ),
+    row(
+      "zd-4",
+      "Залоги третьих лиц и ограничения",
+      "Ручная ФНП, документы задачи, ИНН/ОГРН собственника/залогодателя или идентификаторы предмета",
+      external["Внешний залоговый реестр"] || "Проверка залога третьих лиц и ограничений выполняется вручную по предмету или собственнику/залогодателю.",
+      isRiskText(external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ЖД-4" }
+    ),
+    row(
+      "zd-5",
+      "Профильные регистрационные документы",
+      "Справки/выписки/регистрационные документы, предоставленные в задаче",
+      "Профильные документы сверяются с карточкой, внешняя API-проверка на этапе 1 не предусмотрена.",
+      "Пройдена",
+      { code: "ЖД-5" }
+    )
+  );
+}
+
+function addAircraftObjectCheckRows(rows, row, collateral, external) {
+  rows.push(
+    row(
+      "vs-1",
+      "Идентификация воздушного судна",
+      "Карточка залога, документы задачи, регистрационные документы",
       joinCheckResult([
         collateral?.fields?.["Опознавательные знаки воздушного судна"],
         collateral?.fields?.["Серийный (заводской) номер"],
-        collateral?.fields?.["Свидетельство о регистрации"]
-      ]) || "Регистрационные признаки воздушного судна сверены с документами задачи."
+        collateral?.fields?.["Тип воздушного судна"]
+      ]) || "Определяются бортовой/серийный номер, тип/модель, двигатель, комплектность и иные идентификаторы.",
+      "Пройдена",
+      { code: "ВС-1" }
     ),
     row(
-      "aircraft-encumbrances",
-      "Ограничения распоряжения и залоги третьих лиц по воздушному судну",
-      "Реестровые документы / ФНП",
-      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Незаявленные ограничения и залоги третьих лиц не выявлены.",
-      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдено"
+      "vs-2",
+      "Право собственности и регистрационные сведения",
+      "Свидетельство/выписка из реестра воздушного судна, договор приобретения, документы клиента",
+      external["Право собственности"] || joinCheckResult([collateral?.fields?.["Свидетельство о регистрации"], collateral?.fields?.["Место базирования"]]) || "Право собственности, регистрация воздушного судна и соответствие собственника/залогодателя согласованной схеме сверяются вручную.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ВС-2" }
+    ),
+    row(
+      "vs-3",
+      "Техническая документация и формуляры",
+      "Формуляры, техническая документация, документы на двигатель, сведения о налете часов",
+      "Проверяется наличие и согласованность технической документации, формуляров, данных двигателя и налета часов.",
+      "Пройдена",
+      { code: "ВС-3" }
+    ),
+    row(
+      "vs-4",
+      "Сертификаты и летная годность",
+      "Сертификат летной годности, профильные регистрационные документы, документы клиента",
+      external["Летная годность"] || "Документы, подтверждающие право эксплуатации и летную годность, проверены вручную.",
+      isRiskText(external["Летная годность"]) ? "Требует контроля" : "Пройдена",
+      { code: "ВС-4" }
+    ),
+    row(
+      "vs-5",
+      "Признаки залога в пользу третьих лиц, в том числе по двигателю",
+      "Ручная ФНП при применимости, документы на двигатель, регистрационные документы",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Нераскрытый залог/обременение по воздушному судну или двигателю не выявлен.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ВС-5" }
     )
   );
-  if (context !== "collateral") {
-    rows.push(row(
-      "aircraft-documents",
-      context === "documentary" ? "Комплект документов, летная годность и место базирования" : "Комплект документов для регистрации залога воздушного судна",
-      "Документы задачи",
-      "Свидетельство о регистрации, документы собственности, страхование и документы по месту базирования отображены в блоке документов."
-    ));
-  }
 }
 
-function addGenericObjectCheckRows(rows, row, external, context) {
+function addVesselObjectCheckRows(rows, row, collateral, external) {
   rows.push(
     row(
-      "generic-rights",
-      "Право собственности и идентификация предмета залога",
-      "Документы задачи",
-      external["Право собственности"] || "Документы-основания права собственности и идентификационные признаки объекта сверены."
+      "ps-1",
+      "Идентификация судна / плавучего сооружения",
+      "Карточка залога, документы задачи, судовые документы",
+      joinCheckResult([collateral?.fields?.["Регистрационный номер"], collateral?.fields?.["Название"], collateral?.fields?.["Тип судна"], collateral?.fields?.["Порт регистрации"]]) || "Определяются регистрационный номер, название, тип судна, порт/место регистрации, характеристики и иные идентификаторы.",
+      "Пройдена",
+      { code: "ПС-1" }
     ),
     row(
-      "generic-encumbrances",
-      "Залоги третьих лиц и ограничения распоряжения",
-      "ФНП / профильный реестр",
-      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Незаявленные залоги и ограничения не выявлены. Если предмет нельзя однозначно проверить по собственному идентификатору, допускается поиск по ИНН/ОГРН собственника как предметная проверка.",
-      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдено"
+      "ps-2",
+      "Право собственности и регистрационные сведения",
+      "Выписка/справка из порта регистрации, ГИМС, судового реестра или иного профильного контура, документы клиента",
+      external["Право собственности"] || "Клиент/собственник предоставляет выписку или справку из профильного контура; исполнитель сверяет собственника и регистрацию вручную.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ПС-2" }
+    ),
+    row(
+      "ps-3",
+      "Профильные регистрационные документы и допуск",
+      "Судовые документы, сертификаты, допуски, документы клиента",
+      "Проверяются профильные регистрационные документы, сертификаты и допуск к эксплуатации.",
+      "Пройдена",
+      { code: "ПС-3" }
+    ),
+    row(
+      "ps-4",
+      "Страхование судна",
+      "Страховой полис, выписка/справка, документы клиента",
+      collateral?.insurance && collateral.insurance !== "Не требуется" ? `Страхование: ${collateral.insurance}.` : "Наличие действующего страхования проверяется, если оно требуется для оформления или сопровождения залога.",
+      collateral?.insurance === "Не требуется" ? "Не применимо" : "Пройдена",
+      { code: "ПС-4" }
+    ),
+    row(
+      "ps-5",
+      "Залоги третьих лиц и обременения",
+      "Выписка/справка из порта регистрации, ГИМС, судового реестра; ручная ФНП при применимости",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Нераскрытые залоги, обременения и ограничения в профильных документах не выявлены.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ПС-5" }
     )
   );
-  if (context !== "collateral") {
-    rows.push(row(
-      "generic-documents",
-      context === "documentary" ? "Комплект документов для документарного контроля" : "Комплект документов для регистрации залога",
-      "Документы задачи",
-      "Обязательные документы по виду залога отображены в блоке документов."
-    ));
-  }
+}
+
+function addAnimalObjectCheckRows(rows, row, collateral, external) {
+  rows.push(
+    row(
+      "zh-1",
+      "Идентификация животных / группы",
+      "Справки клиента, бухгалтерские документы, документы учета, реестр/перечень животных",
+      joinCheckResult([collateral?.fields?.["Количество голов"], collateral?.fields?.["Место содержания"], collateral?.fields?.["Порода"]]) || "Определяется способ учета, количество, место содержания и идентификаторы при наличии.",
+      "Пройдена",
+      { code: "Ж-1" }
+    ),
+    row(
+      "zh-2",
+      "Право собственности и документы-основания",
+      "Договор приобретения, акт, справки клиента, документы учета",
+      external["Право собственности"] || "Документ-основание и соответствие собственника/залогодателя согласованной схеме проверены.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "Ж-2" }
+    ),
+    row(
+      "zh-3",
+      "Местонахождение и результат осмотра",
+      "Акт осмотра, фото, комментарий исполнителя, документы задачи",
+      joinCheckResult([collateral?.fields?.["Место содержания"], collateral?.monitoring?.lastInspection, collateral?.monitoring?.condition]) || "Фактическое наличие, место содержания и состояние сверены с заявкой и документами.",
+      "Пройдена",
+      { code: "Ж-3" }
+    ),
+    row(
+      "zh-4",
+      "Залоги третьих лиц",
+      "Ручная ФНП, поиск по ИНН/ОГРН собственника/залогодателя, документы задачи",
+      external["Внешний залоговый реестр"] || "Проверка залога третьих лиц выполняется вручную по собственнику/залогодателю и при наличии по идентификатору предмета/группы.",
+      isRiskText(external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "Ж-4" }
+    ),
+    row(
+      "zh-5",
+      "Ветеринарные и профильные справки",
+      "Ветеринарные справки, справки по животным, документы клиента",
+      "Наличие профильных справок проверяется по матрице документов; содержательная проверка выполняется исполнителем вручную.",
+      "Пройдена",
+      { code: "Ж-5" }
+    )
+  );
+}
+
+function addPropertyRightsObjectCheckRows(rows, row, collateral) {
+  rows.push(
+    row(
+      "ip-1",
+      "Документ-основание права",
+      "Договоры, приложения, реестр прав требования, ДДУ, подтверждающие документы",
+      "Проверяется, из какого документа возникает право, действует ли документ и относится ли право к заявленному предмету залога.",
+      "Пройдена",
+      { code: "ИП-1" }
+    ),
+    row(
+      "ip-2",
+      "Сумма/объем права и должник/контрагент",
+      "Реестр прав требования, договоры, приложения, расчетные документы",
+      joinCheckResult([collateral?.fields?.["Сумма права"], collateral?.fields?.["Должник"], collateral?.fields?.["Контрагент"]]) || "Сумма/объем права, должник/контрагент, сроки и состав требований сверяются с карточкой и заявкой.",
+      "Пройдена",
+      { code: "ИП-2" }
+    ),
+    row(
+      "ip-3",
+      "Ограничения уступки/залога по документам",
+      "Договоры, приложения, соглашения, подтверждающие документы",
+      "Проверяются запреты или ограничения уступки/залога, необходимость согласий и наличие таких согласий.",
+      "Пройдена",
+      { code: "ИП-3" }
+    ),
+    row(
+      "ip-4",
+      "Оплата по договору / платежные документы",
+      "Платежные документы, договор, ДДУ, график платежей при наличии",
+      "Платежные документы и соответствие оплаты условиям договора проверяются вручную.",
+      "Пройдена",
+      { code: "ИП-4" }
+    )
+  );
+}
+
+function addOtherMovableObjectCheckRows(rows, row, collateral, external) {
+  rows.push(
+    row(
+      "pd-1",
+      "Идентификация предмета или группы",
+      "Карточка залога, документы задачи, реестр/перечень",
+      joinCheckResult([getCollateralObjectIdentifier(collateral), collateral?.address]) || "Определяются обязательные идентификаторы по виду: заводской/инвентарный номер, регистрационный номер, состав группы, местонахождение, количество и единица учета.",
+      getCollateralObjectIdentifier(collateral) ? "Пройдена" : "Требует контроля",
+      { code: "ПД-1" }
+    ),
+    row(
+      "pd-2",
+      "Право собственности и документы-основания",
+      "Договор приобретения, акт приема-передачи, инвойс, правоустанавливающий документ, документы учета",
+      external["Право собственности"] || "Документ-основание и соответствие собственника/залогодателя согласованной схеме проверены.",
+      isRiskText(external["Право собственности"]) ? "Требует контроля" : "Пройдена",
+      { code: "ПД-2" }
+    ),
+    row(
+      "pd-3",
+      "Залоги третьих лиц и ограничения",
+      "Ручная ФНП, документы задачи, ИНН/ОГРН собственника/залогодателя как параметр поиска",
+      external["Внешний залоговый реестр"] || external["Признак двойного залога"] || "Поиск по ИНН/ОГРН собственника/залогодателя используется как способ проверки предмета, если у предмета нет уникального идентификатора.",
+      isRiskText(external["Признак двойного залога"] || external["Внешний залоговый реестр"]) ? "Требует контроля" : "Пройдена",
+      { code: "ПД-3" }
+    )
+  );
 }
 
 function getObjectCheckDate(task, collateral, sourceRows, source) {
@@ -21902,8 +22755,45 @@ function isRealEstateCollateralType(type) {
   return /недвиж/i.test(String(type || ""));
 }
 
+function isSelfPropelledCollateralType(type) {
+  return /самоход|спецтехник/i.test(String(type || "").toLowerCase());
+}
+
+function isAutoVehicleCollateralType(type) {
+  const value = String(type || "").toLowerCase();
+  return !isSelfPropelledCollateralType(value) && /автотранспорт|автомоб|транспортные средства|прицеп|полуприцеп/.test(value);
+}
+
 function isVehicleLikeCollateralType(type) {
   return /автотранспорт|самоход/i.test(String(type || "").toLowerCase());
+}
+
+function isEquipmentCollateralType(type) {
+  return /оборуд/.test(String(type || "").toLowerCase());
+}
+
+function isGoodsCollateralType(type) {
+  return /товар|тмц|оборот|запас/.test(String(type || "").toLowerCase());
+}
+
+function isRailwayCollateralType(type) {
+  return /железнодорож|подвижн|вагон/.test(String(type || "").toLowerCase());
+}
+
+function isAircraftCollateralType(type) {
+  return /воздуш|самолет|самолёт|вертолет|вертолёт/.test(String(type || "").toLowerCase());
+}
+
+function isVesselCollateralType(type) {
+  return /судн|плавуч|морск|речн|гимс/.test(String(type || "").toLowerCase());
+}
+
+function isAnimalCollateralType(type) {
+  return /животн|скот|поголов/.test(String(type || "").toLowerCase());
+}
+
+function isPropertyRightsCollateralType(type) {
+  return /имущественн|прав[ао]|требован|дду/.test(String(type || "").toLowerCase());
 }
 
 function joinCheckResult(values = []) {
@@ -21922,9 +22812,16 @@ function applyPledgeCheckManualValues(task, collateral, rows = []) {
   const savedComments = task?.registrationCheckComments?.[collateral?.id] || {};
   return rows.map((row) => ({
     ...row,
-    status: PLEDGE_CHECK_STATUS_OPTIONS.includes(savedStatuses[row.id]) ? savedStatuses[row.id] : row.status,
+    status: PLEDGE_CHECK_STATUS_OPTIONS.includes(normalizePledgeCheckStatus(savedStatuses[row.id])) ? normalizePledgeCheckStatus(savedStatuses[row.id]) : normalizePledgeCheckStatus(row.status),
     comment: savedComments[row.id] || row.comment
   }));
+}
+
+function normalizePledgeCheckStatus(status) {
+  const value = String(status || "").trim();
+  if (value === "Пройдено") return "Пройдена";
+  if (value === "Не пройдено") return "Не пройдена";
+  return value;
 }
 
 function pledgeCheckStatusTone(status) {
@@ -25683,6 +26580,7 @@ function renderDocumentFolder(folder, context, ownerId, task, activeTarget, appl
 }
 
 function renderDocumentTableFileRow(doc, context, ownerId, task, activeTarget, applyOptions = []) {
+  const readonly = Boolean(doc.readonly);
   const documentDate = getDocumentDateInputValue(doc.documentDate);
   const attachedAt = formatDocumentDateCell(doc.attachedAt, true);
   const sizeText = formatDocumentFileSize(doc.size);
@@ -25695,13 +26593,15 @@ function renderDocumentTableFileRow(doc, context, ownerId, task, activeTarget, a
   const nameAttrs = getDocumentMetaFieldAttrs(doc, context, ownerId, activeTarget, "documentName");
   const dateAttrs = getDocumentMetaFieldAttrs(doc, context, ownerId, activeTarget, "documentDate");
   return `
-    <div class="document-table-file-row ${doc.name ? "has-file" : "empty-file"}" role="row">
+    <div class="document-table-file-row ${doc.name ? "has-file" : "empty-file"} ${readonly ? "is-readonly" : ""}" role="row">
       <span class="document-name-cell" role="cell">
-        <input class="document-name-input" value="${escapeHtml(doc.documentName || doc.name || doc.title)}" ${nameAttrs} aria-label="Наименование документа">
+        ${readonly
+          ? `<strong class="document-readonly-name">${escapeHtml(doc.documentName || doc.name || doc.title)}</strong>`
+          : `<input class="document-name-input" value="${escapeHtml(doc.documentName || doc.name || doc.title)}" ${nameAttrs} aria-label="Наименование документа">`}
         <small>${escapeHtml(meta)}</small>
       </span>
-      <span class="document-relation-cell" data-label="Применяется к" role="cell">${renderDocumentRelationSelect(doc, context, ownerId, activeTarget, applyOptions)}</span>
-      <span class="document-date-cell" data-label="Дата документа" role="cell"><input type="date" value="${escapeHtml(documentDate)}" ${dateAttrs} aria-label="Дата документа"></span>
+      <span class="document-relation-cell" data-label="Применяется к" role="cell">${readonly ? `<span class="document-readonly-relation">${escapeHtml(getDocumentRelationLabel(doc, applyOptions))}</span>` : renderDocumentRelationSelect(doc, context, ownerId, activeTarget, applyOptions)}</span>
+      <span class="document-date-cell" data-label="Дата документа" role="cell">${readonly ? escapeHtml(documentDate || "-") : `<input type="date" value="${escapeHtml(documentDate)}" ${dateAttrs} aria-label="Дата документа">`}</span>
       <span class="document-attached-cell" data-label="Дата прикладывания" role="cell">${escapeHtml(attachedAt)}</span>
       <span class="document-author-cell" data-label="Автор" role="cell">${escapeHtml(doc.author || "-")}</span>
       <span class="document-row-actions" role="cell">
@@ -25710,14 +26610,24 @@ function renderDocumentTableFileRow(doc, context, ownerId, task, activeTarget, a
             <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"></path>
           </svg>
         </a>
-        <button type="button" class="doc-delete-button" data-action="delete-document" data-doc-context="${escapeHtml(context)}" data-doc-owner="${escapeHtml(ownerId)}" data-doc-index="${escapeHtml(doc.documentIndex ?? "")}" data-doc-title="${escapeHtml(doc.title)}" data-doc-target="${escapeHtml(doc.target)}" data-doc-name="${escapeHtml(doc.name)}" title="Удалить файл" aria-label="Удалить файл ${escapeHtml(doc.name)}">
+        ${readonly ? "" : `<button type="button" class="doc-delete-button" data-action="delete-document" data-doc-context="${escapeHtml(context)}" data-doc-owner="${escapeHtml(ownerId)}" data-doc-index="${escapeHtml(doc.documentIndex ?? "")}" data-doc-title="${escapeHtml(doc.title)}" data-doc-target="${escapeHtml(doc.target)}" data-doc-name="${escapeHtml(doc.name)}" title="Удалить файл" aria-label="Удалить файл ${escapeHtml(doc.name)}">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"></path>
           </svg>
-        </button>
+        </button>`}
       </span>
     </div>
   `;
+}
+
+function getDocumentRelationLabel(doc, options = []) {
+  const selectedBinding = getDocumentBindingValue(doc);
+  const option = options.find((item) => item.value === selectedBinding);
+  if (option) return option.label;
+  if (doc.applyScope === "collateral" && doc.applyValue) return `Залог ${doc.applyValue}`;
+  if (doc.applyScope === "task" && doc.applyValue) return `Задача ${doc.applyValue}`;
+  if (doc.applyScope === "pledgor" && doc.applyValue) return `Залогодатель ${doc.applyValue}`;
+  return "Карточка залога";
 }
 
 function getDocumentFolderTitle(doc) {
@@ -26099,8 +27009,112 @@ function renderCollateralTab(collateral) {
   if (state.collateralTab === "pledgors") return renderCollateralPledgors(collateral);
   if (state.collateralTab === "external") return renderCollateralExternal(collateral);
   if (state.collateralTab === "contracts") return renderCollateralContracts(collateral);
-  if (state.collateralTab === "documents") return renderDocumentWidget({ context: "collateral", ownerId: collateral.id, documents: collateral.documents || [], activeCollateral: collateral, title: "Документы", subtitle: "Файлы карточки залога", description: "Отображаются документы, привязанные к предмету залога, залогодателю и завершенным связанным задачам." });
+  if (state.collateralTab === "documents") return renderDocumentWidget({ context: "collateral", ownerId: collateral.id, documents: getCollateralDocumentsForCard(collateral), activeCollateral: collateral, title: "Документы", subtitle: "Файлы карточки залога", description: "Отображаются документы, привязанные к предмету залога, завершенным задачам по предмету и договорному контексту." });
   return renderCollateralOverview(collateral);
+}
+
+function getCollateralDocumentsForCard(collateral) {
+  return [
+    ...getCollateralOwnDocuments(collateral),
+    ...getCollateralCompletedTaskDocuments(collateral),
+    ...getCollateralContractContextDocuments(collateral)
+  ];
+}
+
+function getCollateralOwnDocuments(collateral) {
+  return (collateral?.documents || []).map((doc) => {
+    const source = typeof doc === "string" ? { name: doc } : { ...doc };
+    return {
+      ...source,
+      target: source.target || source.collateralId || collateral.id,
+      applyScope: source.applyScope || "collateral",
+      applyValue: source.applyValue || collateral.id
+    };
+  });
+}
+
+function getCollateralCompletedTaskDocuments(collateral) {
+  if (!collateral) return [];
+  return (state.data.tasks || [])
+    .filter((task) => /заверш/i.test(String(task.status || "")) && getTaskCollateralIds(task).includes(collateral.id))
+    .flatMap((task) => (task.documents || [])
+      .filter((doc) => doesTaskDocumentApplyToCollateral(doc, collateral))
+      .map((doc) => ({
+        ...(typeof doc === "string" ? { name: doc } : doc),
+        title: getDocumentFolderTitle(typeof doc === "string" ? { name: doc } : doc) || "Документы завершенных задач",
+        documentName: getTaskDocumentDisplayName(doc, task),
+        target: collateral.id,
+        targetIds: [collateral.id],
+        applyScope: "collateral",
+        applyValue: collateral.id,
+        status: (typeof doc === "string" ? "" : doc.status) || `Из завершенной задачи ${task.id}`,
+        attachedAt: (typeof doc === "string" ? "" : doc.attachedAt || doc.uploadedAt || doc.date) || task.createdAt || "",
+        author: (typeof doc === "string" ? "" : doc.author || doc.uploadedBy || doc.generatedBy) || task.assignee || "Система",
+        readonly: true,
+        content: [
+          `Связанная задача: ${task.id}`,
+          `Тип задачи: ${getTaskDisplayType(task)}`,
+          `Статус задачи: ${task.status}`
+        ]
+      })));
+}
+
+function doesTaskDocumentApplyToCollateral(doc, collateral) {
+  const source = typeof doc === "string" ? { name: doc } : (doc || {});
+  if (Array.isArray(source.collateralIds) && source.collateralIds.length) return source.collateralIds.includes(collateral.id);
+  if (Array.isArray(source.targetIds) && source.targetIds.some((id) => String(id || "").startsWith("COL-"))) return source.targetIds.includes(collateral.id);
+  if (String(source.target || "").startsWith("COL-")) return source.target === collateral.id;
+  if (source.collateralId) return source.collateralId === collateral.id;
+  return true;
+}
+
+function getTaskDocumentDisplayName(doc, task) {
+  const source = typeof doc === "string" ? { name: doc } : (doc || {});
+  return source.documentName || source.businessName || source.displayName || source.name || `Документ задачи ${task.id}`;
+}
+
+function getCollateralContractContextDocuments(collateral) {
+  const contracts = getCollateralRelatedContracts(collateral);
+  const contractDocs = contracts.map((contract) => ({
+    title: "Договорный контекст",
+    name: `${contract.number || contract.id}.txt`,
+    documentName: `Кредитный договор / продукт ${contract.number || contract.id}`,
+    target: collateral.id,
+    targetIds: [collateral.id],
+    applyScope: "collateral",
+    applyValue: collateral.id,
+    status: contract.status || "Связь активна",
+    documentDate: contract.startDate || "",
+    attachedAt: contract.startDate || "",
+    author: "Система",
+    readonly: true,
+    content: [
+      `Номер договора / продукта: ${contract.number || contract.id}`,
+      `Продукт: ${contract.product || "-"}`,
+      `Клиент: ${contract.clientName || "-"}`
+    ]
+  }));
+  const encumbranceDocs = (collateral.encumbrances || []).map((encumbrance) => ({
+    title: "Договорный контекст",
+    name: `${encumbrance.number || "Обременение"}.txt`,
+    documentName: `Договор залога / обременение ${encumbrance.number || encumbrance.type || ""}`.trim(),
+    target: collateral.id,
+    targetIds: [collateral.id],
+    applyScope: "collateral",
+    applyValue: collateral.id,
+    status: encumbrance.status || "Зафиксировано",
+    documentDate: encumbrance.date || "",
+    attachedAt: encumbrance.date || "",
+    author: "Система",
+    readonly: true,
+    content: [
+      `Договор залога / обременение: ${encumbrance.number || "-"}`,
+      `Кредитный договор / продукт: ${encumbrance.contract || "-"}`,
+      `Тип залога / обременения: ${encumbrance.type || "-"}`,
+      `Сумма обременения: ${formatMoney(encumbrance.amount || 0)}`
+    ]
+  }));
+  return [...contractDocs, ...encumbranceDocs];
 }
 
 function renderCollateralOverview(collateral) {
@@ -26122,21 +27136,45 @@ function renderCollateralOverview(collateral) {
       </section>
       <section class="panel">
         <div class="panel-title">
+          <h2>Поля по виду залога</h2>
+          ${badge(typeLabel, "info")}
+        </div>
+        ${Object.keys(typeFields).length
+          ? renderCollateralTypeFieldGroups(collateral, typeFields)
+          : `<div class="empty-state compact">Для выбранного вида залога типовые поля не предусмотрены.</div>`}
+      </section>
+      <section class="panel">
+        <div class="panel-title">
           <h2>Адрес местонахождения объекта</h2>
           <span class="panel-note">${Object.keys(addressFields).length} полей</span>
         </div>
         ${renderEditableFieldGrid(collateral, "address", addressFields)}
       </section>
-      <section class="panel">
-        <div class="panel-title">
-          <h2>Поля по виду залога</h2>
-          ${badge(typeLabel, "info")}
-        </div>
-        ${Object.keys(typeFields).length
-          ? renderEditableFieldGrid(collateral, "type", typeFields)
-          : `<div class="empty-state compact">Для выбранного вида залога типовые поля не предусмотрены.</div>`}
-      </section>
     </section>
+  `;
+}
+
+function renderCollateralTypeFieldGroups(collateral, typeFields) {
+  const typeLabel = getCollateralTypeLabel(collateral);
+  const documentFieldLabels = COLLATERAL_TYPE_DOCUMENT_FIELD_GROUPS[typeLabel] || [];
+  const documentFieldSet = new Set(documentFieldLabels);
+  const entries = Object.entries(typeFields);
+  const commonEntries = entries.filter(([key]) => !documentFieldSet.has(key));
+  const documentEntries = documentFieldLabels
+    .filter((label) => Object.prototype.hasOwnProperty.call(typeFields, label))
+    .map((label) => [label, typeFields[label]]);
+  if (!documentEntries.length) return renderEditableFieldGrid(collateral, "type", typeFields);
+  return `
+    <div class="collateral-type-fields-stack">
+      ${commonEntries.length ? renderEditableFieldGrid(collateral, "type", Object.fromEntries(commonEntries)) : ""}
+      <div class="collateral-type-document-group">
+        <div class="collateral-type-document-title">
+          <h3>${escapeHtml(COLLATERAL_TYPE_DOCUMENT_GROUP_TITLES[typeLabel] || "Документ-основание")}</h3>
+          <span>${documentEntries.length} полей</span>
+        </div>
+        ${renderEditableFieldGrid(collateral, "type", Object.fromEntries(documentEntries))}
+      </div>
+    </div>
   `;
 }
 
@@ -26154,7 +27192,6 @@ function renderEditableField(collateral, group, key, value) {
     "Наименование",
     "Профильный идентификатор объекта",
     "Признак обеспечения",
-    "Описание",
     "Адрес в неструктурированном виде",
     "Улица (в том числе проспект, переулок, квартал)",
     "Номер документа, удостоверяющего исключительное право на результат интеллектуальной деятельности"
@@ -26187,7 +27224,6 @@ function renderReadonlyFieldGrid(items) {
           "Наименование",
           "Профильный идентификатор объекта",
           "Признак обеспечения",
-          "Описание",
           "Адрес в неструктурированном виде",
           "Улица (в том числе проспект, переулок, квартал)",
           "Номер документа, удостоверяющего исключительное право на результат интеллектуальной деятельности"
@@ -26236,7 +27272,27 @@ function getCollateralInitiator(collateral) {
 }
 
 function getPrimaryCollateralContract(collateral) {
-  return (collateral?.contractIds || []).map(getContract).find(Boolean) || null;
+  return getCollateralRelatedContracts(collateral)[0] || null;
+}
+
+function getCollateralRelatedContracts(collateral) {
+  if (!collateral) return [];
+  const identifiers = uniqueItems([
+    ...(collateral.contractIds || []),
+    collateral.contractId,
+    collateral.contractNumber,
+    ...(collateral.encumbrances || []).map((item) => item.contract)
+  ].filter(Boolean));
+  const contracts = identifiers
+    .map((identifier) => getContract(identifier) || getContractByNumber(identifier))
+    .filter(Boolean);
+  const seen = new Set();
+  return contracts.filter((contract) => {
+    const key = contract.id || contract.number;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function getCollateralMainInfoFields(collateral) {
@@ -26249,10 +27305,10 @@ function getCollateralMainInfoFields(collateral) {
     "Категория качества": saved["Категория качества"] || saved["Категория качества для 0409310"] || contract?.loanQuality || getCollateralQualityClass(collateral),
     "Признак обеспечения": saved["Признак обеспечения"] || saved["Признак обеспечения для 0409310"] || (collateral.blankCollateral ? "Бланковый" : "Не бланковый"),
     "Наименование": getCollateralName(collateral),
-    "Описание": collateral.description || getCollateralName(collateral),
     "Лицевой счет": collateral.accountNumber || `LS-${getCollateralNumericCode(collateral).padStart(8, "0")}`,
     "Категория заложенного имущества": saved["Категория заложенного имущества"] || saved["Заложенное имущество для 0409310"] || collateral.collateralCategory || collateral.reportedInForm310 || getCollateralTypeLabel(collateral),
-    "Идентификационный код группы": collateral.groupIdentificationCode || collateral.groupCode || ""
+    "Идентификационный код группы": collateral.groupIdentificationCode || collateral.groupCode || "",
+    "Признак включения в отчетные данные": saved["Признак включения в отчетные данные"] || collateral.includeReportData || collateral.include310 || "Да"
   };
   return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, ensureFilledValue(saved[key], value)]));
 }
@@ -26267,6 +27323,7 @@ function getCollateralAddressFields(collateral) {
 
 function getCollateralTypeSpecificFields(collateral) {
   const typeLabel = getCollateralTypeLabel(collateral);
+  if (!STAGE1_COLLATERAL_TYPE_SET.has(typeLabel)) return {};
   if (FT_COLLATERAL_TYPES_WITHOUT_FIELDS.has(typeLabel)) return {};
   const labels = getCollateralTypeDisplayFieldLabels(typeLabel);
   return labels.reduce((acc, label) => {
@@ -26364,7 +27421,7 @@ function normalizeCollateralFieldControlValue(collateral, group, label, value, o
 }
 
 function isCollateralCheckboxField(group, label) {
-  return false;
+  return group === "main" && label === "Признак включения в отчетные данные";
 }
 
 function isAffirmativeValue(value) {
@@ -26392,20 +27449,31 @@ function getCollateralFieldFallback(collateral, group, label) {
 function getCollateralAddressFieldFallback(collateral, label) {
   const address = String(collateral?.address || collateral?.description || "");
   const isMoscow = /москва|хамовники/i.test(address);
+  const isSpb = /санкт-петербург|спб|шушары|автово|лиговский|обводного/i.test(address);
   const isKlin = /клин|московская область/i.test(address);
   const isNizhny = /нижн/i.test(address);
   const isKrasnodar = /краснодар|тихорец/i.test(address);
   if (label === "Код страны по ОКСМ") return "643 - Российская Федерация";
   if (label === "Код территории по ОКАТО") {
     if (isMoscow) return "45286590000";
+    if (isSpb) return "40278565000";
     if (isKlin) return "46437000000";
     if (isNizhny) return "22401000000";
     if (isKrasnodar) return "03401000000";
     return "45000000000";
   }
+  if (label === "ФИАС GUID") {
+    if (isMoscow) return "0c5b2444-70a0-4932-980c-b4dc0d3f02b5";
+    if (isSpb) return "c2deb16a-0330-4f05-821f-1d09c93331e6";
+    if (isKlin) return "ed99c793-9a2c-48d1-a373-81e4398b8499";
+    if (isNizhny) return "555e7d61-d9a7-4ba6-9770-6caa8198c483";
+    if (isKrasnodar) return "7dfa745e-aa19-4688-b121-b655c11e482f";
+    return "4fd8b6f6-8f1d-4e5a-9f7d-2a9c6d2e0001";
+  }
   if (label === "Город") return getCityFromAddress(address, collateral?.region);
   if (label === "Почтовый индекс") {
     if (isMoscow) return "119021";
+    if (isSpb) return "196240";
     if (isKlin) return "141600";
     if (isNizhny) return "603000";
     if (isKrasnodar) return "350000";
@@ -26413,6 +27481,10 @@ function getCollateralAddressFieldFallback(collateral, label) {
   }
   if (label === "Улица (в том числе проспект, переулок, квартал)") {
     if (isMoscow) return "ул. Профсоюзная";
+    if (isSpb && /автово/i.test(address)) return "станция Автово";
+    if (isSpb && /шушары/i.test(address)) return "пос. Шушары";
+    if (isSpb && /лиговский/i.test(address)) return "Лиговский проспект";
+    if (isSpb && /обводного/i.test(address)) return "набережная Обводного канала";
     if (isKlin) return "промзона Северная";
     if (isNizhny) return "ул. Ленина";
     if (isKrasnodar) return "промышленная зона Тихорецкая";
@@ -26435,6 +27507,7 @@ function getCityFromAddress(address = "", fallbackRegion = "") {
   if (explicitCity?.[1]) return explicitCity[1].trim();
   if (/москва/i.test(value)) return "Москва";
   if (/санкт-петербург|спб/i.test(value)) return "Санкт-Петербург";
+  if (/шушары|автово|лиговский|обводного/i.test(value)) return "Санкт-Петербург";
   if (/екатеринбург/i.test(value)) return "Екатеринбург";
   if (/клин/i.test(value)) return "Клин";
   if (/нижн/i.test(value)) return "Нижний Новгород";
@@ -26511,7 +27584,65 @@ function getCollateralTypeFieldFallback(collateral, label) {
     };
     return equipment[label] || "Значение заполнено";
   }
+  if (typeLabel === "Воздушные суда") {
+    const aircraft = {
+      "Вид воздушного судна": fields["Вид воздушного судна"] || "Воздушные суда",
+      "Серийный (заводской) номер": fields["Серийный (заводской) номер"] || fields["Серийный номер"] || `AC-${code}`,
+      "Подвид": fields["Подвид"] || fields["Тип воздушного судна"] || (/вертолет/i.test(collateral.description || "") ? "Вертолет" : "Самолет"),
+      "Номер планера": fields["Номер планера"] || `PL-${code}`,
+      "Год выпуска": fields["Год выпуска"] || "2020",
+      "Наименование изготовителя": fields["Наименование изготовителя"] || getVehicleMakeModel(fields["Тип воздушного судна"] || collateral.description).make,
+      "Тип (наименование)": fields["Тип (наименование)"] || fields["Тип воздушного судна"] || getVehicleMakeModel(collateral.description).model,
+      "Опознавательные знаки воздушного судна": fields["Опознавательные знаки воздушного судна"] || `RA-${code.padStart(5, "0")}`,
+      "Размер доли в праве общей долевой собственности, числитель": "1",
+      "Размер доли в праве общей долевой собственности, знаменатель": "1"
+    };
+    return aircraft[label] || "Значение заполнено";
+  }
+  if (typeLabel === "Плавучие сооружения") {
+    const vessel = {
+      "Идентификационный номер": fields["Идентификационный номер"] || `RU-VSL-${code}`,
+      "Группа": fields["Группа"] || "Суда, используемые для перевозки грузов и (или) буксировки, а также хранения грузов",
+      "Номер IMO": fields["Номер IMO"] || `IMO${code.padStart(7, "0")}`,
+      "Номер ИМПС/MMSI": fields["Номер ИМПС/MMSI"] || `273${code.padStart(6, "0")}`,
+      "Класс судна": fields["Класс судна"] || "KM Ice2 R2-RSN",
+      "Год постройки": fields["Год постройки"] || fields["Год выпуска"] || "2019",
+      "Регистровый номер": fields["Регистровый номер"] || `РС-${code}-26`,
+      "Размер доли в праве общей долевой собственности, числитель": "1",
+      "Размер доли в праве общей долевой собственности, знаменатель": "1"
+    };
+    return vessel[label] || "Значение заполнено";
+  }
+  if (typeLabel === "Железнодорожный подвижной состав") {
+    const rail = {
+      "Заводской номер": fields["Заводской номер"] || fields["Серийный номер"] || `RW-${code}-26`,
+      "Тип единицы": fields["Тип единицы"] || "Грузовой вагон",
+      "Модель вагона": fields["Модель вагона"] || fields["Модель"] || "12-132-03",
+      "Номер вагона": fields["Номер вагона"] || `58${code.padStart(6, "0")}`,
+      "Год постройки": fields["Год постройки"] || fields["Год выпуска"] || "2021"
+    };
+    return rail[label] || "Значение заполнено";
+  }
+  if (typeLabel === "Имущественные права (требования)") {
+    const rights = {
+      "Подвид": fields["Подвид"] || "Залог прав требования",
+      "Вид имущественных прав (требований)": fields["Вид имущественных прав (требований)"] || "Права требования",
+      "Вид договора": fields["Вид договора"] || "Договор поставки",
+      "Дата заключения договора": fields["Дата заключения договора"] || "2026-02-14",
+      "Номер договора": fields["Номер договора"] || `PR-${code}/26`
+    };
+    return rights[label] || "Значение заполнено";
+  }
   if (typeLabel === "Товары в обороте") return fields["Группа товаров"] || "Текстиль и изделия текстильные";
+  if (typeLabel === "Прочие движимые вещи (однородные группы)") return fields["Вид движимой вещи"] || fields["Вид имущества"] || "Готовая продукция";
+  if (typeLabel === "Прочие движимые вещи (объекты)") {
+    const otherMovable = {
+      "Инвентарный номер": fields["Инвентарный номер"] || `INV-${code}`,
+      "Идентификационный признак (значение)": fields["Идентификационный признак (значение)"] || fields["Серийный номер"] || `OBJ-${code}`,
+      "Идентификационный признак (наименование)": fields["Идентификационный признак (наименование)"] || "Серийный номер"
+    };
+    return otherMovable[label] || "Значение заполнено";
+  }
   if (label.includes("числитель")) return "1";
   if (label.includes("знаменатель")) return "1";
   if (/Дата/.test(label)) return "2026-01-15";
@@ -26563,121 +27694,53 @@ function renderCollateralControlEvents(collateral) {
   return `
     <section class="collateral-control-view collateral-tab-view">
       ${renderLastInspectionPanel(collateral)}
-      ${renderLatestValuationPanel(collateral, collateral.id)}
+      ${renderLatestValuationPanel(collateral, "8 полей")}
       ${renderCollateralUnifiedControlSchedule(collateral)}
     </section>
   `;
 }
 
-function renderPlannedControlParametersPanel(collateral) {
-  const rows = getPlannedControlRows(collateral);
-  return `
-    <section class="panel table-panel planned-control-panel">
-      <div class="panel-title">
-        <div><h2>Параметры планового контроля</h2><p class="hint">Параметры используются для планирования документарной проверки, осмотра и переоценки.</p></div>
-      </div>
-      <table class="planned-control-table">
-        <thead><tr><th>Вид контроля</th><th>Требуется мониторинг</th><th>Периодичность</th><th>Предыдущий контроль</th><th>Следующий контроль</th></tr></thead>
-        <tbody>${rows.map((row) => `
-          <tr>
-            <td><strong>${escapeHtml(row.title)}</strong></td>
-            <td><select aria-label="Требуется мониторинг ${escapeHtml(row.title)}">${["Да", "Нет"].map((item) => `<option ${item === row.required ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select></td>
-            <td><select aria-label="Периодичность ${escapeHtml(row.title)}">${getControlPeriodicityOptions(row.periodicity).map((item) => `<option ${item === row.periodicity ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select></td>
-            <td><input type="date" value="${escapeHtml(row.previous)}" aria-label="Предыдущий контроль ${escapeHtml(row.title)}"></td>
-            <td><input type="date" value="${escapeHtml(row.next)}" aria-label="Следующий контроль ${escapeHtml(row.title)}"></td>
-          </tr>
-        `).join("")}</tbody>
-      </table>
-    </section>
-  `;
-}
-
-function getPlannedControlRows(collateral) {
-  const monitoring = collateral.monitoring || {};
-  const schedule = monitoring.schedule || [];
-  const latestInspection = getLatestInspectionScheduleItem(collateral);
-  const nextInspection = getNextScheduleItem(collateral, /осмотр|инспек|плановый|внеплан/i);
-  const latestEvaluation = getLatestCollateralEvaluation(collateral);
-  const nextEvaluationDate = monitoring.nextValuation || addMonthsIso(latestEvaluation?.date, 12) || monitoring.nextInspection || "";
-  const currentPeriodicity = monitoring.periodicity || "Ежеквартально";
-  return [
-    {
-      title: "Документарная проверка",
-      required: normalizeYesNo(monitoring.documentaryRequired || monitoring.required || "Да"),
-      periodicity: monitoring.documentaryPeriodicity || currentPeriodicity,
-      previous: monitoring.lastDocumentControl || monitoring.lastInspection || latestInspection?.date || "",
-      next: monitoring.nextDocumentControl || monitoring.nextInspection || nextInspection?.date || ""
-    },
-    {
-      title: "Осмотр",
-      required: normalizeYesNo(monitoring.inspectionRequired || monitoring.required || "Да"),
-      periodicity: monitoring.inspectionPeriodicity || currentPeriodicity,
-      previous: latestInspection?.date || monitoring.lastInspection || "",
-      next: nextInspection?.date || monitoring.nextInspection || ""
-    },
-    {
-      title: "Переоценка",
-      required: normalizeYesNo(monitoring.valuationRequired || "Да"),
-      periodicity: monitoring.valuationPeriodicity || "Ежегодно",
-      previous: latestEvaluation?.date || "",
-      next: nextEvaluationDate
-    }
-  ];
-}
-
-function normalizeYesNo(value) {
-  return /^н/i.test(String(value || "")) ? "Нет" : "Да";
-}
-
-function getControlPeriodicityOptions(value = "") {
-  return [...new Set(["Ежемесячно", "Ежеквартально", "Раз в два месяца", "Раз в полгода", "Ежегодно", "По событию", value].filter(Boolean))];
-}
-
-function addMonthsIso(dateValue, months) {
-  if (!dateValue) return "";
-  const date = new Date(`${dateValue}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return "";
-  date.setMonth(date.getMonth() + months);
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 function getLatestInspectionScheduleItem(collateral) {
   const schedule = collateral.monitoring?.schedule || [];
   return [...schedule]
-    .filter((item) => item.status === "Завершен" && /осмотр|инспек|плановый|внеплан/i.test(String(item.type || "")))
+    .filter((item) => item.status === "Завершен" && isCollateralInspectionControlEvent(item))
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
-    .pop() || [...schedule].filter((item) => item.status === "Завершен").pop() || {};
+    .pop() || null;
 }
 
-function getNextScheduleItem(collateral, pattern) {
-  const schedule = collateral.monitoring?.schedule || [];
-  return schedule.find((item) => item.status === "Запланирован" && pattern.test(String(item.type || ""))) || schedule.find((item) => item.status === "Запланирован") || {};
+function isCollateralInspectionControlEvent(item = {}) {
+  const type = normalizeControlEventType(item.type);
+  return type === "Первичный осмотр" || type === "Повторный осмотр";
 }
 
 function renderLastInspectionPanel(collateral) {
   const monitoring = collateral.monitoring || {};
   const last = getLatestInspectionScheduleItem(collateral);
+  const hasLastInspection = Boolean(last);
   return `
     <section class="panel inspection-card last-inspection-card">
       <div class="panel-title">
         <h2>Последний осмотр</h2>
-        <span class="panel-note">${escapeHtml(collateral.id)}</span>
+        <span class="panel-note">8 полей</span>
       </div>
       ${renderInfoGrid({
-        "Дата": last.date || monitoring.lastInspection || "-",
-        "Тип контрольного мероприятия": normalizeControlEventType(last.type || "Осмотр"),
-        "Основание": getControlEventBasis(last),
-        "Результат": last.result || monitoring.condition || "-",
-        "Исполнитель": last.inspector || monitoring.inspector || "-",
-        "Статус": last.status || "-",
-        "Место проверки": collateral.address || "-",
-        "Объект на месте": monitoring.condition === "Не проверялся" ? "Не проверялся" : "Да",
-        "Состояние объекта": monitoring.condition || last.result || "-",
-        "Фото / документы": (collateral.documents || []).length ? `${collateral.documents.length} файл(ов)` : "Нет файлов"
+        "Дата осмотра": hasLastInspection ? last.date || "-" : "-",
+        "Тип осмотра": hasLastInspection ? normalizeInspectionTypeForCollateralCard(last.type || monitoring.type || "Первичный осмотр") : "-",
+        "Основание осмотра": hasLastInspection ? getControlEventBasis(last) : "-",
+        "Результат осмотра": hasLastInspection ? last.result || monitoring.condition || "-" : "-",
+        "Исполнитель": hasLastInspection ? last.inspector || monitoring.inspector || "-" : "-",
+        "Место проверки": hasLastInspection ? collateral.address || "-" : "-",
+        "Состояние объекта": hasLastInspection ? monitoring.condition || last.result || "-" : "-",
+        "Задача осмотра": hasLastInspection ? renderControlEventTaskLink(collateral, last) : "-"
       })}
     </section>
   `;
+}
+
+function normalizeInspectionTypeForCollateralCard(type = "") {
+  const value = normalizeControlEventType(type);
+  if (/повтор/i.test(value)) return "Повторный осмотр";
+  return "Первичный осмотр";
 }
 
 function renderCollateralUnifiedControlSchedule(collateral) {
@@ -26719,7 +27782,7 @@ function getCollateralUnifiedControlRows(collateral) {
   const evaluationRows = getSortedEvaluations(collateral).map((item) => ({
     date: item.date || "-",
     type: "Оценка / переоценка",
-    basis: item.status === "Архив" ? "История оценки" : "Плановая / текущая оценка",
+    basis: item.basis || item.reason || "Плановое",
     result: `${escapeHtml(item.method || "Метод не указан")}<br><small>Рыночная: ${formatMoney(item.market)}; залоговая: ${formatMoney(item.pledge)}</small>`,
     executor: item.appraiser || "-",
     status: item.status || "Действует",
@@ -26729,67 +27792,33 @@ function getCollateralUnifiedControlRows(collateral) {
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
 }
 
-function renderControlEventTaskLink(collateral, scheduleItem = {}) {
+function getControlEventTask(collateral, scheduleItem = {}) {
   const eventType = normalizeControlEventType(scheduleItem.type);
-  const task = state.data.tasks.find((item) => {
+  return state.data.tasks.find((item) => {
     const ids = item.collateralIds?.length ? item.collateralIds : [item.collateralId].filter(Boolean);
     if (!ids.includes(collateral.id)) return false;
     if (/оцен/i.test(eventType)) return /оцен|переоцен/i.test(item.type || "");
     if (/монитор/i.test(eventType)) return /монитор/i.test(item.type || "");
     return /осмотр/i.test(item.type || "");
   });
+}
+
+function renderControlEventTaskLink(collateral, scheduleItem = {}) {
+  const task = getControlEventTask(collateral, scheduleItem);
   if (!task) return "Задача по графику";
   return `<button class="link" data-route="/app/tasks/${escapeHtml(task.id)}">${escapeHtml(task.id)}</button>`;
 }
 
-function renderMonitoringObjectComponent(collateral, options = {}) {
-  const { note = "", showInspectionTable = true, showLatestValuation = false, showMonitoringSettings = false } = options;
-  const monitoring = collateral.monitoring || {};
-  const schedule = monitoring.schedule || [];
-  const last = [...schedule].reverse().find((item) => item.status === "Завершен") || schedule[0] || {};
-  const previousControl = monitoring.lastInspection || last.date || "";
-  return `
-    <section class="collateral-inspections-view collateral-tab-view monitoring-object-component">
-      ${showMonitoringSettings ? renderMonitoringSettingsPanel(collateral, note) : ""}
-      <section class="panel inspection-card">
-        <div class="panel-title">
-          <h2>Последнее контрольное мероприятие</h2>
-          ${note ? `<span class="panel-note">${escapeHtml(note)}</span>` : ""}
-        </div>
-        ${renderInfoGrid({
-          "Дата": last.date || previousControl,
-          "Тип контрольного мероприятия": normalizeControlEventType(last.type),
-          "Основание контрольного мероприятия": getControlEventBasis(last),
-          "Результат": last.result,
-          "Статус залога по результату мероприятия": getCollateralStatusForFt(collateral),
-          "Дата фиксации утраты / повреждения": collateral.lossDate || "Не применимо",
-          "Проведена дефектовка": collateral.defectInspection || "Не требуется",
-          "Сумма утраты": collateral.lossAmount ? formatMoney(collateral.lossAmount) : "Не применимо",
-          "Причина утраты / повреждения": collateral.lossReason || "Не применимо",
-          "Инспектор": last.inspector || monitoring.inspector,
-          "Статус": last.status,
-          "Место проверки": collateral.address,
-          "Объект на месте": monitoring.condition === "Не проверялся" ? "Не проверялся" : "Да",
-          "Состояние объекта": monitoring.condition || last.result,
-          "Фото / документы": (collateral.documents || []).length ? `${collateral.documents.length} файл(ов)` : "Нет файлов",
-          "Комментарий": last.result || monitoring.condition || "-"
-        })}
-      </section>
-      ${showLatestValuation ? renderLatestValuationPanel(collateral, note) : ""}
-      ${showInspectionTable ? `<section class="panel table-panel inspection-table"><div class="panel-title"><h2>График контрольных мероприятий</h2><label class="switch-inline"><input type="checkbox" checked><span></span>Показывать завершенные мероприятия</label></div><table><thead><tr><th>Дата</th><th>Тип контрольного мероприятия</th><th>Основание</th><th>Результат</th><th>Исполнитель</th><th>Статус</th><th>Задача</th></tr></thead><tbody>${schedule.map((item) => `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(normalizeControlEventType(item.type))}</td><td>${escapeHtml(getControlEventBasis(item))}</td><td>${escapeHtml(item.result)}</td><td>${escapeHtml(item.inspector)}</td><td>${badge(item.status)}</td><td>${renderInspectionTaskLink(collateral, item)}</td></tr>`).join("")}</tbody></table></section>` : ""}
-    </section>
-  `;
-}
-
 function normalizeControlEventType(type = "") {
   const value = String(type || "");
-  if (/^(плановый|плановое|внеплановый|внеплановое)$/i.test(value.trim())) return "Первичный осмотр";
+  if (/документ/i.test(value)) return "Документарная проверка";
   if (/переоцен|оцен/i.test(value)) return "Оценка / переоценка";
-  if (/монитор/i.test(value) && /документ/i.test(value)) return "Документальный мониторинг";
-  if (/внешн/i.test(value)) return "Проверка по внешним источникам";
+  if (/монитор/i.test(value) && /внеплан/i.test(value)) return "Внеплановый мониторинг";
+  if (/монитор/i.test(value)) return "Плановый мониторинг";
   if (/повтор/i.test(value)) return "Повторный осмотр";
   if (/осмотр|инспек/i.test(value)) return "Первичный осмотр";
-  return value || "Первичный осмотр";
+  if (/^(плановый|плановое|внеплановый|внеплановое)$/i.test(value.trim())) return "Первичный осмотр";
+  return COLLATERAL_CONTROL_EVENT_TYPES.includes(value) ? value : "Документарная проверка";
 }
 
 function getControlEventBasis(item = {}) {
@@ -26797,59 +27826,9 @@ function getControlEventBasis(item = {}) {
   return /внеплан/i.test(String(item.type || "")) ? "Внеплановое" : "Плановое";
 }
 
-function renderInspectionTaskLink(collateral, scheduleItem = {}) {
-  const task = state.data.tasks.find((item) => {
-    const ids = item.collateralIds?.length ? item.collateralIds : [item.collateralId].filter(Boolean);
-    return ids.includes(collateral.id) && /осмотр|мониторинг/i.test(item.type || "");
-  });
-  if (!task) return "Осмотр по графику";
-  return `<button class="link" data-route="/app/tasks/${escapeHtml(task.id)}">${escapeHtml(task.id)}</button>`;
-}
-
-
-function renderMonitoringSettingsPanel(collateral, note = "") {
-  const monitoring = collateral.monitoring || {};
-  const schedule = monitoring.schedule || [];
-  const last = [...schedule].reverse().find((item) => item.status === "Завершен") || schedule[0] || {};
-  const next = schedule.find((item) => item.status === "Запланирован") || {};
-  const currentPeriodicity = monitoring.periodicity || "Ежеквартально";
-  const periodicities = [...new Set(["Ежемесячно", "Ежеквартально", "Раз в два месяца", "Раз в полгода", "Ежегодно", "По событию", currentPeriodicity].filter(Boolean))];
-  const monitoringRequired = /^н/i.test(monitoring.required || "") ? "Нет" : "Да";
-  const nextControl = monitoring.nextInspection || next.date || "";
-  return `
-    <section class="panel monitoring-settings-panel">
-      <div class="panel-title">
-        <h2>Параметры планового контроля</h2>
-        ${note ? `<span class="panel-note">${escapeHtml(note)}</span>` : ""}
-        <button class="btn btn-secondary" data-action="save-monitoring" data-collateral="${escapeHtml(collateral.id)}">Сохранить настройки</button>
-      </div>
-      <div class="form-grid monitoring-settings-grid">
-        <label>Требуется плановый контроль
-          <select data-monitoring-field="required" data-collateral="${escapeHtml(collateral.id)}">
-            ${["Да", "Нет"].map((item) => `<option value="${escapeHtml(item)}" ${item === monitoringRequired ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Периодичность документального мониторинга
-          <select data-monitoring-field="periodicity" data-collateral="${escapeHtml(collateral.id)}">
-            ${periodicities.map((item) => `<option value="${escapeHtml(item)}" ${item === currentPeriodicity ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Периодичность выездного осмотра
-          <select data-monitoring-field="inspectionPeriodicity" data-collateral="${escapeHtml(collateral.id)}">
-            ${periodicities.map((item) => `<option value="${escapeHtml(item)}" ${item === (monitoring.inspectionPeriodicity || currentPeriodicity) ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
-          </select>
-        </label>
-        <label>Дата следующего планового контрольного мероприятия
-          <input type="date" value="${escapeHtml(nextControl)}" data-monitoring-field="nextInspection" data-collateral="${escapeHtml(collateral.id)}">
-        </label>
-      </div>
-    </section>
-  `;
-}
 function renderLatestValuationPanel(collateral, note = "") {
   const evaluations = getSortedEvaluations(collateral);
   const latest = evaluations[evaluations.length - 1];
-  const previous = evaluations[evaluations.length - 2];
   if (!latest) {
     return `
       <section class="panel inspection-card latest-valuation-card">
@@ -26859,7 +27838,7 @@ function renderLatestValuationPanel(collateral, note = "") {
         </div>
         <div class="empty-state compact">По объекту ${escapeHtml(collateral.id)} пока нет сохраненных оценок.</div>
       </section>
-    `;
+  `;
   }
   return `
     <section class="panel inspection-card latest-valuation-card">
@@ -26868,14 +27847,14 @@ function renderLatestValuationPanel(collateral, note = "") {
         ${note ? `<span class="panel-note">${escapeHtml(note)}</span>` : ""}
       </div>
       ${renderInfoGrid({
-        "Дата": latest.date,
+        "Дата оценки": latest.date,
         "Оценщик": latest.appraiser,
+        "Метод оценки": latest.method,
+        "Статус оценки": badge(latest.status),
         "Рыночная стоимость": formatMoney(latest.market),
-        "Справедливая стоимость": formatMoney(getEvaluationFairValue(latest, collateral)),
         "Залоговая стоимость": formatMoney(latest.pledge),
-        "Метод": latest.method,
-        "Статус": badge(latest.status),
-        ...(previous ? { "Изменение рынка": badge(formatSignedPercent(getValueDelta(latest.market, previous.market)), getDeltaTone(latest.market, previous.market)) } : {})
+        "Справедливая стоимость": formatMoney(getEvaluationFairValue(latest, collateral)),
+        "Задача оценки": renderValuationTaskLink(collateral)
       })}
     </section>
   `;
@@ -26950,7 +27929,7 @@ function getEvaluationFairValue(evaluation = {}, collateral = {}) {
 function renderValuationTaskLink(collateral) {
   const task = state.data.tasks.find((item) => {
     const ids = item.collateralIds?.length ? item.collateralIds : [item.collateralId].filter(Boolean);
-    return ids.includes(collateral.id) && /переоцен|оценк|регистрац|постановка/i.test(item.type || "");
+    return ids.includes(collateral.id) && /переоцен|оценк/i.test(item.type || "");
   });
   if (!task) return "Оценка без отдельной задачи";
   return `<button class="link" data-route="/app/tasks/${escapeHtml(task.id)}">${escapeHtml(task.id)}</button>`;
@@ -27093,10 +28072,11 @@ function formatEvaluationDate(dateValue) {
 }
 
 function renderCollateralContracts(collateral) {
-  const contracts = (collateral.contractIds || []).map(getContract).filter(Boolean);
-  return `<section class="panel table-panel"><h2>Договоры и Обременения</h2><table><thead><tr><th>Договор залога / обременение</th><th>Кредитный договор</th><th>Клиент по договору</th><th>Тип залога / обременения</th><th>Сумма обременения</th><th>Статус</th></tr></thead><tbody>${contracts.map((contract) => {
+  const contracts = getCollateralRelatedContracts(collateral);
+  return `<section class="panel table-panel"><h2>Договоры и Обременения</h2><table><thead><tr><th>Договор залога / обременение</th><th>Кредитный договор / продукт</th><th>Клиент по договору</th><th>Тип залога / обременения</th><th>Сумма обременения</th><th>Статус</th></tr></thead><tbody>${contracts.map((contract) => {
     const encumbrance = (collateral.encumbrances || []).find((item) => item.contract === contract.number) || collateral.encumbrances?.[0] || {};
-    return `<tr><td>${escapeHtml(encumbrance.number || "-")}</td><td>${escapeHtml(contract.number)}</td><td>${escapeHtml(contract.clientName)}<br><small>${escapeHtml(getContractPartyRole(contract))}</small></td><td>${escapeHtml(encumbrance.type || getCollateralTypeLabel(collateral))}</td><td>${formatMoney(encumbrance.amount || collateral.allocatedValue || 0, contract.currency)}</td><td>${badge(encumbrance.status || contract.status)}</td></tr>`;
+    const contractText = [contract.number, contract.product].filter(Boolean).join(" / ");
+    return `<tr><td>${escapeHtml(encumbrance.number || "-")}</td><td>${escapeHtml(contractText || contract.id)}</td><td>${escapeHtml(contract.clientName)}<br><small>${escapeHtml(getContractPartyRole(contract))}</small></td><td>${escapeHtml(encumbrance.type || getCollateralTypeLabel(collateral))}</td><td>${formatMoney(encumbrance.amount || collateral.allocatedValue || 0, contract.currency)}</td><td>${badge(encumbrance.status || contract.status)}</td></tr>`;
   }).join("")}</tbody></table></section>`;
 }
 
@@ -27544,14 +28524,20 @@ function addCollateralRegistrationExternalChecks(collateral, sourceRows, add) {
 
 function isRegistrationExternalCheckRow(row) {
   const source = String(row?.source || "");
-  if (/АБС|Документы задачи/i.test(source)) return false;
-  return /Инфосфера|ЕГРН|SpectrumData|ФНП|Федресурс|реестр|реестровые|ПСМ/i.test(source);
+  if (/АБС|Инфосфера/i.test(source)) return false;
+  if (/^Документы задачи/i.test(source)) return false;
+  return /СКБ-Техно|ЕГРН|SpectrumData|ФНП|Федресурс|реестр|реестров|ПСМ|ЭПСМ|ЭПТС|РЖД|ГИМС|порт|судов|профильн/i.test(source);
 }
 
 function normalizeRegistrationExternalCheckSource(source) {
   return String(source || "")
     .replace(/\s*\+\s*документы задачи/gi, "")
     .replace(/\s*\/\s*документы задачи/gi, "")
+    .replace(/,\s*документы задачи/gi, "")
+    .replace(/,\s*карточка залога/gi, "")
+    .replace(/СКБ-Техно,\s*выписка ЕГРН/gi, "СКБ-Техно / ЕГРН")
+    .replace(/СКБ-Техно\/ЕГРН/gi, "СКБ-Техно / ЕГРН")
+    .replace(/FNP-блок SpectrumData/gi, "SpectrumData")
     .trim() || "Внешний источник";
 }
 
@@ -29405,6 +30391,7 @@ function updateCollateralMonitoringField(fieldEl) {
     const planned = collateral.monitoring.schedule?.find((item) => item.status === "Запланирован");
     if (planned) planned.date = fieldEl.value;
   }
+  persistTaskState();
 }
 
 function saveCollateralOverview(collateralId) {
@@ -29413,6 +30400,7 @@ function saveCollateralOverview(collateralId) {
   document.querySelectorAll("[data-collateral-overview-field]").forEach((fieldEl) => {
     if (fieldEl.dataset.collateral === collateralId) updateCollateralOverviewField(collateral, fieldEl);
   });
+  persistTaskState();
 }
 
 function updateCollateralOverviewField(collateral, fieldEl) {
@@ -29427,6 +30415,7 @@ function updateCollateralOverviewField(collateral, fieldEl) {
     collateral.ftMainInfo[label] = normalizedValue;
     if (label === "Идентификатор в АБС") collateral.absId = normalizedValue;
     if (label === "Вид залога") collateral.type = getCollateralTypeCodeFromLabel(normalizedValue);
+    if (label === "Статус объекта") collateral.status = normalizedValue;
     if (label === "Наименование") collateral.name = normalizedValue;
     if (label === "Описание") collateral.description = normalizedValue;
     if (label === "Лицевой счет") collateral.accountNumber = normalizedValue;
@@ -30865,12 +31854,19 @@ function updateDocumentMetadata(fieldEl) {
 function getDocumentByDataset(owner, dataset) {
   if (!owner?.documents) return null;
   const index = Number(dataset.docIndex);
-  if (Number.isInteger(index) && index >= 0 && index < owner.documents.length) return owner.documents[index];
-  return owner.documents.find((doc) => {
-    const title = doc.title || doc.type || doc.name || "Документ";
-    const target = doc.target || doc.collateralId || "task";
-    return title === dataset.docTitle && target === dataset.docTarget && doc.name === dataset.docName;
-  }) || null;
+  if (Number.isInteger(index) && index >= 0 && index < owner.documents.length) {
+    if (typeof owner.documents[index] === "string") owner.documents[index] = { name: owner.documents[index] };
+    return owner.documents[index];
+  }
+  const foundIndex = owner.documents.findIndex((doc) => {
+    const source = typeof doc === "string" ? { name: doc } : doc;
+    const title = source.title || source.type || source.name || "Документ";
+    const target = source.target || source.collateralId || "task";
+    return title === dataset.docTitle && target === dataset.docTarget && source.name === dataset.docName;
+  });
+  if (foundIndex < 0) return null;
+  if (typeof owner.documents[foundIndex] === "string") owner.documents[foundIndex] = { name: owner.documents[foundIndex] };
+  return owner.documents[foundIndex];
 }
 
 function attachDocument(encoded, files = [], bindingValue = "") {
@@ -31004,7 +32000,10 @@ function deleteDocument(dataset) {
   const removed = canUseIndex
     ? owner.documents.splice(index, 1)[0]
     : removeDocumentByIdentity(owner.documents, dataset);
-  if (removed) addToast("Файл удален", removed.name || dataset.docName || "Документ", "warn");
+  if (removed) {
+    persistTaskState();
+    addToast("Файл удален", removed.name || dataset.docName || "Документ", "warn");
+  }
 }
 
 function removeDocumentByIdentity(documents, dataset) {
@@ -31168,6 +32167,7 @@ function updateMobileInspectionTaskResult(taskId, collateralId) {
 
 window.addEventListener("hashchange", render);
 render();
-    </script>
-  </body>
+
+  </script>
+</body>
 </html>
