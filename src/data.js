@@ -1,3 +1,74 @@
+export const FT_COLLATERAL_SUBTYPE_OPTIONS = {
+  "Объекты недвижимости": [
+    "Здания",
+    "Сооружения",
+    "Помещения",
+    "Машино-место",
+    "Объект незавершенного строительства",
+    "Земельный участок",
+    "Единый недвижимый комплекс",
+    "Предприятие как имущественный комплекс",
+    "Иное"
+  ],
+  "Транспортные средства, прицепы (полуприцепы)": [
+    "Залог мотоцикла, мотороллера или другого мототранспортного средства",
+    "Залог автотранспортного средства категории В",
+    "Залог прицепа, полуприцепа",
+    "Залог транспортных средств",
+    "Залог железнодорожных вагонов"
+  ],
+  "Транспортные средства (самоходная техника)": [
+    "Залог транспортных средств (самоходная техника)",
+    "Залог автотранспортного средства категории С, D"
+  ],
+  "Оборудование": ["Машины и оборудование"],
+  "Воздушные суда": ["Самолет", "Вертолет", "Иное"],
+  "Плавучие сооружения": [
+    "Суда используемые для перевозки пассажиров и их багажа",
+    "Суда, используемые для перевозки грузов и (или) буксировки, а также хранения грузов",
+    "Суда, используемые для рыболовства",
+    "Суда, используемые для иных целей",
+    "Плавучие сооружения, не являющиеся судами"
+  ],
+  "Железнодорожный подвижной состав": [
+    "Локомотив",
+    "Самоходная единица специального железнодорожного подвижного состава",
+    "Вагон моторвагонного подвижного состава",
+    "Грузовой вагон",
+    "Пассажирский вагон локомотивной тяги",
+    "Вагон высокоскоростного железнодорожного подвижного состава",
+    "Несамоходная единица специального железнодорожного подвижного состава"
+  ],
+  "Животные": [
+    "Сельскохозяйственные продуктивные животные (Основное стадо)",
+    "Животные как “Товары в обороте” (Заменимые животные)",
+    "Племенные животные"
+  ],
+  "Имущественные права (требования)": [
+    "Имущественные права",
+    "Залог прав требования по объекту долевого строительства",
+    "Залог прав требования",
+    "Залог прав требования на денежные средства на счете (залоговый счет)",
+    "Залог прав требований дебиторской задолженности"
+  ],
+  "Товары в обороте": [
+    "Сельскохозяйственная продукция (продукты растениеводства)",
+    "Животные",
+    "Продукты пищевые, напитки, изделия табачные",
+    "Драгоценные металлы и драгоценные камни",
+    "Ювелирные и другие изделия из драгоценных металлов и (или) драгоценных камней",
+    "Строительные и отделочные материалы, металлопродукция",
+    "Транспортные средства, оборудование, комплектующие и запасные части к ним",
+    "Текстиль и изделия текстильные",
+    "Топливно-энергетические ресурсы",
+    "Вещества химические и продукты химические",
+    "Средства лекарственные и материалы, применяемые в медицинских целях",
+    "Иное"
+  ],
+  "Прочие движимые вещи (однородные группы)": ["Животные", "Монеты, содержащие драгоценные металлы", "Иное"],
+  "Прочие движимые вещи (объекты)": ["Животное, индивидуально определенное", "Монета, содержащие драгоценные металлы", "Предмет бытового использования"]
+};
+
 export const navItems = [
   { id: "tasksEvaluation", label: "Оценка", path: "/app/tasks/evaluation", permission: "evalTaskView" },
   { id: "tasksInspection", label: "Осмотр", path: "/app/tasks/inspection", permission: "inspectTaskView" },
@@ -9,7 +80,7 @@ export const navItems = [
 export const roles = [
   {
     id: "evaluationManager",
-    label: "Руководитель оценки",
+    label: "Руководитель оценки Уровень 1",
     user: "Алексей Соколов",
     department: "Управление оценки залогов",
     menu: ["tasksEvaluation", "tasksInspection", "tasksRegistration", "applications", "collaterals"],
@@ -20,12 +91,43 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: true,
       appCreateEdit: true,
-      collateralEdit: false,
+      collateralEdit: true,
+      appDelete: true,
+      tasksAllView: true,
       evalTaskApprove: true,
       inspectTaskApprove: false,
       docDelete: true,
       createTask: true,
-      editCollateral: false,
+      editCollateral: true,
+      completeTask: false,
+      returnTask: true,
+      reassign: true,
+      reports: false,
+      admin: false,
+      print: true
+    }
+  },
+  {
+    id: "evaluationManagerLevel2",
+    label: "Руководитель оценки Уровень 2",
+    user: "Ирина Белова",
+    department: "Управление оценки залогов",
+    menu: ["tasksEvaluation", "tasksInspection", "tasksRegistration", "applications", "collaterals"],
+    permissions: {
+      appRegView: true,
+      collateralView: true,
+      evalTaskView: true,
+      inspectTaskView: true,
+      regTaskView: true,
+      appCreateEdit: true,
+      appDelete: true,
+      tasksAllView: true,
+      collateralEdit: true,
+      evalTaskApprove: true,
+      inspectTaskApprove: false,
+      docDelete: true,
+      createTask: true,
+      editCollateral: true,
       completeTask: false,
       returnTask: true,
       reassign: true,
@@ -47,6 +149,8 @@ export const roles = [
       inspectTaskView: false,
       regTaskView: false,
       appCreateEdit: true,
+      appDelete: false,
+      tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
       inspectTaskApprove: false,
@@ -74,6 +178,8 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: false,
       appCreateEdit: false,
+      appDelete: false,
+      tasksAllView: true,
       collateralEdit: false,
       evalTaskApprove: false,
       inspectTaskApprove: false,
@@ -101,6 +207,8 @@ export const roles = [
       inspectTaskView: false,
       regTaskView: false,
       appCreateEdit: false,
+      appDelete: false,
+      tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
       inspectTaskApprove: false,
@@ -117,7 +225,7 @@ export const roles = [
   },
   {
     id: "inspector",
-    label: "Специалист осмотра / мониторинга",
+    label: "Специалист осмотра",
     user: "Павел Смирнов",
     department: "Управление осмотра и мониторинга",
     menu: ["tasksInspection", "collaterals"],
@@ -128,6 +236,8 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: false,
       appCreateEdit: false,
+      appDelete: false,
+      tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
       inspectTaskApprove: false,
@@ -154,7 +264,9 @@ export const roles = [
       evalTaskView: false,
       inspectTaskView: false,
       regTaskView: true,
-      appCreateEdit: false,
+      appCreateEdit: true,
+      appDelete: false,
+      tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
       inspectTaskApprove: false,
@@ -171,7 +283,7 @@ export const roles = [
   },
   {
     id: "inspectionManager",
-    label: "Руководитель осмотра / мониторинга",
+    label: "Руководитель осмотра",
     user: "Сергей Иванов",
     department: "Управление осмотра и мониторинга",
     menu: ["tasksInspection", "applications", "collaterals"],
@@ -182,6 +294,8 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: false,
       appCreateEdit: true,
+      appDelete: true,
+      tasksAllView: true,
       collateralEdit: true,
       evalTaskApprove: false,
       inspectTaskApprove: true,
@@ -520,6 +634,138 @@ const buildStage1CollateralTypeExamples = () => [
     documents: ["Паспорт вагона COL-057.pdf", "Акт технического состояния COL-057.pdf"]
   },
   {
+    id: "COL-061",
+    type: "Железнодорожный подвижной состав",
+    groupIdentificationCode: "RW-CONSIST-26-0411",
+    description: "Полувагон 12-132-03, номер 58824161",
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    gsz: "ГСЗ Северный Терминал",
+    contractId: "CTR-2026-0411",
+    contractNumber: "ST-26/411",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 8800000,
+    discount: 0.65,
+    appraisal: "Действует",
+    appraisalDue: "2027-10-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-10-12",
+    responsible: "Павел Смирнов",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 24,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    encumbranceNumber: "ZL-ST-26/411-1",
+    documentDate: "2026-10-12",
+    fields: {
+      "Заводской номер": "RW-12-132-410061",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "12-132-03",
+      "Номер вагона": "58824161",
+      "Год постройки": "2020"
+    },
+    documents: ["Паспорт вагона 58824161.pdf", "Свидетельство о регистрации вагона 58824161.pdf"]
+  },
+  {
+    id: "COL-062",
+    type: "Железнодорожный подвижной состав",
+    groupIdentificationCode: "RW-CONSIST-26-0411",
+    description: "Полувагон 12-132-03, номер 58824182",
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    gsz: "ГСЗ Северный Терминал",
+    contractId: "CTR-2026-0411",
+    contractNumber: "ST-26/411",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 9100000,
+    discount: 0.65,
+    appraisal: "Действует",
+    appraisalDue: "2027-10-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-10-12",
+    responsible: "Павел Смирнов",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 27,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    encumbranceNumber: "ZL-ST-26/411-2",
+    documentDate: "2026-10-12",
+    fields: {
+      "Заводской номер": "RW-12-132-410062",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "12-132-03",
+      "Номер вагона": "58824182",
+      "Год постройки": "2021"
+    },
+    documents: ["Паспорт вагона 58824182.pdf", "Свидетельство о регистрации вагона 58824182.pdf"]
+  },
+  {
+    id: "COL-063",
+    type: "Железнодорожный подвижной состав",
+    groupIdentificationCode: "RW-CONSIST-26-0411",
+    description: "Крытый вагон 11-280, номер 54781236",
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    gsz: "ГСЗ Северный Терминал",
+    contractId: "CTR-2026-0411",
+    contractNumber: "ST-26/411",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 7900000,
+    discount: 0.62,
+    appraisal: "Действует",
+    appraisalDue: "2027-10-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-10-12",
+    responsible: "Павел Смирнов",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 31,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    encumbranceNumber: "ZL-ST-26/411-3",
+    documentDate: "2026-10-12",
+    fields: {
+      "Заводской номер": "RW-11-280-410063",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "11-280",
+      "Номер вагона": "54781236",
+      "Год постройки": "2019"
+    },
+    documents: ["Паспорт вагона 54781236.pdf", "Свидетельство о регистрации вагона 54781236.pdf"]
+  },
+  {
+    id: "COL-064",
+    type: "Железнодорожный подвижной состав",
+    groupIdentificationCode: "RW-CONSIST-26-0411",
+    description: "Цистерна 15-150-04, номер 52640178",
+    clientName: "АО Северный Терминал",
+    clientId: "781 204 7710",
+    gsz: "ГСЗ Северный Терминал",
+    contractId: "CTR-2026-0411",
+    contractNumber: "ST-26/411",
+    region: "Санкт-Петербург",
+    address: "Санкт-Петербург, станция Автово, парк приема 2",
+    market: 10800000,
+    discount: 0.6,
+    appraisal: "Действует",
+    appraisalDue: "2027-10-12",
+    insurance: "Оплачена",
+    insuranceDue: "2027-10-12",
+    responsible: "Павел Смирнов",
+    source: "Реестр железнодорожного подвижного состава",
+    risk: 36,
+    pledgeType: "Залог железнодорожного подвижного состава",
+    encumbranceNumber: "ZL-ST-26/411-4",
+    documentDate: "2026-10-12",
+    fields: {
+      "Заводской номер": "RW-15-150-410064",
+      "Тип единицы": "Грузовой вагон",
+      "Модель вагона": "15-150-04",
+      "Номер вагона": "52640178",
+      "Год постройки": "2022"
+    },
+    documents: ["Паспорт цистерны 52640178.pdf", "Свидетельство о регистрации вагона 52640178.pdf"]
+  },
+  {
     id: "COL-058",
     type: "Имущественные права (требования)",
     description: "Права требования по договору поставки нефтехимической продукции",
@@ -570,10 +816,10 @@ const buildStage1CollateralTypeExamples = () => [
   {
     id: "COL-060",
     type: "Прочие движимые вещи (объекты)",
-    description: "Промышленный 3D-сканер Creaform MetraSCAN 750",
+    description: "Редкая коллекционная золотая монета номиналом 10 рублей, 1899 год выпуска",
     region: "Санкт-Петербург",
-    address: "Санкт-Петербург, Лиговский проспект, дом 266, лаборатория 3",
-    market: 185000000,
+    address: "Санкт-Петербург, кассовый центр, защищенное хранилище 4",
+    market: 18500000,
     discount: 0.6,
     appraisal: "Действует",
     appraisalDue: "2027-01-25",
@@ -585,10 +831,10 @@ const buildStage1CollateralTypeExamples = () => [
     pledgeType: "Залог прочей движимой вещи",
     fields: {
       "Инвентарный номер": "INV-ST-410060",
-      "Идентификационный признак (значение)": "MS750-22-410060",
-      "Идентификационный признак (наименование)": "Серийный номер"
+      "Идентификационный признак (значение)": "CERT-RU-1899-410060",
+      "Идентификационный признак (наименование)": "Номер сертификата подлинности"
     },
-    documents: ["Инвентарная карточка COL-060.pdf", "Паспорт оборудования COL-060.pdf"]
+    documents: ["Инвентарная карточка COL-060.pdf", "Сертификат подлинности COL-060.pdf"]
   }
 ].map((item, index) => {
   const pledge = Math.round(item.market * item.discount);
@@ -596,10 +842,11 @@ const buildStage1CollateralTypeExamples = () => [
     id: item.id,
     type: item.type,
     description: item.description,
-    clientName: "АО Северный Терминал",
-    clientId: "781 204 7710",
+    clientName: item.clientName || "АО Северный Терминал",
+    clientId: item.clientId || "781 204 7710",
     clientType: "ЮЛ",
-    gsz: "ГСЗ Северный Терминал",
+    gsz: item.gsz || "ГСЗ Северный Терминал",
+    groupIdentificationCode: item.groupIdentificationCode || item.groupCode || "",
     region: item.region,
     address: item.address,
     addressFields: {
@@ -610,7 +857,7 @@ const buildStage1CollateralTypeExamples = () => [
       "Почтовый индекс": item.region === "Санкт-Петербург" ? "196240" : "603000",
       "Адрес в неструктурированном виде": item.address
     },
-    contractIds: ["CTR-2026-0410"],
+    contractIds: [item.contractId || "CTR-2026-0410"],
     marketValue: item.market,
     pledgeValue: pledge,
     allocatedValue: pledge,
@@ -621,7 +868,7 @@ const buildStage1CollateralTypeExamples = () => [
     status: "В залоге",
     crossPledge: false,
     responsible: item.responsible,
-    updatedAt: "2026-06-21 14:25",
+    updatedAt: item.documentDate ? `${item.documentDate} 10:00` : "2026-06-21 14:25",
     source: item.source,
     riskScore: item.risk,
     riskState: item.risk >= 42 ? "Удовлетворительное" : "Хорошее",
@@ -652,10 +899,10 @@ const buildStage1CollateralTypeExamples = () => [
       source: "АБС"
     },
     encumbrances: [
-      { number: `ZL-ST-26/410-${index + 1}`, date: "2026-03-14", type: item.pledgeType, amount: pledge, contract: "ST-26/410", allocated: pledge, ltv: Math.round((pledge / item.market) * 100), status: "Зарегистрировано" }
+      { number: item.encumbranceNumber || `ZL-ST-26/410-${index + 1}`, date: item.documentDate || "2026-03-14", type: item.pledgeType, amount: pledge, contract: item.contractNumber || "ST-26/410", allocated: pledge, ltv: Math.round((pledge / item.market) * 100), status: "Зарегистрировано" }
     ],
     pledgors: [
-      { share: "100%", name: "АО Северный Терминал", idn: "781 204 7710", role: "Залогодатель", check: "Проверен" }
+      { share: "100%", name: item.clientName || "АО Северный Терминал", idn: item.clientId || "781 204 7710", role: "Залогодатель", check: "Проверен" }
     ],
     externalData: {
       "Источник": item.source,
@@ -664,12 +911,130 @@ const buildStage1CollateralTypeExamples = () => [
       "Ограничения": "Не выявлены",
       "Актуальность данных": "Проверено по документам"
     },
-    documents: item.documents.map((name) => ({ name, type: "Право", required: true, status: "Получен", date: "2026-03-12" })),
+    documents: item.documents.map((name) => ({ name, type: "Право", required: true, status: "Получен", date: item.documentDate || "2026-03-12" })),
     history: [
       { date: "2026-06-21 14:25", user: "Система", field: "Вид залога", oldValue: "-", newValue: item.type, reason: "Наполнение примерами этапа 1", source: "Тестовые данные" }
     ]
   };
 });
+
+const buildInspectionProcessShowcaseCollaterals = () => {
+  const clientName = "ООО СибТрансСервис";
+  const clientId = "540 816 2046";
+  const makeCollateral = (item) => ({
+    id: item.id,
+    type: item.type,
+    profileIdentifier: item.profileIdentifier,
+    profileIdentifierType: item.profileIdentifierType,
+    description: item.description,
+    clientName,
+    clientId,
+    clientType: "ЮЛ",
+    gsz: "ГСЗ Сибирский транспорт",
+    region: item.region,
+    address: item.address,
+    addressFields: {
+      "Код страны по ОКСМ": "643 - Российская Федерация",
+      "Код территории по ОКАТО": item.okato,
+      "Город": item.city,
+      "Почтовый индекс": item.postalCode,
+      "Адрес в неструктурированном виде": item.address
+    },
+    contractIds: [],
+    marketValue: 0,
+    pledgeValue: 0,
+    allocatedValue: 0,
+    appraisalStatus: "Не проводилась",
+    appraisalDue: "",
+    insuranceStatus: "Не проверена",
+    insuranceDue: "",
+    status: "Новый",
+    crossPledge: false,
+    responsible: "Анна Кузнецова",
+    updatedAt: "2026-10-27 09:55",
+    source: "Заявка",
+    riskScore: 0,
+    riskState: "Не оценен",
+    risks: [],
+    fields: item.fields,
+    monitoring: {
+      lastInspection: "Не проводился",
+      inspector: "Не назначен",
+      condition: "Ожидается первичный осмотр",
+      nextInspection: "2026-10-30",
+      periodicity: "Однократно",
+      completed: false,
+      schedule: []
+    },
+    evaluations: [],
+    insurance: { company: "", policy: "", from: "", to: "", amount: 0, premiumStatus: "Не проверена", source: "" },
+    encumbrances: [],
+    pledgors: [{ share: "100%", name: item.pledgorName, idn: item.pledgorInn, role: "Залогодатель", check: "Ожидает проверки" }],
+    externalData: { "Источник": "Внешние проверки не запускались", "Статус": "Ожидает запуска" },
+    documents: item.documents.map((name) => ({ name, type: item.documentType, required: true, status: "Получен", date: "2026-10-27" })),
+    history: [{ date: "2026-10-27 09:55", user: "Анна Кузнецова", field: "Объект залога", oldValue: "-", newValue: item.description, reason: "Создание заявки на осмотр", source: "АРМ пользователя" }]
+  });
+
+  const vehicles = [
+    { id: "COL-066", profileIdentifier: "X96A21R32P0046601", description: "ГАЗель NEXT A21R32, 2023 г., гос. номер М 451 ОР 154", model: "ГАЗель NEXT A21R32", year: "2023", plate: "М 451 ОР 154", mileage: "42 600 км", condition: "Исправен", pledgorName: clientName, pledgorInn: clientId },
+    { id: "COL-067", profileIdentifier: "X96A21R32N0046602", description: "ГАЗель NEXT A21R32, 2022 г., гос. номер М 452 ОР 154", model: "ГАЗель NEXT A21R32", year: "2022", plate: "М 452 ОР 154", mileage: "87 300 км", condition: "Рабочее, требуется фото кузова", pledgorName: clientName, pledgorInn: clientId },
+    { id: "COL-068", profileIdentifier: "XTC549010M0046603", description: "КАМАЗ 5490, 2021 г., гос. номер М 453 ОР 154", model: "КАМАЗ 5490", year: "2021", plate: "М 453 ОР 154", mileage: "164 000 км", condition: "Исправен", pledgorName: clientName, pledgorInn: clientId },
+    { id: "COL-069", profileIdentifier: "WF0EXXTTRENA46604", description: "Ford Transit, 2022 г., гос. номер М 454 ОР 154", model: "Ford Transit", year: "2022", plate: "М 454 ОР 154", mileage: "71 500 км", condition: "Исправен", pledgorName: clientName, pledgorInn: clientId },
+    { id: "COL-070", profileIdentifier: "Z94C241CBP0046605", description: "Hyundai Porter II, 2023 г., гос. номер М 455 ОР 154", model: "Hyundai Porter II", year: "2023", plate: "М 455 ОР 154", mileage: "36 200 км", condition: "Исправен", pledgorName: clientName, pledgorInn: clientId }
+  ].map((item, index) => makeCollateral({
+    ...item,
+    type: "Автотранспорт",
+    profileIdentifierType: "VIN",
+    region: "Новосибирск",
+    city: "Новосибирск",
+    address: "Новосибирск, ул. Петухова, 69, автопарк",
+    okato: "50401386000",
+    postalCode: "630088",
+    fields: { "VIN": item.profileIdentifier, "Госномер": item.plate, "Марка/модель": item.model, "Год выпуска": item.year, "Пробег": item.mileage, "Состояние": item.condition, "Место хранения": "Автопарк, ул. Петухова, 69" },
+    documentType: "Право",
+    documents: [`СТС ${item.plate}.pdf`, `ПТС ${item.model}.pdf`]
+  }));
+
+  const apartments = [
+    { id: "COL-071", profileIdentifier: "54:35:074010:1201", description: "Квартира 68,4 кв. м, Новосибирск, ул. Кирова, д. 27, кв. 41", area: "68,4 кв. м", rooms: "3", floor: "8 из 17", cadastralNumber: "54:35:074010:1201" },
+    { id: "COL-072", profileIdentifier: "54:35:074010:1202", description: "Квартира 54,1 кв. м, Новосибирск, ул. Кирова, д. 27, кв. 86", area: "54,1 кв. м", rooms: "2", floor: "14 из 17", cadastralNumber: "54:35:074010:1202" }
+  ].map((item) => makeCollateral({
+    ...item,
+    type: "Недвижимость",
+    profileIdentifierType: "Кадастровый номер",
+    region: "Новосибирск",
+    city: "Новосибирск",
+    address: item.description.replace(/^Квартира [^,]+, /, ""),
+    okato: "50401386000",
+    postalCode: "630102",
+    pledgorName: "Петрова Ирина Николаевна",
+    pledgorInn: "540 612 345 667",
+    fields: { "Вид объекта": "Помещения", "Подвид": "Жилое помещение", "Кадастровый номер": item.cadastralNumber, "Площадь": item.area, "Комнат": item.rooms, "Этаж": item.floor, "Состояние": "Требуется первичный осмотр" },
+    documentType: "Право",
+    documents: [`Выписка ЕГРН ${item.cadastralNumber}.pdf`, `Технический план ${item.cadastralNumber}.pdf`]
+  }));
+
+  const equipment = [
+    { id: "COL-073", profileIdentifier: "HAAS-ST20-2024-7301", description: "Токарный станок с ЧПУ HAAS ST-20, 2024 г.", manufacturer: "HAAS", year: "2024", location: "Цех металлообработки, участок 1", condition: "Требуется проверка комплектности" },
+    { id: "COL-074", profileIdentifier: "AC-GA75-2023-7302", description: "Винтовой компрессор Atlas Copco GA75, 2023 г.", manufacturer: "Atlas Copco", year: "2023", location: "Компрессорная, цех 2", condition: "Рабочее" }
+  ].map((item) => makeCollateral({
+    ...item,
+    type: "Оборудование",
+    profileIdentifierType: "Серийный номер",
+    region: "Новосибирская область",
+    city: "Бердск",
+    address: "Новосибирская область, г. Бердск, ул. Промышленная, 3",
+    okato: "50408000000",
+    postalCode: "633010",
+    pledgorName: "ООО СибТехМаш",
+    pledgorInn: "540 911 3203",
+    fields: { "Подвид": "Объект оборудования", "Серийный номер": item.profileIdentifier, "Производитель": item.manufacturer, "Год выпуска": item.year, "Группа": "Промышленное оборудование", "Местонахождение": item.location, "Техническое состояние": item.condition },
+    documentType: "Право",
+    documents: [`Паспорт оборудования ${item.profileIdentifier}.pdf`, `Инвентарная карточка ${item.profileIdentifier}.pdf`]
+  }));
+
+  return [...vehicles, ...apartments, ...equipment];
+};
 
 export const initialData = {
   contracts: [
@@ -905,12 +1270,75 @@ export const initialData = {
         { role: "Заемщик", name: "АО Северный Терминал", idn: "781 204 7710", share: "100%", contact: "Подтвержден" },
         { role: "Залогодатель", name: "АО Северный Терминал", idn: "781 204 7710", share: "Имущество", contact: "Актуален" }
       ]
+    },
+    {
+      id: "CTR-2026-0411",
+      number: "ST-26/411",
+      startDate: "2026-10-12",
+      endDate: "2029-10-12",
+      product: "Кредит",
+      currency: "RUB",
+      limit: 24000000,
+      debt: 16000000,
+      marketValue: 35600000,
+      allocatedValue: 23200000,
+      ltv: 65,
+      coverageStatus: "Полное",
+      status: "Активен",
+      loanQuality: "2 класс",
+      reserve: 320000,
+      clientType: "ЮЛ",
+      clientName: "АО Северный Терминал",
+      inn: "781 204 7710",
+      gsz: "ГСЗ Северный Терминал",
+      collateralIds: ["COL-061", "COL-062", "COL-063", "COL-064"],
+      participants: [
+        { role: "Заемщик", name: "АО Северный Терминал", idn: "781 204 7710", share: "100%", contact: "Подтвержден" },
+        { role: "Залогодатель", name: "АО Северный Терминал", idn: "781 204 7710", share: "Имущество", contact: "Актуален" }
+      ]
     }
   ],
   applications: [
     {
-      id: "APP-2026-0417",
-      number: "APP-26/0417",
+      id: "app-27102026-001",
+      number: "app-27102026-001",
+      createdAt: "2026-10-27 10:00",
+      source: "Ручное создание",
+      applicationType: "Осмотр имущества",
+      applicationSubtype: "Первоначальный осмотр",
+      applicationPurpose: "Проверка предмета залога",
+      initiator: "Анна Кузнецова",
+      initiatorSegment: "Корпоративный бизнес",
+      clientName: "ООО СибТрансСервис",
+      participantName: "ООО СибТрансСервис",
+      participantInn: "540 816 2046",
+      product: "Кредит",
+      limit: 65000000,
+      currency: "RUB",
+      status: "В работе",
+      decisionStatus: "Ожидается заключение залоговой службы",
+      comment: "Провести первичный физический осмотр объектов, заявленных в обеспечение по кредиту. Сгруппировать выезды по городу, виду залога и залогодателю; по каждому объекту подтвердить наличие, идентификаторы, адрес и состояние.",
+      contractId: "",
+      contractIds: [],
+      deals: [
+        {
+          clientName: "ООО СибТрансСервис",
+          inn: "540 816 2046",
+          contractId: "",
+          contractNumber: "",
+          contractDate: "",
+          product: "Кредит",
+          limit: 65000000,
+          currency: "RUB",
+          collateralIds: ["COL-066", "COL-067", "COL-068", "COL-069", "COL-070", "COL-071", "COL-072", "COL-073", "COL-074"]
+        }
+      ],
+      collateralIds: ["COL-066", "COL-067", "COL-068", "COL-069", "COL-070", "COL-071", "COL-072", "COL-073", "COL-074"],
+      taskIds: ["tsk-27102026-002", "tsk-27102026-003", "tsk-27102026-004"]
+    },
+    {
+      id: "app-01062026-001",
+      number: "app-01062026-001",
       createdAt: "2026-06-01 08:00",
       source: "Ручное создание",
       applicationType: "Оценка залога",
@@ -926,6 +1354,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Решение по сделке не принято",
+      comment: "Плановая переоценка складского комплекса и оборудования по действующей кредитной линии. Требуется проверить актуальность документов и рыночных данных.",
       contractId: "",
       contractIds: ["CTR-2026-0148"],
       deals: [
@@ -941,11 +1370,11 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-001", "COL-004"],
-      taskIds: ["TSK-2026-1153", "TSK-2026-1151"]
+      taskIds: ["tsk-18062026-004", "tsk-18062026-001"]
     },
     {
-      id: "APP-2026-0418",
-      number: "APP-26/0418",
+      id: "app-15062026-001",
+      number: "app-15062026-001",
       createdAt: "2026-06-15 15:49",
       source: "Ручное создание",
       applicationType: "Оценка залога",
@@ -961,6 +1390,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Ожидается заключение залоговой службы",
+      comment: "Последующий залог по корпоративному автопарку. Нужно подтвердить состав транспорта, ограничения и достаточность обеспечения.",
       contractId: "CTR-2026-0192",
       contractIds: ["CTR-2026-0192"],
       deals: [
@@ -976,17 +1406,17 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-002", "COL-006", "COL-020", "COL-021", "COL-022", "COL-023", "COL-024", "COL-025", "COL-026", "COL-027"],
-      taskIds: ["TSK-2026-1176", "TSK-2026-1154", "TSK-2026-1152"]
+      taskIds: ["tsk-27102026-001", "tsk-25082026-007", "tsk-18062026-003", "tsk-18062026-002"]
     },
     {
-      id: "APP-2026-0419",
-      number: "APP-26/0419",
+      id: "app-05062026-001",
+      number: "app-05062026-001",
       createdAt: "2026-06-05 12:30",
       source: "Конвейер Банка",
       applicationType: "Регистрация залога",
       applicationSubtype: "Регистрация залога движимого имущества",
       applicationPurpose: "Регистрация / учет залога",
-      initiator: "Система",
+      initiator: "Елена Морозова",
       initiatorSegment: "Корпоративный бизнес",
       clientName: "АО Кубань Агро Экспорт",
       participantName: "АО Кубань Агро Экспорт",
@@ -996,6 +1426,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Положительное решение по сделке",
+      comment: "Регистрация залога по двум договорам группы. Проверить комплект документов, залогодателя и применимые внешние проверки.",
       contractId: "CTR-2026-0228",
       contractIds: ["CTR-2026-0228", "CTR-2026-0316"],
       deals: [
@@ -1021,17 +1452,17 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-005", "COL-008"],
-      taskIds: ["TSK-2026-1140"]
+      taskIds: ["tsk-17062026-003"]
     },
     {
-      id: "APP-2026-0420",
-      number: "APP-26/0420",
+      id: "app-19062026-001",
+      number: "app-19062026-001",
       createdAt: "2026-06-19 09:20",
       source: "Конвейер Банка",
       applicationType: "Осмотр имущества",
       applicationSubtype: "Первоначальный осмотр",
       applicationPurpose: "Проверка предмета залога",
-      initiator: "Система",
+      initiator: "Дмитрий Орлов",
       initiatorSegment: "Корпоративный бизнес",
       clientName: "ООО Столичный Девелопмент",
       participantName: "ООО Столичный Девелопмент",
@@ -1041,6 +1472,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Положительное решение по сделке",
+      comment: "Первичный осмотр смешанного пула обеспечения перед выдачей. Особое внимание к фактическому наличию, идентификаторам и состоянию объектов.",
       contractId: "CTR-2026-0405",
       contractIds: ["CTR-2026-0405"],
       deals: [
@@ -1056,17 +1488,17 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-040", "COL-041", "COL-042", "COL-043", "COL-044", "COL-045", "COL-046", "COL-047", "COL-048", "COL-049"],
-      taskIds: ["TSK-2026-1160"]
+      taskIds: ["tsk-19062026-001"]
     },
     {
-      id: "APP-2026-0421",
-      number: "APP-26/0421",
+      id: "app-19062026-002",
+      number: "app-19062026-002",
       createdAt: "2026-06-19 11:05",
       source: "Конвейер Банка",
       applicationType: "Осмотр имущества",
       applicationSubtype: "Документарный осмотр",
       applicationPurpose: "Проверка предмета залога",
-      initiator: "Система",
+      initiator: "Мария Петрова",
       initiatorSegment: "Корпоративный бизнес",
       clientName: "АО АэроТех Лизинг",
       participantName: "АО АэроТех Лизинг",
@@ -1076,6 +1508,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Положительное решение по сделке",
+      comment: "Документарный осмотр техники, воздушных судов и земельного участка. Требуется сверить правоустанавливающие документы и ограничения без выезда.",
       contractId: "CTR-2026-0406",
       contractIds: ["CTR-2026-0406"],
       deals: [
@@ -1091,11 +1524,11 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-050", "COL-051", "COL-052", "COL-053", "COL-054", "COL-055"],
-      taskIds: ["TSK-2026-1161"]
+      taskIds: ["tsk-19062026-002"]
     },
     {
-      id: "APP-2026-0422",
-      number: "APP-26/0422",
+      id: "app-25082026-001",
+      number: "app-25082026-001",
       createdAt: "2026-08-25 13:10",
       source: "Ручное создание",
       applicationType: "Регистрация залога",
@@ -1111,6 +1544,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Положительное решение по сделке",
+      comment: "Регистрация квартиры и оборудования одним пакетом по договору MX-26/405. Проверить общие условия договора и документы по каждому объекту.",
       contractId: "CTR-2026-0405",
       contractIds: ["CTR-2026-0405"],
       deals: [
@@ -1126,11 +1560,11 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-045", "COL-048"],
-      taskIds: ["TSK-2026-1174"]
+      taskIds: ["tsk-25082026-005"]
     },
     {
-      id: "APP-2026-0423",
-      number: "APP-26/0423",
+      id: "app-25082026-002",
+      number: "app-25082026-002",
       createdAt: "2026-08-25 13:35",
       source: "Ручное создание",
       applicationType: "Регистрация залога",
@@ -1146,6 +1580,7 @@ export const initialData = {
       currency: "RUB",
       status: "В работе",
       decisionStatus: "Положительное решение по сделке",
+      comment: "Регистрация двух автомобилей по общему договору залога. Проверить VIN, регистрационные сведения и отсутствие ограничений.",
       contractId: "CTR-2026-0192",
       contractIds: ["CTR-2026-0192"],
       deals: [
@@ -1161,10 +1596,48 @@ export const initialData = {
         }
       ],
       collateralIds: ["COL-002", "COL-006"],
-      taskIds: ["TSK-2026-1175"]
+      taskIds: ["tsk-25082026-006"]
+    },
+    {
+      id: "app-16102026-001",
+      number: "app-16102026-001",
+      createdAt: "2026-10-16 09:30",
+      source: "Ручное создание",
+      applicationType: "Осмотр имущества",
+      applicationSubtype: "Документарный осмотр",
+      applicationPurpose: "Проверка предмета залога",
+      initiator: "Елена Морозова",
+      initiatorSegment: "Корпоративный бизнес",
+      clientName: "АО Северный Терминал",
+      participantName: "АО Северный Терминал",
+      participantInn: "781 204 7710",
+      product: "Кредит",
+      limit: 24000000,
+      currency: "RUB",
+      status: "В работе",
+      decisionStatus: "Действующий договор",
+      comment: "Документарный контроль четырех вагонов по договору ST-26/411. Сверить номера и модели с паспортами, подтвердить право собственности и проверить сведения о регистрации и ограничениях без выезда.",
+      contractId: "CTR-2026-0411",
+      contractIds: ["CTR-2026-0411"],
+      deals: [
+        {
+          clientName: "АО Северный Терминал",
+          inn: "781 204 7710",
+          contractId: "CTR-2026-0411",
+          contractNumber: "ST-26/411",
+          contractDate: "2026-10-12",
+          product: "Кредит",
+          limit: 24000000,
+          currency: "RUB",
+          collateralIds: ["COL-061", "COL-062", "COL-063", "COL-064"]
+        }
+      ],
+      collateralIds: ["COL-061", "COL-062", "COL-063", "COL-064"],
+      taskIds: ["tsk-16102026-001"]
     }
   ],
   collaterals: [
+    ...buildInspectionProcessShowcaseCollaterals(),
     {
       id: "COL-001",
       type: "Недвижимость",
@@ -1805,14 +2278,175 @@ export const initialData = {
     ...buildStage1CollateralTypeExamples()
   ],
   tasks: [
+    {
+      id: "tsk-27102026-002",
+      type: "Первичный осмотр",
+      inspectionFormat: "Физический осмотр",
+      title: "Осмотреть оборудование ООО СибТехМаш в Бердске",
+      collateralId: "COL-073",
+      collateralIds: ["COL-073", "COL-074"],
+      applicationId: "app-27102026-001",
+      applicationNumber: "app-27102026-001",
+      contractId: "",
+      contractNumber: "",
+      contractDate: "",
+      client: "ООО СибТрансСервис",
+      author: "Анна Кузнецова",
+      assignee: "Павел Смирнов",
+      status: "Назначена",
+      dueDate: "2026-10-30",
+      createdAt: "2026-10-27 10:01",
+      sla: "Норма",
+      priority: "Средний",
+      source: "Заявка",
+      applicationSource: "Ручное создание",
+      createdFromApplicationAutomatically: true,
+      assignmentComment: "Провести первичный физический осмотр объектов, заявленных в обеспечение по кредиту. Сгруппировать выезды по городу, виду залога и залогодателю; по каждому объекту подтвердить наличие, идентификаторы, адрес и состояние.",
+      inspectionVisitDate: "2026-10-30",
+      inspectionVisitTime: "11:00",
+      inspectionVisitMethod: "Сотрудник банка (регионы)",
+      route: ["Специалист осмотра", "Руководитель"],
+      result: "Группа: оборудование, Бердск, залогодатель ООО СибТехМаш. Осмотреть два объекта, сверить серийные номера, комплектность, фактическое местонахождение и техническое состояние.",
+      documents: [{ name: "Инвентарная ведомость оборудования от 20.10.2026.xlsx", target: "task" }],
+      history: [{ date: "2026-10-27 10:01", user: "Анна Кузнецова", action: "Создание задачи", status: "Назначена", comment: "Автоматически создана из заявки app-27102026-001 для группы объектов: Бердск, оборудование, ООО СибТехМаш." }]
+    },
+    {
+      id: "tsk-27102026-003",
+      type: "Первичный осмотр",
+      inspectionFormat: "Физический осмотр",
+      title: "Осмотреть две квартиры Петровой Ирины Николаевны в Новосибирске",
+      collateralId: "COL-071",
+      collateralIds: ["COL-071", "COL-072"],
+      applicationId: "app-27102026-001",
+      applicationNumber: "app-27102026-001",
+      contractId: "",
+      contractNumber: "",
+      contractDate: "",
+      client: "ООО СибТрансСервис",
+      author: "Анна Кузнецова",
+      assignee: "Павел Смирнов",
+      status: "Назначена",
+      dueDate: "2026-10-30",
+      createdAt: "2026-10-27 10:02",
+      sla: "Норма",
+      priority: "Средний",
+      source: "Заявка",
+      applicationSource: "Ручное создание",
+      createdFromApplicationAutomatically: true,
+      assignmentComment: "Провести первичный физический осмотр объектов, заявленных в обеспечение по кредиту. Сгруппировать выезды по городу, виду залога и залогодателю; по каждому объекту подтвердить наличие, идентификаторы, адрес и состояние.",
+      inspectionVisitDate: "2026-10-30",
+      inspectionVisitTime: "09:00",
+      inspectionVisitMethod: "Сотрудник банка (регионы)",
+      route: ["Специалист осмотра", "Руководитель"],
+      result: "Группа: недвижимость, Новосибирск, залогодатель Петрова Ирина Николаевна. Осмотреть две квартиры, сверить адреса и планировки с документами, зафиксировать состояние и фактическое использование помещений.",
+      documents: [{ name: "Выписки ЕГРН по квартирам от 26.10.2026.pdf", target: "task" }],
+      history: [{ date: "2026-10-27 10:02", user: "Анна Кузнецова", action: "Создание задачи", status: "Назначена", comment: "Автоматически создана из заявки app-27102026-001 для группы объектов: Новосибирск, недвижимость, Петрова Ирина Николаевна." }]
+    },
+    {
+      id: "tsk-27102026-004",
+      type: "Первичный осмотр",
+      inspectionFormat: "Физический осмотр",
+      title: "Физический осмотр пяти автомобилей ООО СибТрансСервис",
+      collateralId: "COL-066",
+      collateralIds: ["COL-066", "COL-067", "COL-068", "COL-069", "COL-070"],
+      applicationId: "app-27102026-001",
+      applicationNumber: "app-27102026-001",
+      contractId: "",
+      contractNumber: "",
+      contractDate: "",
+      client: "ООО СибТрансСервис",
+      author: "Анна Кузнецова",
+      assignee: "Павел Смирнов",
+      status: "Назначена",
+      dueDate: "2026-10-30",
+      createdAt: "2026-10-27 10:03",
+      sla: "Норма",
+      priority: "Средний",
+      source: "Заявка",
+      applicationSource: "Ручное создание",
+      createdFromApplicationAutomatically: true,
+      assignmentComment: "Провести первичный физический осмотр объектов, заявленных в обеспечение по кредиту. Сгруппировать выезды по городу, виду залога и залогодателю; по каждому объекту подтвердить наличие, идентификаторы, адрес и состояние.",
+      inspectionVisitDate: "2026-10-30",
+      inspectionVisitTime: "10:00",
+      inspectionVisitMethod: "Сотрудник банка (регионы)",
+      route: ["Специалист осмотра", "Руководитель"],
+      result: "Группа: автотранспорт, Новосибирск, залогодатель ООО СибТрансСервис. Осмотреть пять автомобилей в автопарке на ул. Петухова, 69; сверить VIN и регистрационные документы, показания одометров, комплектность и видимые повреждения.",
+      documents: [{ name: "Перечень пяти автомобилей к осмотру от 27.10.2026.xlsx", target: "task" }],
+      history: [{ date: "2026-10-27 10:03", user: "Анна Кузнецова", action: "Создание задачи", status: "Назначена", comment: "Автоматически создана из заявки app-27102026-001 для группы объектов: Новосибирск, автотранспорт, ООО СибТрансСервис." }]
+    },
     // Generated extended demo task queue.
     {
-      id: "TSK-2026-1176",
+      id: "tsk-27102026-001",
+      type: "Первичный осмотр",
+      inspectionFormat: "Физический осмотр",
+      title: "Физический осмотр пяти автомобилей ООО Волга Логистик",
+      collateralId: "COL-023",
+      collateralIds: ["COL-023", "COL-024", "COL-025", "COL-026", "COL-027"],
+      applicationId: "app-15062026-001",
+      contractId: "CTR-2026-0192",
+      contractNumber: "AV-26/192",
+      client: "ООО Волга Логистик",
+      author: "Алексей Соколов",
+      assignee: "Павел Смирнов",
+      status: "В работе",
+      dueDate: "2026-11-03",
+      createdAt: "2026-10-27 09:15",
+      sla: "Неделя",
+      priority: "Средний",
+      source: "Ручное создание",
+      createdFromApplicationAutomatically: false,
+      assignmentComment: "Организовать физический осмотр пяти автомобилей. Сверить VIN и регистрационные документы, зафиксировать пробег, состояние и видимые повреждения.",
+      route: ["Специалист осмотра", "Руководитель"],
+      result: "Осмотреть пять автомобилей автопарка ООО Волга Логистик: подтвердить наличие и VIN, проверить состояние кузова и салона, показания одометра, комплектность и условия хранения.",
+      documents: [
+        { name: "Реестр пяти автомобилей к осмотру.xlsx", target: "task" },
+        { name: "Договор залога AV-26-192.pdf", target: "task" }
+      ],
+      history: [
+        { date: "2026-10-27 09:15", user: "Алексей Соколов", action: "Создание задачи", status: "Назначена", comment: "Создана задача физического осмотра пяти автомобилей по заявке app-15062026-001." },
+        { date: "2026-10-27 09:30", user: "Павел Смирнов", action: "Принятие в работу", status: "В работе", comment: "Начата подготовка выезда и сверка VIN по документам." }
+      ]
+    },
+    {
+      id: "tsk-16102026-001",
+      type: "Первичный осмотр",
+      inspectionFormat: "Документарный осмотр",
+      title: "Документарно проверить четыре вагона АО Северный Терминал",
+      collateralId: "COL-061",
+      collateralIds: ["COL-061", "COL-062", "COL-063", "COL-064"],
+      applicationId: "app-16102026-001",
+      contractId: "CTR-2026-0411",
+      contractNumber: "ST-26/411",
+      contractDate: "2026-10-12",
+      client: "АО Северный Терминал",
+      assignee: "Павел Смирнов",
+      status: "В работе",
+      dueDate: "2026-10-23",
+      createdAt: "2026-10-16 09:30",
+      sla: "Неделя",
+      priority: "Средний",
+      source: "Заявка",
+      createdFromApplicationAutomatically: true,
+      route: ["Инициатор заявки", "Специалист осмотра", "Руководитель"],
+      result: "В задаче четыре грузовых вагона одного залогодателя по договору ST-26/411. Без выезда сверить номер и модель каждого вагона с паспортом, проверить документы о праве собственности, регистрацию и ограничения.",
+      documents: [
+        { name: "Реестр вагонов к документарному контролю.xlsx", target: "task" },
+        { name: "Договор залога железнодорожного подвижного состава ST-26-411.pdf", target: "task" },
+        { name: "Выписка из реестра залогов ST-26-411.pdf", target: "task" }
+      ],
+      history: [
+        { date: "2026-10-16 09:30", user: "Елена Морозова", action: "Создание заявки", status: "Новая", comment: "Заявка на документарный контроль четырех вагонов по договору ST-26/411" },
+        { date: "2026-10-16 09:31", user: "Елена Морозова", action: "Создание задачи", status: "Назначена", comment: "Документарный осмотр создан автоматически по заявке" },
+        { date: "2026-10-16 09:45", user: "Павел Смирнов", action: "Принятие в работу", status: "В работе", comment: "Начата сверка паспортов вагонов и реестровых сведений" }
+      ]
+    },
+    {
+      id: "tsk-25082026-007",
       type: "Дефектовка",
       title: "Провести дефектовку Hyundai HD78 после выявленных замечаний",
       collateralId: "COL-006",
       collateralIds: ["COL-006"],
-      applicationId: "APP-2026-0418",
+      applicationId: "app-15062026-001",
       contractId: "CTR-2026-0192",
       contractNumber: "AV-26/192",
       client: "ООО Волга Логистик",
@@ -1841,12 +2475,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1175",
+      id: "tsk-25082026-006",
       type: "Регистрация залога",
       title: "Зарегистрировать залог двух автомобилей по договору AV-26/192",
       collateralId: "COL-002",
       collateralIds: ["COL-002", "COL-006"],
-      applicationId: "APP-2026-0423",
+      applicationId: "app-25082026-002",
       contractId: "CTR-2026-0192",
       contractNumber: "AV-26/192",
       client: "ООО Волга Логистик",
@@ -1857,6 +2491,7 @@ export const initialData = {
       sla: "Завтра",
       priority: "Средний",
       source: "Заявка",
+      createdFromApplicationAutomatically: true,
       route: ["Заявка", "Специалист", "АБС"],
       registrationScenario: "Регистрация залога движимого имущества",
       registrationStatuses: {
@@ -1877,12 +2512,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1174",
+      id: "tsk-25082026-005",
       type: "Регистрация залога",
       title: "Зарегистрировать залог квартиры и оборудования по договору MX-26/405",
       collateralId: "COL-045",
       collateralIds: ["COL-045", "COL-048"],
-      applicationId: "APP-2026-0422",
+      applicationId: "app-25082026-001",
       contractId: "CTR-2026-0405",
       contractNumber: "MX-26/405",
       client: "ООО Столичный Девелопмент",
@@ -1893,6 +2528,7 @@ export const initialData = {
       sla: "Завтра",
       priority: "Высокий",
       source: "Заявка",
+      createdFromApplicationAutomatically: true,
       route: ["Заявка", "Специалист", "АБС"],
       registrationScenario: "Регистрация недвижимости (выезд)",
       registrationStatuses: {
@@ -1913,13 +2549,13 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1161",
+      id: "tsk-19062026-002",
       type: "Первичный осмотр",
       inspectionFormat: "Документарный осмотр",
       title: "Документарно проверить спецтехнику, воздушные суда и земельный участок АэроТех Лизинг",
       collateralId: "COL-050",
       collateralIds: ["COL-050", "COL-051", "COL-052", "COL-053", "COL-054", "COL-055"],
-      applicationId: "APP-2026-0421",
+      applicationId: "app-19062026-002",
       contractId: "CTR-2026-0406",
       client: "АО АэроТех Лизинг",
       assignee: "Мария Петрова",
@@ -1929,6 +2565,7 @@ export const initialData = {
       sla: "Неделя",
       priority: "Средний",
       source: "Конвейер",
+      createdFromApplicationAutomatically: true,
       route: ["Конвейер", "Распознавание документов", "Специалист"],
       result: "В задаче 6 объектов: 2 единицы самоходной техники, 3 воздушных судна и 1 земельный участок. Проверить правоустанавливающие документы, реестровые сведения, страхование и ограничения без выезда на объект.",
       documents: [
@@ -1940,13 +2577,13 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1160",
+      id: "tsk-19062026-001",
       type: "Первичный осмотр",
       inspectionFormat: "Физический осмотр",
       title: "Физически осмотреть смешанный пул залогов Столичный Девелопмент",
       collateralId: "COL-040",
       collateralIds: ["COL-040", "COL-041", "COL-042", "COL-043", "COL-044", "COL-045", "COL-046", "COL-047", "COL-048", "COL-049"],
-      applicationId: "APP-2026-0420",
+      applicationId: "app-19062026-001",
       contractId: "CTR-2026-0405",
       client: "ООО Столичный Девелопмент",
       assignee: "Дмитрий Орлов",
@@ -1956,6 +2593,7 @@ export const initialData = {
       sla: "Неделя",
       priority: "Высокий",
       source: "Конвейер",
+      createdFromApplicationAutomatically: true,
       route: ["Конвейер", "Распознавание документов", "Специалист"],
       result: "В задаче 10 объектов: 5 машин, 3 квартиры и 2 единицы оборудования. Нужно подтвердить фактическое наличие, состояние, идентификаторы, адреса и комплект документов.",
       inspectionAnswers: {
@@ -2008,7 +2646,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1142",
+      id: "tsk-17062026-002",
       type: "Составление отчетности",
       title: "Сформировать отчетность по залоговому портфелю за июнь",
       collateralId: "COL-001",
@@ -2029,13 +2667,13 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1154",
+      id: "tsk-18062026-003",
       type: "Первичный осмотр",
       inspectionFormat: "Физический осмотр",
       title: "Первично осмотреть транспортный пул Волга Логистик",
       collateralId: "COL-002",
       collateralIds: ["COL-002", "COL-006", "COL-020", "COL-021", "COL-022"],
-      applicationId: "APP-2026-0418",
+      applicationId: "app-15062026-001",
       contractId: "CTR-2026-0192",
       client: "ООО Волга Логистик",
       assignee: "Анна Кузнецова",
@@ -2057,11 +2695,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1153",
+      id: "tsk-18062026-004",
       type: "Повторный осмотр",
       title: "Повторно проверить складской комплекс после замечаний",
       collateralId: "COL-001",
-      applicationId: "APP-2026-0417",
+      applicationId: "app-01062026-001",
+      parentTaskId: "tsk-16062026-011",
       contractId: "CTR-2026-0148",
       client: "ООО СеверТекстиль",
       assignee: "Анна Кузнецова",
@@ -2077,16 +2716,16 @@ export const initialData = {
         { name: "Замечания по предыдущему осмотру.pdf", target: "task" }
       ],
       history: [
-        { date: "2026-06-18 10:40", user: "Анна Кузнецова", action: "Создана задача", status: "Назначена", comment: "Создана вручную для повторного осмотра после замечаний" }
+        { date: "2026-06-18 10:40", user: "Анна Кузнецова", action: "Создана задача", status: "Назначена", comment: "Создана из задачи tsk-16062026-011 для повторного осмотра после замечаний" }
       ]
     },
     {
-      id: "TSK-2026-1152",
+      id: "tsk-18062026-002",
       type: "Списочная переоценка",
       title: "Списочная переоценка автопарка Волга Логистик: 10 машин",
       collateralId: "COL-002",
       collateralIds: ["COL-002", "COL-006", "COL-020", "COL-021", "COL-022", "COL-023", "COL-024", "COL-025", "COL-026", "COL-027"],
-      applicationId: "APP-2026-0418",
+      applicationId: "app-15062026-001",
       contractId: "CTR-2026-0192",
       client: "ООО Волга Логистик",
       assignee: "Анна Кузнецова",
@@ -2124,12 +2763,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1151",
+      id: "tsk-18062026-001",
       type: "Списочная переоценка",
       title: "Списочная переоценка смешанного пула залогов",
       collateralId: "COL-001",
       collateralIds: ["COL-001", "COL-002", "COL-004", "COL-005", "COL-008"],
-      applicationId: "APP-2026-0417",
+      applicationId: "app-01062026-001",
       contractId: "CTR-2026-0148",
       client: "Управление залогов",
       assignee: "Анна Кузнецова",
@@ -2166,7 +2805,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1141",
+      id: "tsk-17062026-001",
       type: "Списочная переоценка",
       title: "Массово обновить стоимость транспортного пула Волга Логистик",
       collateralId: "COL-002",
@@ -2191,12 +2830,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1140",
+      id: "tsk-17062026-003",
       type: "Первичный осмотр",
       title: "Первично осмотреть оборудование и поголовье Кубань Агро",
       collateralId: "COL-005",
       collateralIds: ["COL-005", "COL-008"],
-      applicationId: "APP-2026-0419",
+      applicationId: "app-05062026-001",
       contractId: "CTR-2026-0228",
       client: "АО Кубань Агро Экспорт",
       assignee: "Елена Морозова",
@@ -2206,6 +2845,7 @@ export const initialData = {
       sla: "Неделя",
       priority: "Средний",
       source: "Конвейер",
+      createdFromApplicationAutomatically: true,
       route: ["Конвейер", "Распознавание документов", "Специалист"],
       result: "В задаче два предмета залога: оборудование и поголовье. Нужно сверить документы, фактическое наличие, условия эксплуатации и содержания.",
       documents: [
@@ -2217,12 +2857,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1170",
+      id: "tsk-25082026-001",
       type: "Единичная переоценка",
       title: "Оценить пул транспортных средств Волга Логистик",
       collateralId: "COL-002",
       collateralIds: ["COL-002", "COL-006", "COL-020", "COL-021", "COL-022"],
-      applicationId: "APP-2026-0418",
+      applicationId: "app-15062026-001",
       contractId: "CTR-2026-0192",
       client: "ООО Волга Логистик",
       assignee: "Мария Петрова",
@@ -2232,6 +2872,7 @@ export const initialData = {
       sla: "Завтра",
       priority: "Высокий",
       source: "Заявка",
+      createdFromApplicationAutomatically: true,
       route: ["Заявка", "Специалист", "Руководитель"],
       result: "В рамках заявки требуется обновить стоимость 5 транспортных средств с учетом рыночных аналогов и состояния по осмотрам.",
       marketAnalogManualValues: {
@@ -2260,12 +2901,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1171",
+      id: "tsk-25082026-002",
       type: "Единичная переоценка",
       title: "Оценить пул квартир Столичный Девелопмент",
       collateralId: "COL-045",
       collateralIds: ["COL-045", "COL-046", "COL-047"],
-      applicationId: "APP-2026-0420",
+      applicationId: "app-19062026-001",
       contractId: "CTR-2026-0405",
       client: "ООО Столичный Девелопмент",
       assignee: "Анна Кузнецова",
@@ -2314,12 +2955,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1172",
+      id: "tsk-25082026-003",
       type: "Единичная переоценка",
       title: "Оценить оборудование Столичный Девелопмент",
       collateralId: "COL-048",
       collateralIds: ["COL-048", "COL-049"],
-      applicationId: "APP-2026-0420",
+      applicationId: "app-19062026-001",
       contractId: "CTR-2026-0405",
       client: "ООО Столичный Девелопмент",
       assignee: "Дмитрий Орлов",
@@ -2373,12 +3014,12 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1173",
+      id: "tsk-25082026-004",
       type: "Единичная переоценка",
       title: "Единично оценить смешанный пул залогов Столичный Девелопмент",
       collateralId: "COL-040",
       collateralIds: ["COL-040", "COL-045", "COL-048"],
-      applicationId: "APP-2026-0420",
+      applicationId: "app-19062026-001",
       contractId: "CTR-2026-0405",
       client: "ООО Столичный Девелопмент",
       assignee: "Дмитрий Орлов",
@@ -2472,7 +3113,7 @@ export const initialData = {
       ]
     },
     {
-        "id": "TSK-2026-1132",
+        "id": "tsk-16062026-011",
         "type": "Единичная переоценка",
         "title": "Переоценить складской комплекс после обновления кадастра",
         "collateralId": "COL-001",
@@ -2502,7 +3143,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1131",
+        "id": "tsk-16062026-010",
         "type": "Первичный осмотр",
         "title": "Подтвердить новый автотранспорт из таблицы залогодателя",
         "collateralId": "COL-002",
@@ -2532,7 +3173,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1130",
+        "id": "tsk-16062026-001",
         "type": "Плановый мониторинг",
         "inspectionFormat": "Физический осмотр",
         "inspectionVisitMethod": "Сотрудник банка (регионы)",
@@ -2566,7 +3207,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1129",
+        "id": "tsk-15062026-005",
         "type": "Снятие обременения",
         "title": "Проверить основание частичного снятия по Actros",
         "collateralId": "COL-002",
@@ -2596,7 +3237,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1128",
+        "id": "tsk-15062026-004",
         "type": "Внеплановый мониторинг",
         "inspectionFormat": "Документарный осмотр",
         "documentCheckDate": "2026-06-18",
@@ -2628,7 +3269,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1127",
+        "id": "tsk-16062026-008",
         "type": "Замена залога",
         "title": "Оценить замену печатной линии на новое оборудование",
         "collateralId": "COL-007",
@@ -2659,7 +3300,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1126",
+        "id": "tsk-16062026-004",
         "type": "Повторный осмотр",
         "title": "Повторно осмотреть поголовье КРС после расхождения",
         "collateralId": "COL-008",
@@ -2689,7 +3330,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1125",
+        "id": "tsk-14062026-003",
         "type": "Регистрация залога",
         "title": "Зарегистрировать обременение по складскому комплексу",
         "collateralId": "COL-001",
@@ -2720,7 +3361,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1124",
+        "id": "tsk-16062026-007",
         "type": "Единичная переоценка",
         "title": "Переоценить тягач Actros по новым рыночным аналогам",
         "collateralId": "COL-002",
@@ -2750,7 +3391,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1123",
+        "id": "tsk-16062026-002",
         "type": "Плановый мониторинг",
         "inspectionFormat": "Физический осмотр",
         "inspectionVisitMethod": "Мобильный оценщик (МО)",
@@ -2784,7 +3425,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1122",
+        "id": "tsk-12062026-003",
         "type": "Первичный осмотр",
         "title": "Подтвердить печатную линию после ремонта",
         "collateralId": "COL-007",
@@ -2814,7 +3455,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1121",
+        "id": "tsk-15062026-003",
         "type": "Снятие обременения",
         "title": "Закрыть обременение по части товарных остатков",
         "collateralId": "COL-004",
@@ -2844,7 +3485,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1120",
+        "id": "tsk-14062026-004",
         "type": "Внеплановый мониторинг",
         "inspectionFormat": "Физический осмотр",
         "inspectionVisitMethod": "Сюрвейер (СК)",
@@ -2878,7 +3519,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1119",
+        "id": "tsk-13062026-002",
         "type": "Регистрация залога",
         "title": "Проверить пакет документов по оборудованию Unitec",
         "collateralId": "COL-005",
@@ -2908,7 +3549,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1118",
+        "id": "tsk-13062026-001",
         "type": "Единичная переоценка",
         "title": "Обновить стоимость печатной линии Heidelberg",
         "collateralId": "COL-007",
@@ -2938,7 +3579,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1117",
+        "id": "tsk-11062026-001",
         "type": "Повторный осмотр",
         "title": "Доснять фасад и идентификаторы складского комплекса",
         "collateralId": "COL-001",
@@ -2951,6 +3592,7 @@ export const initialData = {
         "sla": "Норма",
         "priority": "Средний",
         "source": "Вручную",
+        "assignmentComment": "Повторно сфотографировать фасад и сверить идентификаторы объекта после замечаний к материалам осмотра.",
         "route": [
             "Специалист",
             "Специалист",
@@ -2968,7 +3610,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1116",
+        "id": "tsk-12062026-002",
         "type": "Внеплановый мониторинг",
         "inspectionFormat": "Документарный осмотр",
         "documentCheckDate": "2026-06-18",
@@ -3014,7 +3656,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1115",
+        "id": "tsk-16062026-009",
         "type": "Замена залога",
         "title": "Согласовать замену части товарных остатков на оборудование",
         "collateralId": "COL-004",
@@ -3058,7 +3700,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1114",
+        "id": "tsk-10062026-001",
         "type": "Снятие обременения",
         "title": "Передать в АБС снятие по закрытому лимиту",
         "collateralId": "COL-005",
@@ -3088,7 +3730,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1113",
+        "id": "tsk-14062026-001",
         "type": "Первичный осмотр",
         "title": "Проверить склад хранения товарных остатков",
         "collateralId": "COL-004",
@@ -3118,7 +3760,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1112",
+        "id": "tsk-08062026-001",
         "type": "Плановый мониторинг",
         "inspectionFormat": "Физический осмотр",
         "inspectionVisitMethod": "Сюрвейер (СК)",
@@ -3135,6 +3777,7 @@ export const initialData = {
         "sla": "Просрочена",
         "priority": "Средний",
         "source": "Расписание",
+        "assignmentComment": "Согласовать с представителем залогодателя дату планового контроля квартиры.",
         "route": [
             "Планировщик",
             "Специалист",
@@ -3152,7 +3795,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1111",
+        "id": "tsk-16062026-006",
         "type": "Внеплановый мониторинг",
         "inspectionFormat": "Физический осмотр",
         "inspectionVisitMethod": "Мобильный оценщик (МО)",
@@ -3185,7 +3828,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1110",
+        "id": "tsk-11062026-002",
         "type": "Регистрация залога",
         "title": "Проверить ГСЗ и залогодателей по квартире",
         "collateralId": "COL-003",
@@ -3215,7 +3858,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1109",
+        "id": "tsk-15062026-001",
         "type": "Единичная переоценка",
         "title": "Контроль стоимости поголовья КРС",
         "collateralId": "COL-008",
@@ -3245,7 +3888,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1108",
+        "id": "tsk-16062026-005",
         "type": "Повторный осмотр",
         "title": "Повторная проверка линии Unitec после замечаний",
         "collateralId": "COL-005",
@@ -3275,7 +3918,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1107",
+        "id": "tsk-15062026-002",
         "type": "Внеплановый мониторинг",
         "inspectionFormat": "Документарный осмотр",
         "documentCheckDate": "2026-06-18",
@@ -3307,7 +3950,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1106",
+        "id": "tsk-07062026-001",
         "type": "Замена залога",
         "title": "Предварительно проверить новый складской объект",
         "collateralId": "COL-001",
@@ -3337,7 +3980,7 @@ export const initialData = {
         ]
     },
     {
-        "id": "TSK-2026-1105",
+        "id": "tsk-06062026-001",
         "type": "Снятие обременения",
         "title": "Архивировать старое обременение по квартире",
         "collateralId": "COL-003",
@@ -3367,7 +4010,7 @@ export const initialData = {
         ]
     },
     {
-      id: "TSK-2026-1104",
+      id: "tsk-15062026-006",
       type: "Повторный осмотр",
       title: "Проверить страхование и фото шин Actros",
       collateralId: "COL-002",
@@ -3387,7 +4030,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1098",
+      id: "tsk-12062026-001",
       type: "Единичная переоценка",
       title: "Переоценка квартиры по просроченному отчету",
       collateralId: "COL-003",
@@ -3408,7 +4051,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1081",
+      id: "tsk-01062026-001",
       type: "Плановый мониторинг",
       inspectionFormat: "Физический осмотр",
       inspectionVisitMethod: "Сотрудник банка (регионы)",
@@ -3433,7 +4076,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1055",
+      id: "tsk-10062026-002",
       type: "Регистрация залога",
       title: "Передать складской комплекс в АБС",
       collateralId: "COL-001",
@@ -3453,7 +4096,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-1022",
+      id: "tsk-11062026-003",
       type: "Снятие обременения",
       title: "Снять ограничение по старому договору",
       collateralId: "COL-006",
@@ -3474,7 +4117,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-0999",
+      id: "tsk-05062026-001",
       type: "Первичный осмотр",
       title: "Осмотреть линию сортировки Unitec",
       collateralId: "COL-005",
@@ -3495,7 +4138,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-0987",
+      id: "tsk-16062026-003",
       type: "Внеплановый мониторинг",
       inspectionFormat: "Физический осмотр",
       inspectionVisitMethod: "Сотрудник банка (регионы)",
@@ -3519,7 +4162,7 @@ export const initialData = {
       ]
     },
     {
-      id: "TSK-2026-0974",
+      id: "tsk-14062026-002",
       type: "Замена залога",
       title: "Сравнить старый и новый объект обеспечения",
       collateralId: "COL-007",
@@ -3552,8 +4195,8 @@ export const initialData = {
       imported: 16,
       errors: 0,
       logs: [
-        { time: "2026-06-17 09:10", result: "Успешно", object: "TSK-2026-1125", message: "Исполнителю отправлено уведомление о новой задаче" },
-        { time: "2026-06-16 17:20", result: "Успешно", object: "TSK-2026-1090", message: "Руководителю отправлено уведомление о переназначении" }
+        { time: "2026-06-17 09:10", result: "Успешно", object: "tsk-14062026-003", message: "Исполнителю отправлено уведомление о новой задаче" },
+        { time: "2026-06-16 17:20", result: "Успешно", object: "tsk-16062026-010", message: "Руководителю отправлено уведомление о переназначении" }
       ]
     },
     {
@@ -3568,7 +4211,7 @@ export const initialData = {
       imported: 12,
       errors: 0,
       logs: [
-        { time: "2026-06-17 11:42", result: "Успешно", object: "TSK-2026-1140", message: "Извлечены реквизиты правоустанавливающего документа" }
+        { time: "2026-06-17 11:42", result: "Успешно", object: "tsk-17062026-003", message: "Извлечены реквизиты правоустанавливающего документа" }
       ]
     },
     {
@@ -3598,7 +4241,7 @@ export const initialData = {
       imported: 5,
       errors: 0,
       logs: [
-        { time: "2026-06-17 10:30", result: "Успешно", object: "TSK-2026-1141", message: "Найдены аналоги для транспортного пула" }
+        { time: "2026-06-17 10:30", result: "Успешно", object: "tsk-17062026-001", message: "Найдены аналоги для транспортного пула" }
       ]
     },
     {
@@ -3749,7 +4392,7 @@ export const initialData = {
       imported: 7,
       errors: 0,
       logs: [
-        { time: "2026-06-16 10:15", result: "Успешно", object: "TSK-2026-1055", message: "Создана задача регистрации залога" }
+        { time: "2026-06-16 10:15", result: "Успешно", object: "tsk-10062026-002", message: "Создана задача регистрации залога" }
       ]
     }
   ],
@@ -3761,17 +4404,119 @@ export const initialData = {
     { row: 6, collateralId: "COL-007", type: "Оборудование", reportAsset: "Оборудование", name: "Линия упаковки Bobst", description: "Производственная линия", qualityCategory: "I", pledgeSign: "Основное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-KL-644", owner: "ООО Север Принт Пак", ownerInn: "7811456789", contract: "KL-24/644", address: "г. Санкт-Петербург, промзона Парнас", city: "Санкт-Петербург", countryCode: "643", okato: "40265000000", identifierType: "Заводской номер", identifierValue: "BST-2022-0091", source: "Excel", status: "Обновить", message: "Обновить статус страхования" }
   ],
   audit: [
-    { date: "2026-06-16 10:15", user: "Конвейер", object: "TSK-2026-1055", action: "Создание задачи", oldValue: "-", newValue: "Назначена", source: "API конвейера" },
+    { date: "2026-06-16 10:15", user: "Конвейер", object: "tsk-10062026-002", action: "Создание задачи", oldValue: "-", newValue: "Назначена", source: "API конвейера" },
     { date: "2026-06-16 08:52", user: "Система", object: "COL-008", action: "Сигнал риска", oldValue: "Нет", newValue: "Расхождение поголовья", source: "Триггер мониторинга" },
     { date: "2026-06-15 15:45", user: "Система", object: "COL-002", action: "Сигнал риска", oldValue: "Нет", newValue: "Истечение страховки", source: "АБС" },
-    { date: "2026-06-13 18:12", user: "Павел Смирнов", object: "TSK-2026-1081", action: "Отложение задачи", oldValue: "В работе", newValue: "Отложена", source: "АРМ" },
-    { date: "2026-06-12 17:00", user: "Сергей Иванов", object: "TSK-2026-1022", action: "Возврат на инициатора", oldValue: "В работе", newValue: "Ожидание", source: "АРМ руководителя" }
+    { date: "2026-06-13 18:12", user: "Павел Смирнов", object: "tsk-01062026-001", action: "Отложение задачи", oldValue: "В работе", newValue: "Отложена", source: "АРМ" },
+    { date: "2026-06-12 17:00", user: "Сергей Иванов", object: "tsk-11062026-003", action: "Возврат на инициатора", oldValue: "В работе", newValue: "Ожидание", source: "АРМ руководителя" }
   ],
   comments: [
     { object: "COL-003", date: "2026-06-13 09:40", user: "Анна Кузнецова", text: "Нужно запросить свежую кадастровую выписку перед завершением переоценки." },
-    { object: "TSK-2026-1104", date: "2026-06-15 16:05", user: "Мария Петрова", text: "Попросила страхователя подготовить обновленный страховой полис." }
+    { object: "tsk-15062026-006", date: "2026-06-15 16:05", user: "Мария Петрова", text: "Попросила страхователя подготовить обновленный страховой полис." }
   ]
 };
+
+export function resolveCollateralSubtype(collateral) {
+  collateral ||= {};
+  const typeAliases = {
+    "Недвижимость": "Объекты недвижимости",
+    "Автотранспорт": "Транспортные средства, прицепы (полуприцепы)",
+    "Скот": "Животные"
+  };
+  const type = typeAliases[collateral.type] || collateral.type;
+  const options = FT_COLLATERAL_SUBTYPE_OPTIONS[type] || [];
+  const fields = { ...(collateral.typeFields || {}), ...(collateral.fields || {}) };
+  const candidates = [
+    fields["Подвид залога"],
+    fields["Подвид"],
+    fields["Подтип"],
+    fields["Вид объекта"],
+    fields["Тип единицы"],
+    fields["Группа"],
+    fields["Вид товара в обороте"],
+    fields["Вид движимой вещи"]
+  ];
+  const existing = candidates.find((value) => options.includes(String(value || "").trim()));
+  if (existing) return existing;
+
+  const text = `${collateral.description || ""} ${Object.values(fields).join(" ")}`.toLocaleLowerCase("ru-RU");
+  switch (type) {
+    case "Объекты недвижимости":
+      if (/земельн|участок/.test(text)) return "Земельный участок";
+      if (/квартир|помещен/.test(text)) return "Помещения";
+      if (/сооружен/.test(text)) return "Сооружения";
+      if (/незаверш/.test(text)) return "Объект незавершенного строительства";
+      if (/имущественн.*комплекс|предприяти.*комплекс/.test(text)) return "Предприятие как имущественный комплекс";
+      return /единый недвижим/.test(text) ? "Единый недвижимый комплекс" : "Здания";
+    case "Транспортные средства, прицепы (полуприцепы)":
+      if (/мотоцикл|мотороллер/.test(text)) return options[0];
+      if (/прицеп|полуприцеп/.test(text)) return options[2];
+      if (/camry|sonata|kia\s*k5|легков|ford transit|газель|porter|transport(?:er)?/i.test(text)) return options[1];
+      return options[3];
+    case "Транспортные средства (самоходная техника)":
+      return /категори[яи]\s*[cс]|категори[яи]\s*[dд]/i.test(text) ? options[1] : options[0];
+    case "Оборудование":
+      return options[0];
+    case "Воздушные суда":
+      return /вертолет/i.test(text) ? "Вертолет" : /самолет/i.test(text) ? "Самолет" : "Иное";
+    case "Плавучие сооружения":
+      return /пассажир/.test(text) ? options[0] : /рыболов|рыбн/.test(text) ? options[2] : /не являющ.*суд/.test(text) ? options[4] : options[1];
+    case "Железнодорожный подвижной состав":
+      return /моторвагон|мотор-вагон/.test(text) ? options[2] : /пассажир/.test(text) ? options[4] : /локомотив/.test(text) ? options[0] : /самоходн.*специальн/.test(text) ? options[1] : /высокоскорост/.test(text) ? options[5] : /несамоходн.*специальн/.test(text) ? options[6] : options[3];
+    case "Животные":
+      return /племенн/.test(text) ? options[2] : /товар.*оборот|заменяем/.test(text) ? options[1] : options[0];
+    case "Имущественные права (требования)":
+      return /долевого строительств/.test(text) ? options[1] : /залогов.*счет|денежн.*счет/.test(text) ? options[3] : /дебиторск/.test(text) ? options[4] : /имущественн.*прав/.test(text) ? options[0] : options[2];
+    case "Товары в обороте":
+      if (/текстил|пряж|ткан/.test(text)) return options[7];
+      if (/животн|скот|коров|крупн.*рогат/.test(text)) return options[1];
+      if (/зерн|урожай|сельскохозяйственн/.test(text)) return options[0];
+      if (/строительн|арматур|металлопродукц/.test(text)) return options[5];
+      return options[11];
+    case "Прочие движимые вещи (однородные группы)":
+      if (/животн|скот/.test(text)) return options[0];
+      if (/монет|драг.*металл/.test(text)) return options[1];
+      return options[2];
+    case "Прочие движимые вещи (объекты)":
+      if (/животн|скот/.test(text)) return options[0];
+      if (/монет|золот|серебр/.test(text)) return options[1];
+      return options[2];
+    default:
+      return "";
+  }
+}
+
+export function normalizeCollateralCreationDates(collaterals = []) {
+  return (Array.isArray(collaterals) ? collaterals : []).map((collateral, index) => {
+    if (!collateral || typeof collateral !== "object" || String(collateral.createdAt || "").trim()) return collateral;
+
+    const seedValue = String(collateral.id || collateral.profileIdentifier || `collateral-${index}`);
+    const seed = Array.from(seedValue).reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 7);
+    const updatedDate = String(collateral.updatedAt || "").match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+    const parsedUpdatedDate = updatedDate ? new Date(`${updatedDate}T00:00:00Z`) : null;
+    const hasValidUpdatedDate = parsedUpdatedDate
+      && !Number.isNaN(parsedUpdatedDate.getTime())
+      && parsedUpdatedDate.toISOString().slice(0, 10) === updatedDate;
+    const date = hasValidUpdatedDate
+      ? parsedUpdatedDate
+      : new Date(Date.UTC(2026, 5, 1 + (seed % 120)));
+    if (hasValidUpdatedDate) {
+      date.setUTCDate(date.getUTCDate() - 1 - (seed % 30));
+    }
+
+    return { ...collateral, createdAt: date.toISOString().slice(0, 10) };
+  });
+}
+
+initialData.collaterals = normalizeCollateralCreationDates(initialData.collaterals);
+
+for (const collateral of initialData.collaterals || []) {
+  const subtype = resolveCollateralSubtype(collateral);
+  if (subtype) {
+    collateral.fields ||= {};
+    collateral.fields["Подвид залога"] = subtype;
+  }
+}
 
 export const reportCatalog = [
   {
