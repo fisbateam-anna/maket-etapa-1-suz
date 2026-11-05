@@ -14495,7 +14495,6 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
       <div class="collateral-header-values">
         <span><strong>Рыночная стоимость</strong>${formatMoney(collateral.marketValue)}</span>
         <span><strong>Залоговая стоимость</strong>${formatMoney(collateral.pledgeValue)}</span>
-        <span><strong>Номер залога в СУЗ</strong>${escapeHtml(suzNumber)}</span>
       </div>
     </section>
     <div class="tabs wrap">${tabs.map(([id, label]) => `<button class="${state.collateralTab === id ? "active" : ""}" data-action="collateral-tab" data-tab="${id}">${escapeHtml(label)}</button>`).join("")}</div>
@@ -14674,11 +14673,11 @@ function renderCollateralOverview(collateral) {
             ? renderCollateralDisplayFieldGrid(typeFields, "collateral-overview-type-fields collateral-characteristics-type-fields", [], "type", fieldDraft)
             : ""}
           ${renderCollateralDisplayFieldGrid(sharedFields, "collateral-overview-common-fields collateral-characteristics-common-fields", [], "main", fieldDraft, { "Дополнительная информация": "text" })}
+          <div class="collateral-overview-basis-section">
+            <h3>Документ-основание</h3>
+            ${renderCollateralDisplayFieldGrid(basisFields, "collateral-overview-basis-fields", [], "basisDocument", fieldDraft)}
+          </div>
         </div>
-      </section>
-      <section class="panel collateral-overview-basis-panel">
-        <div class="panel-title"><h2>Документ-основание</h2></div>
-        ${renderCollateralDisplayFieldGrid(basisFields, "collateral-overview-basis-fields", [], "basisDocument", fieldDraft)}
       </section>
       ${addressApplicable ? `<section class="panel collateral-overview-address-panel">
         <div class="panel-title"><h2>Адрес местонахождения объекта</h2></div>
