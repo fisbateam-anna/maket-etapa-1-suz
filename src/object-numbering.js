@@ -71,6 +71,61 @@ export const LEGACY_OBJECT_NUMBER_ALIASES = Object.freeze({
 
 const taskNumberPattern = /^tsk-(\d{8})-(\d{3})$/;
 const applicationNumberPattern = /^app-(\d{8})-(\d{3})$/;
+const collateralNumberPattern = /^col-(\d{2})(\d{4})-(\d{3})$/;
+
+function getMonthlyDateStamp(value = new Date()) {
+  if (value instanceof Date) {
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    return `${month}${value.getFullYear()}`;
+  }
+  const text = String(value || "");
+  const isoDate = text.match(/^(\d{4})-(\d{2})/);
+  if (isoDate) return `${isoDate[2]}${isoDate[1]}`;
+  const localizedDate = text.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (localizedDate) return `${localizedDate[2]}${localizedDate[3]}`;
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) return getMonthlyDateStamp(parsed);
+  return getMonthlyDateStamp(new Date());
+}
+
+export function getNextMonthlyCollateralNumber(records = [], createdAt = new Date()) {
+  const stamp = getMonthlyDateStamp(createdAt);
+  let maxSequence = 0;
+  (records || []).forEach((record) => {
+    const match = String(record?.suzNumber || record?.collateralNumber || "").match(collateralNumberPattern);
+    if (match && `${match[1]}${match[2]}` === stamp) maxSequence = Math.max(maxSequence, Number(match[3]));
+  });
+  if (maxSequence >= 999) throw new RangeError(`Достигнут лимит col-номеров за ${stamp}`);
+  return `col-${stamp}-${String(maxSequence + 1).padStart(3, "0")}`;
+}
+
+export function normalizeCollateralSuzNumbers(collaterals = []) {
+  const records = Array.isArray(collaterals) ? collaterals : [];
+  const used = new Set();
+  const reserved = records.map((record) => {
+    const candidate = String(record?.suzNumber || record?.collateralNumber || "");
+    if (!collateralNumberPattern.test(candidate) || used.has(candidate)) return null;
+    used.add(candidate);
+    return candidate;
+  });
+  const missing = records
+    .map((record, index) => ({ record, index }))
+    .filter(({ index }) => !reserved[index])
+    .sort((left, right) => String(left.record?.createdAt || "").localeCompare(String(right.record?.createdAt || ""))
+      || String(left.record?.id || "").localeCompare(String(right.record?.id || ""))
+      || left.index - right.index);
+  missing.forEach(({ record }) => {
+    record.suzNumber = getNextMonthlyCollateralNumber(records, record?.createdAt || new Date());
+    used.add(record.suzNumber);
+  });
+  records.forEach((record, index) => {
+    if (reserved[index]) record.suzNumber = reserved[index];
+    if (!record.profileIdentifier || String(record.profileIdentifier) === String(record.id || "")) {
+      record.profileIdentifier = record.suzNumber;
+    }
+  });
+  return records;
+}
 
 export function getDailyDateStamp(value = new Date()) {
   if (value instanceof Date) {

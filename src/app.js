@@ -1,5 +1,5 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-arm-v2-20261031-r13";
-import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
+import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-collateral-v7-20261105-r1";
+import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
 
 const app = document.getElementById("app");
@@ -164,7 +164,7 @@ const FT_COLLATERAL_TYPE_OPTIONS = [
 const STAGE1_COLLATERAL_TYPE_SET = new Set(FT_COLLATERAL_TYPE_OPTIONS);
 const FT_COLLATERAL_V6_TYPE_FIELDS = {
   "Объекты недвижимости": [
-    "Описание по ЕГРН", "Кадастровый номер есть", "Кадастровый номер", "Условный номер", "Адрес по ЕГРН", "Наименование", "Кадастровая стоимость",
+    "Описание по ЕГРН", "Кадастровый номер", "Условный номер", "Адрес по ЕГРН", "Кадастровая стоимость",
     "Дата определения кадастровой стоимости", "Дата регистрации права собственности",
     "Назначение объекта", "Функциональная группа", "Площадь застройки, кв. м", "Длина сооружения, м",
     "Категория земель", "Вид разрешенного использования участка", "Право залогодателя", "Дата окончания срока аренды",
@@ -179,9 +179,9 @@ const FT_COLLATERAL_V6_TYPE_FIELDS = {
   ],
   "Транспортные средства (самоходная техника)": [
     "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", "Год выпуска", "Марка", "Модель", "Мощность двигателя, л.с.",
-    "Объем двигателя, куб. см", "Регион выдачи", "Адрес по СТС", "Пробег", "Категория транспорта", "Подкатегория",
+    "Марка двигателя", "Модель двигателя", "Объем двигателя, куб. см", "Регион выдачи", "Адрес по СТС", "Пробег", "Категория транспорта", "Подкатегория",
     "Тип транспорта", "Номер шасси (рамы)", "Мощность двигателя, кВт", "Тип автомобиля", "Инвентарный номер",
-    "Дополнительная информация", "Гос.номер"
+    "Гос.номер"
   ],
   "Оборудование": [
     "Заводской номер", "Серийный номер", "Марка", "Модель", "Инвентарный номер", "Год выпуска", "Группа",
@@ -199,41 +199,12 @@ const FT_COLLATERAL_V6_TYPE_FIELDS = {
   ],
   "Железнодорожный подвижной состав": ["Заводской номер", "Модель вагона", "Номер вагона", "Год постройки"],
   "Животные": ["Инвентарный номер"],
-  "Имущественные права (требования)": ["Вид имущественных прав (требований)", "Вид договора", "Дата заключения договора", "Номер договора", "Инвентарный номер"],
+  "Имущественные права (требования)": ["Вид имущественных прав (требований)", "Договор имущественных прав", "Дата заключения договора", "Номер договора"],
   "Товары в обороте": ["Инвентарный номер"],
   "Прочие движимые вещи (однородные группы)": ["Инвентарный номер"],
   "Прочие движимые вещи (объекты)": ["Инвентарный номер", "Идентификационный признак (значение)", "Идентификационный признак (наименование)"]
 };
-const FT_COLLATERAL_V6_MODAL_TYPE_FIELDS = {
-  "Объекты недвижимости": [
-    "Описание по ЕГРН", "Кадастровый номер есть", "Кадастровый номер", "Условный номер", "Адрес по ЕГРН",
-    "Кадастровая стоимость", "Дата определения кадастровой стоимости", "Дата регистрации права собственности",
-    "Назначение объекта", "Функциональная группа", "Площадь застройки, кв. м", "Длина сооружения, м", "Категория земель",
-    "Вид разрешенного использования участка", "Право залогодателя", "Дата окончания срока аренды",
-    "Размер доли в праве общей долевой собственности, числитель", "Размер доли в праве общей долевой собственности, знаменатель",
-    "Площадь в неструктурированном виде", "Идентификационный номер объекта недвижимости в стране регистрации",
-    "Признак части объекта недвижимости", "Вид сооружения", "Кадастровый номер в пределах, которого находится объект"
-  ],
-  "Транспортные средства, прицепы (полуприцепы)": [
-    "Идентификационный номер транспортного средства (VIN)", "Марка", "Модель", "Год выпуска", "Мощность двигателя, л.с.",
-    "Объем двигателя, куб. см", "Регион выдачи", "Адрес по СТС", "Пробег", "Категория транспорта", "Подкатегория",
-    "Тип транспорта", "Номер шасси (рамы)", "Мощность двигателя, кВт", "Тип автомобиля", "Инвентарный номер", "Гос.номер"
-  ],
-  "Транспортные средства (самоходная техника)": [
-    "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", "Год выпуска", "Марка", "Модель", "Мощность двигателя, л.с.",
-    "Объем двигателя, куб. см", "Регион выдачи", "Адрес по СТС", "Пробег", "Категория транспорта", "Подкатегория",
-    "Тип транспорта", "Номер шасси (рамы)", "Мощность двигателя, кВт", "Тип автомобиля", "Инвентарный номер", "Гос.номер"
-  ],
-  "Оборудование": FT_COLLATERAL_V6_TYPE_FIELDS["Оборудование"],
-  "Воздушные суда": FT_COLLATERAL_V6_TYPE_FIELDS["Воздушные суда"],
-  "Плавучие сооружения": FT_COLLATERAL_V6_TYPE_FIELDS["Плавучие сооружения"],
-  "Железнодорожный подвижной состав": FT_COLLATERAL_V6_TYPE_FIELDS["Железнодорожный подвижной состав"],
-  "Животные": FT_COLLATERAL_V6_TYPE_FIELDS["Животные"],
-  "Имущественные права (требования)": FT_COLLATERAL_V6_TYPE_FIELDS["Имущественные права (требования)"],
-  "Товары в обороте": FT_COLLATERAL_V6_TYPE_FIELDS["Товары в обороте"],
-  "Прочие движимые вещи (однородные группы)": FT_COLLATERAL_V6_TYPE_FIELDS["Прочие движимые вещи (однородные группы)"],
-  "Прочие движимые вещи (объекты)": FT_COLLATERAL_V6_TYPE_FIELDS["Прочие движимые вещи (объекты)"]
-};
+const FT_COLLATERAL_V6_MODAL_TYPE_FIELDS = FT_COLLATERAL_V6_TYPE_FIELDS;
 const COLLATERAL_ADDRESS_FIELDS = [
   "Адрес / место нахождения",
   "Почтовый индекс",
@@ -248,16 +219,13 @@ const COLLATERAL_ADDRESS_FIELDS = [
 ];
 const COLLATERAL_ADDRESS_TECHNICAL_FIELDS = ["ФИАС GUID", "Код страны по ОКСМ", "Код территории по ОКАТО"];
 const COLLATERAL_SHARED_MAIN_FIELDS = [
-  COLLATERAL_GROUP_ATTRIBUTE,
   "Единица измерения",
-  "Параметры единицы измерения",
-  "Дополнительная информация",
-  "Номер договора залога",
-  "Дата договора залога"
+  "Значение, в указанных ед.изм.",
+  "Дополнительная информация"
 ];
 const COLLATERAL_CHARACTERISTIC_COMMON_FIELDS = [
   "Единица измерения",
-  "Параметры единицы измерения",
+  "Значение, в указанных ед.изм.",
   "Дополнительная информация"
 ];
 const NEW_COLLATERAL_SHARED_FIELDS = [
@@ -266,9 +234,8 @@ const NEW_COLLATERAL_SHARED_FIELDS = [
   "Контактное лицо для осмотра"
 ];
 const COLLATERAL_LEGACY_TYPE_FIELDS = [
-  "Тип обеспечения",
   "Единица измерения",
-  "Параметры единицы измерения",
+  "Значение, в указанных ед.изм.",
   "Дополнительная информация"
 ];
 const COLLATERAL_TYPE_FIELDS = {
@@ -825,7 +792,14 @@ const COLLATERAL_TYPE_FIELD_OPTIONS = {
   "Имущественные права (требования)": {
     "Подвид": ["Имущественные права", "Залог прав требования по объекту долевого строительства", "Залог прав требования", "Залог прав требования на денежные средства на счете (залоговый счет)", "Залог прав требований дебиторской задолженности"],
     "Вид имущественных прав (требований)": ["Права пользования (аренды)", "Права требования", "Иное"],
-    "Вид договора": ["Договор купли-продажи", "Договор поставки", "Договор аренды", "Иной договор"]
+    "Договор имущественных прав": [
+      "Кредитный договор (права требования к заемщику)",
+      "Договор займа (права требования к заемщику)",
+      "Договор поставки (права требования к покупателю)",
+      "Договор подряда (права требования к заказчику)",
+      "Договор аренды (права арендодателя)",
+      "Договор уступки права требования (цессии)"
+    ]
   },
   "Товары в обороте": {
     "Вид товара в обороте": ["Сельскохозяйственная продукция (продукты растениеводства)", "Животные", "Продукты пищевые, напитки, изделия табачные", "Драгоценные металлы и драгоценные камни", "Ювелирные и другие изделия из драгоценных металлов и (или) драгоценных камней", "Строительные и отделочные материалы, металлопродукция", "Транспортные средства, оборудование, комплектующие и запасные части к ним", "Текстиль и изделия текстильные", "Топливно-энергетические ресурсы", "Вещества химические и продукты химические", "Средства лекарственные и материалы, применяемые в медицинских целях", "Иное"]
@@ -882,16 +856,15 @@ const FT_COLLATERAL_IMPORT_BASE_COLUMNS = [
   "Идентификатор в АБС", "Наименование", "Дополнительная информация", "Вид профильного идентификатора",
   "Профильный идентификатор объекта", "Статус объекта", "Залогодатель", "ИНН залогодателя",
   "Тип субъекта залогодателя", "Собственник", "ИНН собственника", "Тип субъекта собственника",
-  "Номер кредитного договора / продукт заявки", "Номер договора залога", "Дата договора залога",
-  "Документ-основание", "Дата документа-основания", "Номер документа-основания", "Адрес / местонахождение",
-  "Осмотр (проведен/не проведен)", "Контактное лицо для осмотра", "Единица измерения"
+  "Номер кредитного договора / продукт заявки", "Дата кредитного договора", "Номер договора залога", "Дата договора залога",
+  "Документ-основание", "Дата документа-основания", "Серия документа-основания", "Номер документа-основания", "Статус ЭПТС",
+  "Адрес / местонахождение", "Осмотр произведен", "Контактное лицо для осмотра", "Единица измерения",
+  "Значение, в указанных ед.изм."
 ];
-const FT_COLLATERAL_IMPORT_TYPE_COLUMNS = {
-  "Объекты недвижимости": ["Площадь, кв. м", "Кадастровый номер в пределах, которого находится объект"],
-  "Транспортные средства, прицепы (полуприцепы)": ["Марка", "Модель", "Год выпуска", "Гос.номер", "Мощность, л.с.", "Объем двигателя, куб.м.", "Пробег/наработка"],
-  "Транспортные средства (самоходная техника)": ["Марка", "Модель", "Год выпуска", "Гос.номер", "Мощность, л.с.", "Объем двигателя, куб.м.", "Пробег/наработка"],
-  "Оборудование": ["Марка", "Модель", "Год выпуска", "Производитель", "Инвентарный номер", "Дата ввода в эксплуатацию", "Первоначальная стоимость", "Остаточная стоимость"]
-};
+const FT_COLLATERAL_IMPORT_TYPE_COLUMNS = Object.fromEntries(FT_COLLATERAL_TYPE_OPTIONS.map((typeLabel) => [
+  typeLabel,
+  [...(FT_COLLATERAL_V6_MODAL_TYPE_FIELDS[typeLabel] || [])]
+]));
 
 function normalizeTaskStatus(status) {
   if (status === LEGACY_TASK_STATUS_REWORK) return "Ожидание";
@@ -1005,15 +978,19 @@ function getImportTemplateValue(row, column) {
     "ИНН собственника": row.ownerInn || row.fields?.["ИНН собственника"],
     "Тип субъекта собственника": row.ownerSubjectType || row.fields?.["Тип субъекта собственника"],
     "Номер кредитного договора / продукт заявки": row.dealContract || row.contract,
+    "Дата кредитного договора": row.creditContractDate || row.fields?.["Дата кредитного договора"],
     "Номер договора залога": row.pledgeContractNumber,
     "Дата договора залога": row.pledgeContractDate,
     "Документ-основание": row.basisDocument?.type || row.basisDocumentType,
     "Дата документа-основания": row.basisDocument?.date || row.basisDocumentDate,
     "Номер документа-основания": row.basisDocument?.number || row.basisDocumentNumber,
+    "Серия документа-основания": row.basisDocument?.series || row.basisDocumentSeries,
+    "Статус ЭПТС": row.basisDocument?.status || row.eptsStatus,
     "Адрес / местонахождение": row.address,
-    "Осмотр (проведен/не проведен)": row.inspectionStatus,
+    "Осмотр произведен": row.inspectionStatus || row.fields?.["Осмотр произведен"] || row.fields?.["Осмотр (проведен/не проведен)"],
     "Контактное лицо для осмотра": row.inspectionContact,
     "Единица измерения": row.unit || row.fields?.["Единица измерения"],
+    "Значение, в указанных ед.изм.": row.unitValue || row.unitParameters || row.fields?.["Значение, в указанных ед.изм."] || row.fields?.["Параметры единицы измерения"],
     "Площадь, кв. м": row.area || row.fields?.["S"] || row.fields?.["Площадь, кв. м"] || row.fields?.["Площадь"],
     "Кадастровый номер в пределах, которого находится объект": row.parentCadastralNumber || row.fields?.["Кадастровый номер в пределах, которого находится объект"],
     "Марка": row.fields?.["Марка"] || row.make,
@@ -1029,7 +1006,8 @@ function getImportTemplateValue(row, column) {
     "Первоначальная стоимость": row.fields?.["Первоначальная стоимость"] || row.initialCost,
     "Остаточная стоимость": row.fields?.["Остаточная стоимость"] || row.residualCost
   };
-  return isBlankFieldValue(values[column]) ? "-" : values[column];
+  const value = values[column] ?? row.fields?.[column] ?? row[column];
+  return isBlankFieldValue(value) ? "-" : value;
 }
 
 function getImportTemplateColumns(typeLabel) {
@@ -1226,6 +1204,7 @@ function buildRuntimeData() {
     ];
   }
   data.collaterals = normalizeCollateralCreationDates(data.collaterals);
+  data.collaterals = normalizeCollateralRecordsForFtV7(data.collaterals);
   const deletedApplicationKeys = new Set(deletedApplicationIds);
   data.applications = (data.applications || []).filter((item) =>
     !deletedApplicationKeys.has(String(item?.id || "")) && !deletedApplicationKeys.has(String(item?.number || ""))
@@ -2303,6 +2282,115 @@ function getTask(id) {
 
 function getCollateral(id) {
   return state.data.collaterals.find((item) => item.id === id);
+}
+
+function getCollateralSuzNumber(collateral) {
+  return String(collateral?.suzNumber || collateral?.collateralNumber || "").trim();
+}
+
+function normalizeCollateralRecordsForFtV7(collaterals = []) {
+  normalizeCollateralSuzNumbers(collaterals);
+  return collaterals.map((collateral) => {
+    collateral.fields ||= {};
+    collateral.ftMainInfo ||= {};
+    const legacyGroupIndicator = [
+      collateral.groupIdentificationCode,
+      collateral.groupCode,
+      collateral.ftMainInfo[COLLATERAL_GROUP_ATTRIBUTE],
+      collateral.ftMainInfo[LEGACY_COLLATERAL_GROUP_ATTRIBUTE],
+      collateral.fields[COLLATERAL_GROUP_ATTRIBUTE],
+      collateral.fields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]
+    ].map((value) => String(value || "").trim()).find(Boolean) || "";
+    if (legacyGroupIndicator) {
+      collateral.groupIdentificationCode = legacyGroupIndicator;
+      collateral.groupCode ||= legacyGroupIndicator;
+    }
+    const sharedAliases = {
+      "Единица измерения": ["Единица измерения"],
+      "Значение, в указанных ед.изм.": ["Значение, в указанных ед.изм.", "Параметры единицы измерения"],
+      "Дополнительная информация": ["Дополнительная информация"]
+    };
+    Object.entries(sharedAliases).forEach(([label, aliases]) => {
+      if (isBlankFieldValue(collateral.ftMainInfo[label])) {
+        const legacyValue = aliases
+          .map((alias) => collateral.ftMainInfo[alias] ?? collateral.fields[alias])
+          .find((value) => !isBlankFieldValue(value));
+        if (!isBlankFieldValue(legacyValue)) collateral.ftMainInfo[label] = legacyValue;
+      }
+      aliases.forEach((alias) => delete collateral.fields[alias]);
+    });
+    if (isBlankFieldValue(collateral.ftMainInfo["Значение, в указанных ед.изм."])) {
+      const legacyValue = [collateral.ftMainInfo["Параметры единицы измерения"], collateral.fields["Параметры единицы измерения"]]
+        .find((value) => !isBlankFieldValue(value));
+      if (!isBlankFieldValue(legacyValue)) collateral.ftMainInfo["Значение, в указанных ед.изм."] = legacyValue;
+    }
+    delete collateral.ftMainInfo["Параметры единицы измерения"];
+    delete collateral.fields["Кадастровый номер есть"];
+    delete collateral.hasCadastralNumber;
+    const subtype = resolveCollateralSubtype(collateral);
+    if (subtype) {
+      collateral.subtype = subtype;
+      collateral.fields["Подвид залога"] = subtype;
+      delete collateral.fields["Подтип"];
+    }
+    delete collateral.fields["Вид объекта"];
+    delete collateral.ftMainInfo[COLLATERAL_GROUP_ATTRIBUTE];
+    delete collateral.ftMainInfo[LEGACY_COLLATERAL_GROUP_ATTRIBUTE];
+    delete collateral.fields[COLLATERAL_GROUP_ATTRIBUTE];
+    delete collateral.fields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE];
+    if (isBlankFieldValue(collateral.fields["Договор имущественных прав"]) && !isBlankFieldValue(collateral.fields["Вид договора"])) {
+      collateral.fields["Договор имущественных прав"] = collateral.fields["Вид договора"];
+    }
+    delete collateral.fields["Вид договора"];
+    const typeLabel = getCollateralTypeLabel(collateral);
+    const options = getNewCollateralProfileIdentifierOptions(typeLabel);
+    const selected = options.find((option) => option.label === collateral.profileIdentifierType);
+    const current = String(collateral.profileIdentifier || "").trim();
+    const legacyCardId = !current || current === String(collateral.id || "") || /^COL-/i.test(current);
+    if (selected?.group === "system") {
+      collateral.profileIdentifier = getCollateralSuzNumber(collateral);
+    } else if (selected?.group === "type" || selected?.group === "subtype") {
+      const selectedValue = getCollateralProfileFieldValue(collateral, selected);
+      collateral.profileIdentifier = selectedValue || (legacyCardId ? getCollateralSuzNumber(collateral) : current);
+    } else {
+      const naturalOption = options.find((option) => (option.group === "type" || option.group === "subtype")
+        && getCollateralProfileFieldValue(collateral, option)
+        && String(getCollateralProfileFieldValue(collateral, option)).replace(/\s+/g, "").toLocaleLowerCase("ru-RU")
+          === current.replace(/\s+/g, "").toLocaleLowerCase("ru-RU"));
+      const firstAvailable = options.find((option) => (option.group === "type" || option.group === "subtype") && getCollateralProfileFieldValue(collateral, option));
+      if (naturalOption || firstAvailable) {
+        const option = naturalOption || firstAvailable;
+        collateral.profileIdentifierType = option.label;
+        collateral.profileIdentifier = getCollateralProfileFieldValue(collateral, option);
+      } else {
+        collateral.profileIdentifierType = "Номер карточки залога";
+        collateral.profileIdentifier = getCollateralSuzNumber(collateral);
+      }
+    }
+    return collateral;
+  });
+}
+
+function getCollateralProfileFieldValue(collateral, option) {
+  if (option?.group === "subtype") {
+    return String(collateral?.subtype || collateral?.fields?.["Подвид залога"] || collateral?.fields?.["Подтип"] || "").trim();
+  }
+  const fields = collateral?.fields || {};
+  const aliases = {
+    "Идентификационный номер транспортного средства (VIN)": ["VIN", "Идентификационный номер транспортного средства (VIN)"],
+    "Идентификационный номер ТС или СМ (VIN, PIN, заводской)": ["Идентификационный номер ТС или СМ (VIN, PIN, заводской)", "Идентификационный номер самоходной машины", "VIN"],
+    "Серийный (заводской) номер": ["Серийный (заводской) номер", "Серийный номер"],
+    "Опознавательные знаки воздушного судна": ["Опознавательные знаки воздушного судна"],
+    "Идентификационный признак (значение)": ["Идентификационный признак (значение)"],
+    "Идентификационный номер": ["Идентификационный номер"]
+  };
+  const fieldValue = (aliases[option?.field] || [option?.field]).map((field) => fields[field]).find((value) => !isBlankFieldValue(value));
+  if (option?.includesDate) {
+    const number = String(fields[option.field] || "").trim();
+    const date = formatProfileIdentifierDate(fields["Дата заключения договора"] || "");
+    return number ? `${number}${date ? ` от ${date}` : ""}` : "";
+  }
+  return String(fieldValue || "").trim();
 }
 
 function getContract(id) {
@@ -7951,35 +8039,23 @@ function updateApplicationContactField(fieldEl) {
 function getCollateralObjectIdentifier(collateral) {
   const fields = collateral?.fields || {};
   const typeLabel = getCollateralTypeLabel(collateral);
-  if (typeLabel === "Имущественные права (требования)") {
-    const contractNumber = fields["Номер договора"] || "";
-    const contractDate = formatProfileIdentifierDate(fields["Дата заключения договора"] || fields["Дата договора"] || "");
-    if (contractNumber) return contractNumber + (contractDate ? ` от ${contractDate}` : "");
-    return collateral?.profileIdentifier || collateral?.id || "Номер договора не указан";
+  const options = getNewCollateralProfileIdentifierOptions(typeLabel);
+  const selected = options.find((option) => option.label === collateral?.profileIdentifierType);
+  if (selected?.group === "system") return getCollateralSuzNumber(collateral) || collateral?.profileIdentifier || "Номер карточки не присвоен";
+  if (selected?.group === "type" || selected?.group === "subtype") {
+    const value = getCollateralProfileFieldValue(collateral, selected);
+    if (value) return value;
+    if (collateral?.profileIdentifier && !/^COL-/i.test(String(collateral.profileIdentifier))) return collateral.profileIdentifier;
   }
-  if (typeLabel === "Товары в обороте") {
-    return collateral?.groupIdentificationCode
-      || collateral?.groupCode
-      || collateral?.ftMainInfo?.[COLLATERAL_GROUP_ATTRIBUTE]
-      || collateral?.ftMainInfo?.[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]
-      || fields[COLLATERAL_GROUP_ATTRIBUTE]
-      || fields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]
-      || collateral?.id
-      || "Идентификатор карточки не указан";
-  }
-  if (collateral?.profileIdentifier) return collateral.profileIdentifier;
-  if (typeLabel === "Транспортные средства, прицепы (полуприцепы)") return fields["VIN"] || fields["Идентификационный номер транспортного средства (VIN)"] || fields["Номер шасси (рамы)"] || collateral?.id || "VIN не указан";
-  if (typeLabel === "Транспортные средства (самоходная техника)") return fields["Идентификационный номер самоходной машины"] || fields["VIN"] || fields["Номер шасси (рамы)"] || collateral?.id || "Идентификатор машины не указан";
-  if (typeLabel === "Объекты недвижимости") return fields["Кадастровый номер"] || fields["Условный номер"] || collateral?.id || "Кадастровый номер не указан";
-  if (typeLabel === "Оборудование") return fields["Серийный номер"] || fields["Заводской номер"] || fields["Инвентарный номер"] || collateral?.id || "Серийный номер не указан";
-  if (typeLabel === "Воздушные суда") return fields["Серийный (заводской) номер"] || fields["Опознавательные знаки воздушного судна"] || collateral?.id || "Серийный номер не указан";
-  if (typeLabel === "Плавучие сооружения") return fields["Идентификационный номер"] || fields["Номер IMO"] || fields["Регистровый номер"] || collateral?.id || "Идентификатор судна не указан";
-  if (typeLabel === "Железнодорожный подвижной состав") return fields["Номер вагона"] || fields["Заводской номер"] || collateral?.id || "Номер вагона не указан";
-  if (typeLabel === "Имущественные права (требования)") return collateral?.id || "Идентификатор карточки не указан";
-  if (typeLabel === "Товары в обороте") return collateral?.id || "Идентификатор карточки не указан";
-  if (typeLabel === "Прочие движимые вещи (однородные группы)") return collateral.groupIdentificationCode || fields["Вид движимой вещи"] || collateral?.id || "Идентификатор группы не указан";
-  if (typeLabel === "Прочие движимые вещи (объекты)") return fields["Идентификационный признак (значение)"] || fields["Инвентарный номер"] || collateral?.id || "Идентификационный признак не указан";
-  return collateral?.id || "Идентификатор не указан";
+  const natural = options
+    .filter((option) => option.group === "type" || option.group === "subtype")
+    .map((option) => getCollateralProfileFieldValue(collateral, option))
+    .find(Boolean);
+  if (natural) return natural;
+  const saved = String(collateral?.profileIdentifier || "").trim();
+  if (saved && saved !== String(collateral?.id || "") && !/^COL-/i.test(saved)
+      && collateral?.profileIdentifierType !== "Условный номер") return saved;
+  return getCollateralSuzNumber(collateral) || "Номер карточки не присвоен";
 }
 
 function formatProfileIdentifierDate(value) {
@@ -9294,7 +9370,22 @@ function getCollateralObjectCheckRows(task, collateral, context = "registration"
   }
 
   const displayTask = task || (context === "collateral" ? getLatestObjectCheckTask(collateral) : null);
-  return applyPledgeCheckManualValues(displayTask, collateral, rows);
+  const checkedRows = applyPledgeCheckManualValues(displayTask, collateral, rows);
+  const recheck = collateral?.externalData?.profileIdentifierRecheck;
+  if (!recheck) return checkedRows;
+  const recheckRowId = isRealEstateCollateralType(type)
+    ? "n-1-2"
+    : isAutoVehicleCollateralType(type) || isSelfPropelledCollateralType(type) ? "ts-1" : "";
+  if (!recheckRowId) return checkedRows;
+  return checkedRows.map((item) => item.id === recheckRowId
+    ? {
+        ...item,
+        source: recheck.source,
+        checkedAt: recheck.requestedAt,
+        result: `Повторная проверка по идентификатору ${recheck.identifier} ожидает ответа источника.`,
+        status: "Не проверено"
+      }
+    : item);
 }
 
 function addRealEstateObjectCheckRows(rows, row, collateral, external, context) {
@@ -9392,16 +9483,6 @@ function addRealEstateObjectCheckRows(rows, row, collateral, external, context) 
       isBuildingLike ? "Пройдена" : "Не применимо",
       { code: "Н-3.1" }
     ),
-    row(
-      "n-4",
-      "Связанные объекты и группа оценки",
-      "Карточки залога, признак группы залога, документы объекта",
-      collateral.groupIdentificationCode || collateral.groupCode || collateral.ftMainInfo?.[COLLATERAL_GROUP_ATTRIBUTE] || collateral.ftMainInfo?.[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || fields[COLLATERAL_GROUP_ATTRIBUTE] || fields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]
-        ? `Признак группы залога: ${collateral.groupIdentificationCode || collateral.groupCode || collateral.ftMainInfo?.[COLLATERAL_GROUP_ATTRIBUTE] || collateral.ftMainInfo?.[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || fields[COLLATERAL_GROUP_ATTRIBUTE] || fields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]}. Связанные объекты выводятся списком с гиперссылками.`
-        : "Единая группа обеспечения не указана; общий расчет стоимости группы на этапе 1 не выполняется.",
-      "Пройдена",
-      { code: "Н-4" }
-    )
   );
 }
 
@@ -14367,30 +14448,6 @@ function renderContractCard(contractId) {
   `;
 }
 
-function getCollateralGroupMembers(collateral) {
-  const groupCode = getCollateralGroupCode(collateral);
-  if (!groupCode) return [];
-  return state.data.collaterals
-    .filter((item) => getCollateralGroupCode(item) === groupCode)
-    .sort((left, right) => getCollateralObjectIdentifier(left).localeCompare(getCollateralObjectIdentifier(right), "ru", { numeric: true, sensitivity: "base" }));
-}
-
-function renderCollateralGroupSwitcher(collateral) {
-  const members = getCollateralGroupMembers(collateral);
-  if (members.length < 2) return "";
-  return `
-    <label class="collateral-group-switcher">
-      <span>Объекты группы</span>
-      <select data-collateral-group-switch aria-label="Переключить карточку залога в группе">
-        ${members.map((item) => {
-          const label = `${getCollateralTypeLabel(item)} - ${getCollateralObjectIdentifier(item)}`;
-          return `<option value="${escapeHtml(item.id)}" ${item.id === collateral.id ? "selected" : ""}>${escapeHtml(label)}</option>`;
-        }).join("")}
-      </select>
-    </label>
-  `;
-}
-
 function renderCollateralCard(collateralId, query = new URLSearchParams()) {
   const collateral = getCollateral(collateralId);
   if (!collateral) return renderNotFound("Залог не найден", "/app/collaterals");
@@ -14399,6 +14456,7 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
   const mainPledgor = getMainPledgor(collateral);
   const status = getCollateralStatusForFt(collateral);
   const profileIdentifier = getCollateralObjectIdentifier(collateral);
+  const suzNumber = getCollateralSuzNumber(collateral);
   const tabs = [
     ["overview", "Основная информация по объекту"],
     ["documents", "Документы"],
@@ -14413,7 +14471,7 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
   else if (tabs.some(([id]) => id === requestedTab)) state.collateralTab = requestedTab;
   if (!tabs.some(([id]) => id === state.collateralTab)) state.collateralTab = "overview";
   return `
-    ${renderPageHeader(`Карточка залога ${collateral.id}`, "", `<button class="btn btn-secondary" data-route="/app/collaterals">Назад</button>${hasPermission(getRole(), "appCreateEdit") ? `<button class="btn btn-secondary" data-route="/app/applications/new?collateral=${collateral.id}">Создать заявку</button>` : ""}${renderCollateralGroupSwitcher(collateral)}`)}
+    ${renderPageHeader(`Карточка залога ${suzNumber}`, "", `<button class="btn btn-secondary" data-route="/app/collaterals">Назад</button>${hasPermission(getRole(), "appCreateEdit") ? `<button class="btn btn-secondary" data-route="/app/applications/new?collateral=${collateral.id}">Создать заявку</button>` : ""}`)}
     <section class="collateral-card-header">
       <div class="collateral-header-title">
         <div class="collateral-header-topline">
@@ -14437,7 +14495,7 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
       <div class="collateral-header-values">
         <span><strong>Рыночная стоимость</strong>${formatMoney(collateral.marketValue)}</span>
         <span><strong>Залоговая стоимость</strong>${formatMoney(collateral.pledgeValue)}</span>
-        <span><strong>Признак группы залога</strong>${escapeHtml(getCollateralMainInfoFields(collateral)[COLLATERAL_GROUP_ATTRIBUTE] || "Не указан")}</span>
+        <span><strong>Номер залога в СУЗ</strong>${escapeHtml(suzNumber)}</span>
       </div>
     </section>
     <div class="tabs wrap">${tabs.map(([id, label]) => `<button class="${state.collateralTab === id ? "active" : ""}" data-action="collateral-tab" data-tab="${id}">${escapeHtml(label)}</button>`).join("")}</div>
@@ -14588,15 +14646,11 @@ function renderCollateralOverview(collateral) {
       "Частный дом": collateral.addressFields?.["Частный дом"] || "Нет"
     }
   };
-  if (typeLabel === "Объекты недвижимости") {
-    const cadastralFlag = getCollateralCadastralFlag(collateral);
-    if (cadastralFlag) fieldDraft.typeFields["Кадастровый номер есть"] = cadastralFlag;
-  }
   const characteristicGroups = getNewCollateralFieldGroups(typeLabel, fieldDraft);
   const characteristicTypeLabels = getNewCollateralCharacteristicTypeFields(fieldDraft, characteristicGroups);
   const typeFields = Object.fromEntries(characteristicTypeLabels.map((label) => [
     label,
-    label === "Кадастровый номер есть" ? fieldDraft.typeFields[label] : getCollateralTypeSpecificValue(collateral, label)
+    getCollateralTypeSpecificValue(collateral, label)
   ]));
   const addressFields = getCollateralAddressFields(collateral);
   const basisFields = {
@@ -14778,18 +14832,13 @@ function getCollateralRelatedContracts(collateral) {
 function getCollateralMainInfoFields(collateral) {
   const saved = collateral.ftMainInfo || {};
   const legacyFields = collateral.fields || {};
+  const firstValue = (...values) => values.find((value) => !isBlankFieldValue(value));
   const fields = {
-    "Единица измерения": saved["Единица измерения"] || legacyFields["Единица измерения"] || getCollateralUnitDefault(collateral),
-    "Параметры единицы измерения": saved["Параметры единицы измерения"] || legacyFields["Параметры единицы измерения"] || "1,000",
-    [COLLATERAL_GROUP_ATTRIBUTE]: collateral.groupIdentificationCode || collateral.groupCode || saved[COLLATERAL_GROUP_ATTRIBUTE] || saved[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || legacyFields[COLLATERAL_GROUP_ATTRIBUTE] || legacyFields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || "",
-    "Дополнительная информация": saved["Дополнительная информация"] || legacyFields["Дополнительная информация"] || collateral.additionalInfo || "Не указана",
-    "Номер договора залога": saved["Номер договора залога"] || legacyFields["Номер договора залога"] || "",
-    "Дата договора залога": saved["Дата договора залога"] || legacyFields["Дата договора залога"] || ""
+    "Единица измерения": firstValue(saved["Единица измерения"], legacyFields["Единица измерения"], getCollateralUnitDefault(collateral)),
+    "Значение, в указанных ед.изм.": firstValue(saved["Значение, в указанных ед.изм."], legacyFields["Значение, в указанных ед.изм."], saved["Параметры единицы измерения"], legacyFields["Параметры единицы измерения"], ""),
+    "Дополнительная информация": firstValue(saved["Дополнительная информация"], legacyFields["Дополнительная информация"], collateral.additionalInfo, "Не указана")
   };
-  return Object.fromEntries(COLLATERAL_SHARED_MAIN_FIELDS.map((key) => [key, ensureFilledValue(
-    key === COLLATERAL_GROUP_ATTRIBUTE ? (saved[key] || saved[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || legacyFields[key] || legacyFields[LEGACY_COLLATERAL_GROUP_ATTRIBUTE]) : saved[key],
-    fields[key]
-  )]));
+  return Object.fromEntries(COLLATERAL_SHARED_MAIN_FIELDS.map((key) => [key, ensureFilledValue(firstValue(saved[key], legacyFields[key], fields[key]), fields[key])]));
 }
 
 function getCollateralUnitOptions(collateral) {
@@ -14854,16 +14903,16 @@ function isCollateralV6TypeFieldApplicable(typeLabel, label, source = {}) {
   const subtype = String(source?.subtype || fields["Подвид залога"] || fields["Подвид"] || fields["Подтип"] || "");
   const value = fields[label];
   if (typeLabel === "Объекты недвижимости") {
-    if (["Кадастровый номер есть", "Кадастровый номер", "Условный номер"].includes(label)) return true;
-    if (["Назначение объекта", "Функциональная группа"].includes(label)) return /здани|помещени|незаверш/i.test(subtype);
-    if (["Площадь застройки, кв. м", "Длина сооружения, м"].includes(label)) return /здани|помещени|машино-мест|незаверш|земельн/i.test(subtype);
+    if ([
+      "Размер доли в праве общей долевой собственности, числитель",
+      "Размер доли в праве общей долевой собственности, знаменатель",
+      "Площадь в неструктурированном виде"
+    ].includes(label)) return true;
+    if (["Кадастровый номер", "Условный номер"].includes(label)) return true;
+    if (["Назначение объекта", "Функциональная группа"].includes(label)) return /здани|помещени|квартир|апартамент|комнат|жилой дом|таунхаус|незаверш/i.test(subtype);
+    if (["Площадь застройки, кв. м", "Длина сооружения, м"].includes(label)) return /здани|помещени|квартир|апартамент|комнат|жилой дом|таунхаус|машино-мест|незаверш|земельн/i.test(subtype);
     if (["Категория земель", "Вид разрешенного использования участка"].includes(label)) return /земельн/i.test(subtype);
     if (label === "Дата окончания срока аренды") return /аренд/i.test(String(fields["Право залогодателя"] || ""));
-    if (label.startsWith("Размер доли в праве общей долевой собственности")) {
-      return !isBlankFieldValue(fields["Размер доли в праве общей долевой собственности, числитель"])
-        || !isBlankFieldValue(fields["Размер доли в праве общей долевой собственности, знаменатель"]);
-    }
-    if (label === "Площадь в неструктурированном виде") return !isBlankFieldValue(value);
     if (label === "Идентификационный номер объекта недвижимости в стране регистрации") return !isBlankFieldValue(value);
     if (label === "Признак части объекта недвижимости") return isAffirmativeValue(value);
     if (label === "Вид сооружения") return /сооружен/i.test(subtype) || !isBlankFieldValue(value);
@@ -14881,7 +14930,6 @@ function isCollateralV6CardTypeFieldApplicable(typeLabel, label, source = {}) {
   const subtype = String(source?.subtype || fields["Подвид залога"] || fields["Подвид"] || fields["Подтип"] || "");
   if (typeLabel === "Объекты недвижимости") {
     const alwaysVisible = [
-      "Площадь застройки, кв. м",
       "Размер доли в праве общей долевой собственности, числитель",
       "Размер доли в праве общей долевой собственности, знаменатель",
       "Площадь в неструктурированном виде",
@@ -14921,11 +14969,9 @@ function getCollateralTypeDisplayFieldLabels(typeLabel) {
 
 function getCollateralTypeSpecificValue(collateral, label) {
   const fields = collateral.fields || {};
-  if (label === "Кадастровый номер есть") return getCollateralCadastralFlag(collateral);
   if (label === "Подвид залога") return getCanonicalCollateralSubtype(collateral);
   if (!isBlankFieldValue(fields[label])) return fields[label];
   if (label === "Кадастровый номер" && (collateral.profileIdentifierType === label || /^\d{2}:\d{2}:\d{6,7}:\d+$/i.test(String(collateral.profileIdentifier || "")))) return collateral.profileIdentifier || "";
-  if (label === "Условный номер" && collateral.profileIdentifierType === label) return collateral.profileIdentifier || "";
   const aliases = {
     "Тип единицы": "Подвид залога",
     "Вид товара в обороте": "Группа товаров",
@@ -14949,6 +14995,9 @@ function getCollateralTypeSpecificValue(collateral, label) {
     "Кадастровый номер в пределах, которого находится объект": "Кадастровый номер объекта, в состав которого входит часть",
     "Заводской номер": "Серийный номер",
     "Серийный (заводской) номер": "Серийный номер",
+    "Договор имущественных прав": "Вид договора",
+    "Марка двигателя": "Марка двигателя",
+    "Модель двигателя": "Модель двигателя",
   };
   if (aliases[label] && !isBlankFieldValue(fields[aliases[label]])) return fields[aliases[label]];
   if (["Название", "Наименование"].includes(label)) return fields[label] || collateral.name || collateral.description || getCollateralName(collateral);
@@ -14963,16 +15012,6 @@ function getCollateralTypeSpecificValue(collateral, label) {
   if (label === "Идентификатор (номер)" || label === "Идентификационный код векселя") return collateral.id;
   if (label === "Описание предмета залога в договоре залога") return collateral.description || getCollateralName(collateral);
   return getCollateralTypeFieldFallback(collateral, label);
-}
-
-function getCollateralCadastralFlag(collateral = {}) {
-  const fields = collateral.fields || collateral.typeFields || {};
-  const stored = collateral.hasCadastralNumber ?? fields["Кадастровый номер есть"];
-  if (stored !== undefined && stored !== null && String(stored).trim() !== "") return isAffirmativeValue(stored) ? "Да" : "Нет";
-  if (collateral.profileIdentifierType === "Кадастровый номер" || /^\d{2}:\d{2}:\d{6,7}:\d+$/i.test(String(collateral.profileIdentifier || ""))) return "Да";
-  if (collateral.profileIdentifierType === "Условный номер" || !isBlankFieldValue(fields["Условный номер"])) return "Нет";
-  if (!isBlankFieldValue(fields["Кадастровый номер"])) return "Да";
-  return "";
 }
 
 function getVehicleMakeModel(rawValue = "") {
@@ -15052,8 +15091,7 @@ function normalizeCollateralFieldControlValue(collateral, group, label, value, o
 }
 
 function isCollateralCheckboxField(group, label) {
-  return (group === "main" && ["Признак включения в отчетные данные", "Осмотр произведен"].includes(label))
-    || (group === "type" && label === "Кадастровый номер есть");
+  return group === "main" && label === "Осмотр произведен";
 }
 
 function isAffirmativeValue(value) {
@@ -15172,7 +15210,7 @@ function getCollateralTypeFieldFallback(collateral, label) {
   const common = {
     "Тип обеспечения": collateral?.pledgeType || "Полученное",
     "Единица измерения": getCollateralUnitDefault(collateral),
-    "Параметры единицы измерения": "1,000",
+    "Значение, в указанных ед.изм.": fields["Значение, в указанных ед.изм."] || fields["Параметры единицы измерения"] || "",
     "Инвентарный номер": fields["Инвентарный номер"] || `INV-${code}`,
     "Дополнительная информация": fields["Дополнительная информация"] || collateral?.additionalInfo || "Не указана"
   };
@@ -15183,7 +15221,6 @@ function getCollateralTypeFieldFallback(collateral, label) {
       "Подвид залога": fields["Подвид залога"] || fields["Подвид"] || (isApartment ? "Жилое помещение, садового (дачного) домика" : "Производственное, складское помещение"),
       "Кадастровый номер": fields["Кадастровый номер"] || `77:01:000${code}:100${code}`,
       "Условный номер": `УН-${code}-2026`,
-      "Кадастровый номер есть": fields["Кадастровый номер есть"] || (fields["Кадастровый номер"] ? "Да" : fields["Условный номер"] ? "Нет" : "Да"),
       "Дата регистрации права собственности": "2024-03-15",
       "Вид объекта": isApartment ? "Помещения" : "Здания",
       "Описание по ЕГРН": collateral.description || getCollateralName(collateral),
@@ -15207,7 +15244,7 @@ function getCollateralTypeFieldFallback(collateral, label) {
       "Идентификационный номер объекта недвижимости в стране регистрации": `RU-${collateral.id}`,
       "Признак части объекта недвижимости": "Нет",
       "Вид сооружения": "Не применимо",
-      "Кадастровый номер объекта, в состав которого входит часть": "Не применимо"
+      "Кадастровый номер в пределах, которого находится объект": "Не применимо"
     };
     return realty[label] || "Не применимо";
   }
@@ -15235,6 +15272,8 @@ function getCollateralTypeFieldFallback(collateral, label) {
       "Марка": model.make,
       "Модель": model.model,
       "Мощность двигателя, л.с.": "450",
+      "Марка двигателя": fields["Марка двигателя"] || (selfPropelled ? "ММЗ" : "Не применимо"),
+      "Модель двигателя": fields["Модель двигателя"] || (selfPropelled ? "Д-243" : "Не применимо"),
       "Номер шасси (рамы)": `${vin.slice(0, 8)}-${code}`,
       "Мощность двигателя, кВт": "331",
       "Объем двигателя, куб. см": "12809"
@@ -15245,7 +15284,8 @@ function getCollateralTypeFieldFallback(collateral, label) {
     const model = getVehicleMakeModel(fields["Марка"] || fields["Модель"] || fields["Производитель"] || collateral.description);
     const equipment = {
       "Подвид": "Машины и оборудование",
-      "Заводской номер": fields["Серийный номер"] || `EQ-${code}-2026`,
+      "Заводской номер": fields["Заводской номер"] || `EQ-${code}-2026`,
+      "Серийный номер": fields["Серийный номер"] || `SN-${code}-2026`,
       "Группа": /пищ|сухофрукт|упаков/i.test(collateral.description || "") ? "Оборудование пищевой промышленности" : "Иное",
       "Марка": fields["Производитель"] || model.make,
       "Модель": fields["Модель"] || model.model,
@@ -15303,7 +15343,7 @@ function getCollateralTypeFieldFallback(collateral, label) {
     const rights = {
       "Подвид": fields["Подвид"] || "Залог прав требования",
       "Вид имущественных прав (требований)": fields["Вид имущественных прав (требований)"] || "Права требования",
-      "Вид договора": fields["Вид договора"] || "Договор поставки",
+      "Договор имущественных прав": fields["Договор имущественных прав"] || fields["Вид договора"] || "Договор поставки (права требования к покупателю)",
       "Дата заключения договора": fields["Дата заключения договора"] || "2026-02-14",
       "Номер договора": fields["Номер договора"] || `PR-${code}/26`
     };
@@ -15359,7 +15399,7 @@ function getCollateralTypeFieldFallback(collateral, label) {
   if (/Вид|Тип|Группа|Подвид|Категория|Сведения/.test(label)) return "Действующее значение справочника";
   if (label === "Тип обеспечения") return collateral?.pledgeType || "Полученное";
   if (label === "Единица измерения") return getCollateralUnitDefault(collateral);
-  if (label === "Параметры единицы измерения") return "1,000";
+  if (label === "Значение, в указанных ед.изм.") return fields[label] || fields["Параметры единицы измерения"] || "Не указано";
   if (label === "Дополнительная информация") return fields[label] || "Не указана";
   return "Не указано";
 }
@@ -16255,24 +16295,43 @@ function getExternalAttributeGroupStatus(rows) {
 
 function getCollateralExternalRows(collateral) {
   const sources = (state.data.integrations || []).filter((source) => source.group === "Внешняя");
-  return sources.map((source) => {
+  const rows = sources.map((source) => {
     const log = getExternalSourceLog(source, collateral);
     const detail = getCollateralExternalSourceDetail(source, collateral);
     const applicable = detail.applicable !== false;
-    const rawStatus = log?.result || detail.status || source.status;
+    const recheck = collateral.externalData?.profileIdentifierRecheck;
+    const isRequestedSource = recheck?.sourceId === source.id;
+    const rawStatus = isRequestedSource ? recheck.status : (log?.result || detail.status || source.status);
     const status = normalizeExternalSourceStatus(rawStatus, applicable);
     return {
       source: source.name,
       group: source.group,
       applicable,
-      dataType: detail.dataType || source.method,
-      value: detail.value,
-      updatedAt: detail.updatedAt || log?.time || source.lastSync || collateral.updatedAt,
+      dataType: isRequestedSource ? "Повторная проверка профильного идентификатора" : (detail.dataType || source.method),
+      value: isRequestedSource ? `Проверка идентификатора ${recheck.identifier}` : detail.value,
+      updatedAt: isRequestedSource ? recheck.requestedAt : (detail.updatedAt || log?.time || source.lastSync || collateral.updatedAt),
       status,
       tone: externalStatusTone(status),
-      message: detail.message || log?.message || source.method
+      message: isRequestedSource
+        ? "Повторная проверка инициирована после изменения профильного идентификатора."
+        : (detail.message || log?.message || source.method)
     };
   });
+  const recheck = collateral.externalData?.profileIdentifierRecheck;
+  if (recheck && !sources.some((source) => source.id === recheck.sourceId)) {
+    rows.push({
+      source: recheck.source,
+      group: "Внешняя",
+      applicable: true,
+      dataType: "Повторная проверка профильного идентификатора",
+      value: `Проверка идентификатора ${recheck.identifier}`,
+      updatedAt: recheck.requestedAt,
+      status: recheck.status,
+      tone: externalStatusTone(recheck.status),
+      message: "Повторная проверка инициирована после изменения профильного идентификатора."
+    });
+  }
+  return rows;
 }
 
 function getExternalSourceLog(source, collateral) {
@@ -18037,6 +18096,7 @@ function renderCollateralRegistryPickerModal() {
 }
 
 function createNewCollateralDraft(context = "registry", collateral = null) {
+  const collateralRecords = state.data?.collaterals || [];
   const fromApplication = context !== "registry";
   const clientName = fromApplication ? (state.newTask?.dealClientName || state.newTask?.participantName || "") : "";
   const clientInn = fromApplication ? (state.newTask?.dealClientInn || state.newTask?.participantInn || "") : "";
@@ -18044,9 +18104,6 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
   const typeLabel = collateral ? getCollateralTypeLabel(collateral) : "";
   const existingMain = collateral?.ftMainInfo || {};
   const existingLegacy = collateral?.fields || {};
-  const groupIndicator = collateral
-    ? (collateral.groupIdentificationCode || collateral.groupCode || existingMain[COLLATERAL_GROUP_ATTRIBUTE] || existingMain[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || existingLegacy[COLLATERAL_GROUP_ATTRIBUTE] || existingLegacy[LEGACY_COLLATERAL_GROUP_ATTRIBUTE] || "")
-    : "";
   const existingAddress = collateral?.addressFields || {};
   const existingPledgors = (collateral?.pledgors || []).map((row) => ({ ...row }));
   const pledgeContracts = [];
@@ -18091,8 +18148,10 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
     typeLabel,
     profileIdentifierType: collateral.profileIdentifierType,
     typeFields,
-    sharedFields: { [COLLATERAL_GROUP_ATTRIBUTE]: groupIndicator },
+    sharedFields: {},
     profileIdentifier: collateral.profileIdentifier,
+    suzNumber: getCollateralSuzNumber(collateral)
+      || getNextMonthlyCollateralNumber(collateralRecords, new Date()),
     collateralId: collateral.id
   }) : "";
   if (collateral && typeLabel === "Объекты недвижимости") {
@@ -18100,13 +18159,6 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
       const value = String(existingLegacy[field] || "").trim();
       if (value) typeFields[field] = value;
     }
-    const cadastralFlag = getCollateralCadastralFlag({
-      hasCadastralNumber: collateral.hasCadastralNumber,
-      fields: existingLegacy,
-      profileIdentifierType,
-      profileIdentifier: collateral.profileIdentifier
-    });
-    if (cadastralFlag) typeFields["Кадастровый номер есть"] = cadastralFlag;
   }
   const addressAliases = {
     "Улица": "Улица (в том числе проспект, переулок, квартал)",
@@ -18137,18 +18189,19 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
     name: collateral ? getCollateralName(collateral) : "",
     profileIdentifierType,
     typeFields,
+    suzNumber: getCollateralSuzNumber(collateral)
+      || getNextMonthlyCollateralNumber(collateralRecords, new Date()),
     basisDocumentExpanded: false,
     typeFieldsExpanded: false,
     basisDocument: Object.fromEntries(Object.entries(basisDocument).map(([field, value]) => [field, field === "date" ? formatNewCollateralDateInput(value) : value])),
     sharedFields: {
-      "Единица измерения": existingMain["Единица измерения"] || existingLegacy["Единица измерения"] || (collateral ? getCollateralUnitDefault(collateral) : ""),
-      "Параметры единицы измерения": existingMain["Параметры единицы измерения"] || existingLegacy["Параметры единицы измерения"] || "",
-      "Дополнительная информация": existingMain["Дополнительная информация"] || existingLegacy["Дополнительная информация"] || collateral?.additionalInfo || "",
+      "Единица измерения": [existingMain["Единица измерения"], existingLegacy["Единица измерения"], collateral ? getCollateralUnitDefault(collateral) : ""].find((value) => !isBlankFieldValue(value)) || "",
+      "Значение, в указанных ед.изм.": [existingMain["Значение, в указанных ед.изм."], existingLegacy["Значение, в указанных ед.изм."], existingMain["Параметры единицы измерения"], existingLegacy["Параметры единицы измерения"]].find((value) => !isBlankFieldValue(value)) || "",
+      "Дополнительная информация": [existingMain["Дополнительная информация"], existingLegacy["Дополнительная информация"], collateral?.additionalInfo].find((value) => !isBlankFieldValue(value)) || "",
       "Осмотр произведен": inspectionDone ? "Да" : "Нет",
       "Контактное лицо для осмотра": existingMain["Контактное лицо для осмотра"] || existingLegacy["Контактное лицо для осмотра"] || ""
     },
     pledgeContracts,
-    hiddenGroupIndicator: groupIndicator,
     addressFields,
     pledgors: existingPledgors.length
       ? existingPledgors
@@ -18213,7 +18266,6 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
   const naturalOptions = {
     "Объекты недвижимости": [
       { label: "Кадастровый номер", group: "type", field: "Кадастровый номер" },
-      { label: "Условный номер", group: "type", field: "Условный номер" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Транспортные средства, прицепы (полуприцепы)": [
@@ -18221,13 +18273,13 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Транспортные средства (самоходная техника)": [
-      { label: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", group: "type", field: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)" },
+      { label: "Идентификационный номер самоходной машины", group: "type", field: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Оборудование": [
       { label: "Заводской номер", group: "type", field: "Заводской номер" },
-      { label: "Серийный номер", group: "type", field: "Серийный номер" },
       { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
+      { label: "Серийный номер", group: "type", field: "Серийный номер" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Воздушные суда": [
@@ -18244,8 +18296,8 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Железнодорожный подвижной состав": [
-      { label: "Заводской номер", group: "type", field: "Заводской номер" },
       { label: "Номер вагона", group: "type", field: "Номер вагона" },
+      { label: "Заводской номер", group: "type", field: "Заводской номер" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Имущественные права (требования)": [
@@ -18254,10 +18306,12 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
     ],
     "Животные": [{ label: "Инвентарный номер", group: "type", field: "Инвентарный номер" }, { label: "Номер карточки залога", group: "system", field: "" }],
     "Товары в обороте": [{ label: "Инвентарный номер", group: "type", field: "Инвентарный номер" }, { label: "Номер карточки залога", group: "system", field: "" }],
-    "Прочие движимые вещи (однородные группы)": [{ label: "Инвентарный номер", group: "type", field: "Инвентарный номер" }, { label: "Номер карточки залога", group: "system", field: "" }],
+    "Прочие движимые вещи (однородные группы)": [
+      { label: "Номер карточки залога", group: "system", field: "" }
+    ],
     "Прочие движимые вещи (объекты)": [
-      { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
       { label: "Идентификационный признак (значение)", group: "type", field: "Идентификационный признак (значение)" },
+      { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ]
   }[typeLabel] || [];
@@ -18271,6 +18325,7 @@ function getNewCollateralProfileSource(draft, identifierType = draft?.profileIde
 
 function getNewCollateralProfileRawSourceValue(draft, option) {
   if (!option || option.group === "system") return "";
+  if (option.group === "subtype") return String(draft?.subtype || "").trim();
   const values = option.group === "main" ? draft?.sharedFields : draft?.typeFields;
   return String(values?.[option.field] || "").trim();
 }
@@ -18302,7 +18357,7 @@ function getNewCollateralProfileIdentifierType(draft) {
 function getNewCollateralProfileIdentifier(draft) {
   const identifierType = getNewCollateralProfileIdentifierType(draft);
   const option = getNewCollateralProfileSource(draft, identifierType);
-  if (option?.group === "system") return draft?.collateralId || "";
+  if (option?.group === "system") return draft?.suzNumber || "";
   return getNewCollateralProfileSourceValue(draft, option);
 }
 
@@ -18362,6 +18417,14 @@ function normalizeNewCollateralDate(value) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : String(value || "").trim();
 }
 
+function normalizeCollateralMeasuredInput(value) {
+  let text = String(value || "").replace(/[^\d,]/g, "");
+  const commaIndex = text.indexOf(",");
+  if (commaIndex >= 0) text = `${text.slice(0, commaIndex).slice(0, 6)},${text.slice(commaIndex + 1).replace(/,/g, "").slice(0, 3)}`;
+  else text = text.slice(0, 6);
+  return text;
+}
+
 function formatNewCollateralDateInput(value) {
   const text = String(value || "").trim();
   const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -18394,6 +18457,10 @@ function getNewCollateralDraftValidationError(draft) {
   }
 
   const shared = draft.sharedFields || {};
+  const measuredValue = String(shared["Значение, в указанных ед.изм."] || "").trim();
+  if (measuredValue && !/^\d{1,6},\d{3}$/.test(measuredValue)) {
+    return fail("main", "Значение, в указанных ед.изм.", "Введите до 6 цифр, запятую и 3 цифры после запятой.");
+  }
   if (!isAffirmativeValue(shared["Осмотр произведен"])
       && !String(shared["Контактное лицо для осмотра"] || "").trim()) {
     return { ...fail("main", "Осмотр произведен", "Отметьте, что осмотр произведен, или укажите контактное лицо."), rule: "inspection-either" };
@@ -18545,8 +18612,11 @@ function renderNewCollateralField(label, group, value, draft, options = [], { re
       ? "Если нет естественного идентификатора, оставьте пустым"
       : "При наличии данных";
     const maxlengthAttr = maxlength ? ` maxlength="${maxlength}"` : "";
+    const measuredValueAttrs = !readOnly && group === "main" && label === "Значение, в указанных ед.изм."
+      ? ' inputmode="decimal" pattern="[0-9]{1,6},[0-9]{3}" placeholder="000000,000"'
+      : "";
     const inputValue = readOnly && inputType === "date" ? formatNewCollateralDateInput(fieldValue) : fieldValue;
-    control = `<input type="${inputType === "date" ? "text" : escapeHtml(inputType)}" ${attrs}${readOnly ? "" : errorAttrs} value="${escapeHtml(inputValue)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""}${readOnly ? "" : maxlengthAttr}>`;
+    control = `<input type="${inputType === "date" ? "text" : escapeHtml(inputType)}" ${attrs}${readOnly ? "" : errorAttrs} value="${escapeHtml(inputValue)}"${measuredValueAttrs || (placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : "")}${readOnly ? "" : maxlengthAttr}>`;
   }
   const profileSource = group === "identity" && label === "Профильный идентификатор объекта"
     ? getNewCollateralProfileSource(draft, getNewCollateralProfileIdentifierType(draft))
@@ -18599,6 +18669,7 @@ function getNewCollateralFieldMaxLength(group, label, draft) {
   if (group === "type" && getNewCollateralProfileFieldLabels(draft?.typeLabel).includes(label)) return 50;
   if (group === "type" && ["Описание по ЕГРН", "Адрес по ЕГРН", "Адрес по СТС", "Адрес в неструктурированном виде", "Идентификационный номер объекта недвижимости в стране регистрации"].includes(label)) return 255;
   if (group === "main" && [COLLATERAL_GROUP_ATTRIBUTE, "Идентификатор в АБС"].includes(label)) return 50;
+  if (group === "main" && label === "Значение, в указанных ед.изм.") return 10;
   if (group === "main" && label === "Дополнительная информация") return 255;
   if (group === "basisDocument" && ["Серия документа-основания", "Номер документа-основания"].includes(label)) return 50;
   if (group === "address") {
@@ -18772,15 +18843,14 @@ function updateNewCollateralDraftField(fieldEl) {
   const label = fieldEl.dataset.newCollateralField;
   if (!group || !label) return;
   clearNewCollateralDraftValidationError(draft, fieldEl, group, label);
-  const value = fieldEl.type === "checkbox" ? (fieldEl.checked ? "Да" : "Нет") : fieldEl.value;
+  let value = fieldEl.type === "checkbox" ? (fieldEl.checked ? "Да" : "Нет") : fieldEl.value;
+  if (group === "main" && label === "Значение, в указанных ед.изм.") {
+    value = normalizeCollateralMeasuredInput(value);
+    fieldEl.value = value;
+  }
   if (group === "identity") {
     if (label === "Наименование") draft.name = value;
-    else if (label === "Вид профильного идентификатора") {
-      draft.profileIdentifierType = value;
-      if (draft.typeLabel === "Объекты недвижимости" && ["Кадастровый номер", "Условный номер"].includes(value)) {
-        draft.typeFields["Кадастровый номер есть"] = value === "Кадастровый номер" ? "Да" : "Нет";
-      }
-    }
+    else if (label === "Вид профильного идентификатора") draft.profileIdentifierType = value;
     else if (label === "Профильный идентификатор объекта") {
       const source = getNewCollateralProfileSource(draft, getNewCollateralProfileIdentifierType(draft));
       if (source?.group === "type") {
@@ -18800,10 +18870,6 @@ function updateNewCollateralDraftField(fieldEl) {
     }
   } else if (group === "type") {
     draft.typeFields[label] = value;
-    if (draft.typeLabel === "Объекты недвижимости" && label === "Кадастровый номер есть") {
-      const activeNumberField = isAffirmativeValue(value) ? "Кадастровый номер" : "Условный номер";
-      if (["Кадастровый номер", "Условный номер"].includes(draft.profileIdentifierType)) draft.profileIdentifierType = activeNumberField;
-    }
     if (label === getNewCollateralSubtypeField(draft.typeLabel)) draft.subtype = value;
   } else if (group === "main") {
     draft.sharedFields[label] = value;
@@ -19794,7 +19860,6 @@ document.addEventListener("change", (event) => {
     draft.typeLabel = newCollateralType.value;
     draft.subtype = "";
     draft.typeFields = {};
-    if (draft.typeLabel === "Объекты недвижимости") draft.typeFields["Кадастровый номер есть"] = "Нет";
     const identifierOptions = getNewCollateralProfileIdentifierOptions(draft.typeLabel);
     draft.profileIdentifierType = identifierOptions.length === 1 ? identifierOptions[0].label : "";
     draft.typeFieldsExpanded = false;
@@ -19824,8 +19889,6 @@ document.addEventListener("change", (event) => {
   if (newCollateralField) {
     updateNewCollateralDraftField(newCollateralField);
     if (newCollateralField.dataset.newCollateralGroup === "identity" && newCollateralField.dataset.newCollateralField === "Подвид залога") {
-      render();
-    } else if (newCollateralField.dataset.newCollateralGroup === "type" && newCollateralField.dataset.newCollateralField === "Кадастровый номер есть") {
       render();
     }
     return;
@@ -20721,6 +20784,7 @@ function createImportedCollateral(row) {
   const contract = getContractByNumber(contractNumber);
   const id = row.collateralId || getNextCollateralId();
   const createdAt = formatTaskHistoryDate(new Date());
+  const suzNumber = getNextMonthlyCollateralNumber(state.data.collaterals, createdAt);
   const typeLabel = row.collateralTypeLabel || getCollateralTypeLabel({ type: row.type || "Оборудование" });
   const type = getCollateralTypeCodeFromLabel(typeLabel);
   const importValue = (column) => {
@@ -20763,20 +20827,24 @@ function createImportedCollateral(row) {
     }
   }
   const address = importValue("Адрес / местонахождение");
-  const profileIdentifierType = importValue("Вид профильного идентификатора");
-  const naturalProfileIdentifier = profileIdentifierType === "Номер карточки залога"
+  const requestedProfileIdentifierType = importValue("Вид профильного идентификатора");
+  const importedProfileIdentifier = requestedProfileIdentifierType === "Номер карточки залога"
     ? ""
     : importValue("Профильный идентификатор объекта");
-  const profileIdentifier = naturalProfileIdentifier || id;
+  const profileIdentifierType = importedProfileIdentifier ? requestedProfileIdentifierType : "Номер карточки залога";
+  const naturalProfileIdentifier = importedProfileIdentifier;
+  const profileIdentifier = naturalProfileIdentifier || suzNumber;
   const basisDocument = {
     type: importValue("Документ-основание"),
     date: normalizeNewCollateralDate(importValue("Дата документа-основания")),
     number: importValue("Номер документа-основания"),
-    series: "",
-    status: ""
+    series: importValue("Серия документа-основания"),
+    status: importValue("Статус ЭПТС")
   };
   const unit = importValue("Единица измерения") || getCollateralUnitDefault({ type });
   const additionalInfo = importValue("Дополнительная информация");
+  const measuredValue = importValue("Значение, в указанных ед.изм.")
+    || importValue("Параметры единицы измерения");
   const pledgeContractNumber = importValue("Номер договора залога");
   const pledgeContractDate = normalizeNewCollateralDate(importValue("Дата договора залога"));
   const inspectionValue = importValue("Осмотр произведен") || importValue("Осмотр (проведен/не проведен)");
@@ -20786,12 +20854,14 @@ function createImportedCollateral(row) {
     "Площадь в неструктурированном виде": "Площадь, кв. м",
     "Мощность двигателя, л.с.": "Мощность, л.с.",
     "Объем двигателя, куб. см": "Объем двигателя, куб.м.",
-    "Пробег": "Пробег/наработка"
+    "Пробег": "Пробег/наработка",
+    "Договор имущественных прав": "Договор имущественных прав"
   };
   const fields = {};
   for (const field of FT_COLLATERAL_V6_TYPE_FIELDS[typeLabel] || []) {
     if (field === "Дополнительная информация") continue;
     let value = importValue(importColumnByTypeField[field] || field);
+    if (!value && field === "Договор имущественных прав") value = importValue("Вид договора");
     if (!value && getNewCollateralProfileFieldLabels(typeLabel).includes(field)) {
       value = naturalProfileIdentifier;
     }
@@ -20804,14 +20874,19 @@ function createImportedCollateral(row) {
   const pledgeValue = Math.round(marketValue * 0.8);
   const mainFields = {
     "Единица измерения": unit,
-    "Параметры единицы измерения": row.unitParameters || row.fields?.["Параметры единицы измерения"] || "",
+    "Значение, в указанных ед.изм.": measuredValue || row.unitValue || row.fields?.["Значение, в указанных ед.изм."] || row.unitParameters || row.fields?.["Параметры единицы измерения"] || "",
     "Дополнительная информация": additionalInfo,
     "Осмотр произведен": inspection,
-    "Контактное лицо для осмотра": inspectionContact,
-    "Номер договора залога": pledgeContractNumber,
-    "Дата договора залога": pledgeContractDate
+    "Контактное лицо для осмотра": inspectionContact
   };
-  const importedSubtype = String(row.subtype || row.fields?.["Подвид залога"] || row.fields?.["Подвид"] || "").trim();
+  if (fields["Вид договора"] && !fields["Договор имущественных прав"]) {
+    fields["Договор имущественных прав"] = fields["Вид договора"];
+    delete fields["Вид договора"];
+  }
+  const rawImportedSubtype = String(row.subtype || row.fields?.["Подвид залога"] || row.fields?.["Подвид"] || "").trim();
+  const importedSubtype = rawImportedSubtype
+    ? resolveCollateralSubtype({ type: typeLabel, description: row.description || row.name || "", fields: { ...(row.fields || {}), "Подвид залога": rawImportedSubtype } }) || rawImportedSubtype
+    : "";
   fields["Категория"] = typeLabel;
   if (importedSubtype) {
     fields["Подвид залога"] = importedSubtype;
@@ -20825,6 +20900,7 @@ function createImportedCollateral(row) {
   const reportStatus = importValue("Статус объекта");
   return {
     id,
+    suzNumber,
     type,
     subtype: importedSubtype,
     name: importValue("Наименование") || `${typeLabel}: объект из таблицы`,
@@ -20845,6 +20921,9 @@ function createImportedCollateral(row) {
     contractNumber: dealContractNumber,
     pledgeContractNumber,
     pledgeContractDate,
+    pledgeContracts: pledgeContractNumber || pledgeContractDate
+      ? [{ number: pledgeContractNumber, date: pledgeContractDate }]
+      : [],
     status: COLLATERAL_STATUS_OPTIONS.includes(reportStatus) ? reportStatus : status,
     source: "Excel",
     responsible: getRole().user,
@@ -20944,16 +21023,13 @@ function createDraftCollateralFromForm() {
   const id = editingCollateral?.id || getNextCollateralId();
   const type = getCollateralTypeCodeFromLabel(typeLabel);
   const name = draft.name.trim();
-  const profileIdentifier = naturalIdentifier || id;
+  const timestamp = formatTaskHistoryDate(new Date());
+  const suzNumber = getCollateralSuzNumber(editingCollateral)
+    || getNextMonthlyCollateralNumber(state.data.collaterals, timestamp);
+  const profileIdentifierType = getNewCollateralProfileIdentifierType(draft);
+  const profileIdentifier = naturalIdentifier || suzNumber;
   const source = editingCollateral?.source || (state.modal?.context === "registry" ? "Реестр залогов" : "Форма заявки");
-  const cadastralFlag = String(draft.typeFields?.["Кадастровый номер есть"] || "").trim();
-  const hasCadastralNumber = typeLabel === "Объекты недвижимости"
-    ? cadastralFlag ? isAffirmativeValue(cadastralFlag) : selectedIdentifierOption?.label === "Кадастровый номер"
-    : undefined;
   const savedTypeFieldDraft = { ...draft.typeFields };
-  if (typeLabel === "Объекты недвижимости") {
-    savedTypeFieldDraft["Кадастровый номер есть"] = hasCadastralNumber ? "Да" : "Нет";
-  }
   const typeFields = Object.fromEntries(getCollateralTypeDisplayFieldLabels(typeLabel)
     .filter((label) => label !== "Дополнительная информация")
     .filter((label) => label !== subtypeField && !isBlankFieldValue(savedTypeFieldDraft[label]))
@@ -20980,13 +21056,22 @@ function createDraftCollateralFromForm() {
   }
   pledgeContracts = normalizePledgeContracts(pledgeContracts);
   const primaryPledgeContract = pledgeContracts[0] || { number: "", date: "" };
+  const sharedFields = {
+    "Единица измерения": [draft.sharedFields?.["Единица измерения"]].find((value) => !isBlankFieldValue(value)) || "",
+    "Значение, в указанных ед.изм.": [draft.sharedFields?.["Значение, в указанных ед.изм."], draft.sharedFields?.["Параметры единицы измерения"]].find((value) => !isBlankFieldValue(value)) || "",
+    "Дополнительная информация": [draft.sharedFields?.["Дополнительная информация"]].find((value) => !isBlankFieldValue(value)) || "",
+    "Осмотр произведен": draft.sharedFields?.["Осмотр произведен"] || "Нет",
+    "Контактное лицо для осмотра": draft.sharedFields?.["Контактное лицо для осмотра"] || ""
+  };
   const mainFields = {
     ...(editingCollateral?.ftMainInfo || {}),
-    ...(draft.sharedFields || {}),
-    "Номер договора залога": primaryPledgeContract.number,
-    "Дата договора залога": primaryPledgeContract.date,
+    ...sharedFields,
     "Наименование": name
   };
+  delete mainFields[COLLATERAL_GROUP_ATTRIBUTE];
+  delete mainFields["Параметры единицы измерения"];
+  delete mainFields["Номер договора залога"];
+  delete mainFields["Дата договора залога"];
   delete mainFields["Осмотр (проведен/не проведен)"];
   const basisDocument = {
     type: String(draft.basisDocument?.type || "").trim(),
@@ -21030,23 +21115,60 @@ function createDraftCollateralFromForm() {
   });
   const fields = {
     ...typeFields,
-    ...Object.fromEntries(COLLATERAL_LEGACY_TYPE_FIELDS.filter((label) => !isBlankFieldValue(mainFields[label])).map((label) => [label, mainFields[label]])),
     "Категория": typeLabel,
     "Подтип": draft.subtype.trim(),
     "Источник создания": source
   };
-  const timestamp = formatTaskHistoryDate(new Date());
   const normalizedMainInfo = { ...(editingCollateral?.ftMainInfo || {}) };
+  delete normalizedMainInfo[COLLATERAL_GROUP_ATTRIBUTE];
   delete normalizedMainInfo[LEGACY_COLLATERAL_GROUP_ATTRIBUTE];
+  delete normalizedMainInfo["Параметры единицы измерения"];
+  delete normalizedMainInfo["Номер договора залога"];
+  delete normalizedMainInfo["Дата договора залога"];
+  const profileSourceChanged = editingCollateral && selectedIdentifierOption?.group === "type"
+    ? normalizeProfileIdentifier(getCollateralProfileFieldValue(editingCollateral, selectedIdentifierOption))
+      !== normalizeProfileIdentifier(naturalIdentifier)
+    : false;
+  const shouldRecheckIdentifier = profileSourceChanged && (
+    (typeLabel === "Объекты недвижимости" && selectedIdentifierOption?.field === "Кадастровый номер")
+    || (typeLabel === "Транспортные средства, прицепы (полуприцепы)"
+      && selectedIdentifierOption?.field === "Идентификационный номер транспортного средства (VIN)")
+    || (typeLabel === "Транспортные средства (самоходная техника)"
+      && selectedIdentifierOption?.field === "Идентификационный номер ТС или СМ (VIN, PIN, заводской)")
+  );
+  const recheckRequest = shouldRecheckIdentifier
+    ? {
+        sourceId: typeLabel === "Объекты недвижимости" ? "mobile-appraiser" : "spectrum-auto",
+        source: typeLabel === "Объекты недвижимости" ? "Мобильный оценщик" : "SpectrumData",
+        identifier: naturalIdentifier,
+        requestedAt: timestamp,
+        status: "Ожидает ответа"
+      }
+    : editingCollateral?.externalData?.profileIdentifierRecheck || null;
+  const updatedExternalData = recheckRequest
+    ? { ...(editingCollateral?.externalData || {}), profileIdentifierRecheck: recheckRequest }
+    : (editingCollateral?.externalData || { "Источник": "Не запрашивался", "Дата проверки": "-", "Статус проверки": "Ожидает обогащения" });
+  if (shouldRecheckIdentifier) {
+    const sourceIntegration = state.data.integrations?.find((item) => item.id === recheckRequest.sourceId);
+    if (sourceIntegration) {
+      sourceIntegration.logs ||= [];
+      sourceIntegration.logs.unshift({
+        time: timestamp,
+        result: "Ожидает ответа",
+        object: id,
+        message: `Повторная проверка по идентификатору ${naturalIdentifier}`
+      });
+    }
+  }
   const createdCollateral = {
     id,
     createdAt: editingCollateral?.createdAt || (editingCollateral ? "" : timestamp),
+    suzNumber,
     type,
     name,
     profileIdentifier,
-    profileIdentifierType: getNewCollateralProfileIdentifierType(draft),
+    profileIdentifierType,
     basisDocument,
-    ...(typeLabel === "Объекты недвижимости" ? { hasCadastralNumber } : {}),
     pledgeContracts,
     pledgeContractNumber: primaryPledgeContract.number,
     pledgeContractDate: primaryPledgeContract.date,
@@ -21076,7 +21198,7 @@ function createDraftCollateralFromForm() {
     crossPledge: false,
     fields,
     ftMainInfo: mainFields,
-    groupIdentificationCode: mainFields[COLLATERAL_GROUP_ATTRIBUTE] || "",
+    groupIdentificationCode: editingCollateral?.groupIdentificationCode || editingCollateral?.groupCode || "",
     absId: mainFields["Идентификатор в АБС"] || "",
     includeReportData: mainFields["Признак включения в отчетные данные"] || "Да",
     additionalInfo: mainFields["Дополнительная информация"] || "",
@@ -21088,7 +21210,7 @@ function createDraftCollateralFromForm() {
     risks: [],
     documents,
     history: [{ date: timestamp, user: getRole().user, field: "Карточка залога", oldValue: "-", newValue: "Создана вручную", reason: "Ручное добавление объекта", source: "АРМ" }],
-    externalData: { "Источник": "Не запрашивался", "Дата проверки": "-", "Статус проверки": "Ожидает обогащения" },
+    externalData: updatedExternalData,
     updatedAt: timestamp
   };
   if (!editingCollateral) return createdCollateral;
@@ -21113,8 +21235,8 @@ function createDraftCollateralFromForm() {
     ...createdCollateral,
     fields: { ...preservedFields, ...createdCollateral.fields },
     ftMainInfo: { ...normalizedMainInfo, ...mainFields },
-    groupIdentificationCode: mainFields[COLLATERAL_GROUP_ATTRIBUTE] ?? "",
-    groupCode: mainFields[COLLATERAL_GROUP_ATTRIBUTE] ?? "",
+    groupIdentificationCode: editingCollateral.groupIdentificationCode || editingCollateral.groupCode || "",
+    groupCode: editingCollateral.groupCode || editingCollateral.groupIdentificationCode || "",
     address: addressApplicable ? address : (editingCollateral.address || ""),
     addressFields: addressApplicable ? addressFields : { ...(editingCollateral.addressFields || {}), ...(addressFields || {}) },
     absId: editingCollateral.absId || editingCollateral.absIdentifier || editingCollateral.ftMainInfo?.["Идентификатор в АБС"] || "",
@@ -21139,7 +21261,18 @@ function createDraftCollateralFromForm() {
     encumbrances: editingCollateral.encumbrances || [],
     risks: editingCollateral.risks || [],
     history: [editHistory, ...(editingCollateral.history || [])],
-    externalData: editingCollateral.externalData,
+    externalData: updatedExternalData,
+    history: shouldRecheckIdentifier
+      ? [{
+          date: timestamp,
+          user: getRole().user,
+          field: "Профильный идентификатор объекта",
+          oldValue: getCollateralProfileFieldValue(editingCollateral, selectedIdentifierOption) || "-",
+          newValue: naturalIdentifier,
+          reason: `Запущена повторная проверка через ${recheckRequest.source}`,
+          source: recheckRequest.source
+        }, editHistory, ...(editingCollateral.history || [])]
+      : [editHistory, ...(editingCollateral.history || [])],
     source: editingCollateral.source,
     responsible: editingCollateral.responsible,
     initiator: editingCollateral.initiator

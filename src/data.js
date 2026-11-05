@@ -8,7 +8,15 @@ export const FT_COLLATERAL_SUBTYPE_OPTIONS = {
     "Земельный участок",
     "Единый недвижимый комплекс",
     "Предприятие как имущественный комплекс",
-    "Иное"
+    "Иное",
+    "Квартира",
+    "Право требования на квартиру",
+    "Апартаменты",
+    "Право требования на апартаменты",
+    "Комната",
+    "Доля",
+    "Жилой дом",
+    "Таунхаус"
   ],
   "Транспортные средства, прицепы (полуприцепы)": [
     "Залог мотоцикла, мотороллера или другого мототранспортного средства",
@@ -784,7 +792,7 @@ const buildStage1CollateralTypeExamples = () => [
     fields: {
       "Подвид": "Залог прав требования",
       "Вид имущественных прав (требований)": "Права требования",
-      "Вид договора": "Договор поставки",
+      "Договор имущественных прав": "Договор поставки",
       "Дата заключения договора": "2026-02-14",
       "Номер договора": "PR-410/26"
     },
@@ -807,6 +815,7 @@ const buildStage1CollateralTypeExamples = () => [
     risk: 37,
     pledgeType: "Залог прочих движимых вещей",
     fields: {
+      "Инвентарный номер": "INV-GRP-059",
       "Вид движимой вещи": "Готовая продукция",
       "Партия": "Контейнеры серии ST-120",
       "Количество": "120 единиц"
@@ -1912,6 +1921,7 @@ export const initialData = {
       riskState: "Удовлетворительное",
       risks: risks(["ok", "ok", "warn", "ok", "warn", "ok", "ok", "ok"]),
       fields: {
+        "Инвентарный номер": "INV-STX-004",
         "Группа товаров": "Текстильная продукция",
         "Объем": "620 тонн",
         "Место хранения": "Склад готовой продукции",
@@ -2223,6 +2233,7 @@ export const initialData = {
       riskState: "Удовлетворительное",
       risks: risks(["ok", "warn", "warn", "ok", "warn", "ok", "warn", "ok"]),
       fields: {
+        "Инвентарный номер": "INV-AGR-008",
         "Вид имущества": "Крупный рогатый скот",
         "Поголовье": "340 голов",
         "Метод идентификации": "Бирки и ветеринарный журнал",
@@ -4436,6 +4447,20 @@ export function resolveCollateralSubtype(collateral) {
     fields["Вид товара в обороте"],
     fields["Вид движимой вещи"]
   ];
+  const aliasesByType = {
+    "Объекты недвижимости": new Map([
+      ["квартиру", "Квартира"],
+      ["апартмаенты", "Апартаменты"],
+      ["право требования на апартмаенты", "Право требования на апартаменты"]
+    ])
+  };
+  const aliases = aliasesByType[type];
+  for (const candidate of candidates) {
+    const value = String(candidate || "").trim();
+    if (!value) continue;
+    const canonicalAlias = aliases?.get(value.toLocaleLowerCase("ru-RU"));
+    if (canonicalAlias && options.includes(canonicalAlias)) return canonicalAlias;
+  }
   const existing = candidates.find((value) => options.includes(String(value || "").trim()));
   if (existing) return existing;
 
