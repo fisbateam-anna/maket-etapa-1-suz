@@ -1,5 +1,16 @@
 tmp/
+.tmp/
 delivery/
 docs/theme-backups/
 *.log
 *.pid
+
+# Include the FT matrix and baseline archive in this task's solution snapshot.
+!delivery/
+delivery/*
+!delivery/arm-registries-ft-v2-20261030/
+delivery/arm-registries-ft-v2-20261030/*
+!delivery/arm-registries-ft-v2-20261030/ANALYSIS.md
+!delivery/arm-registries-ft-v2-20261030/baseline/
+delivery/arm-registries-ft-v2-20261030/baseline/*
+!delivery/arm-registries-ft-v2-20261030/baseline/current-prototype.tar.gz

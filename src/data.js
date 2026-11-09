@@ -99,11 +99,12 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: true,
       appCreateEdit: true,
+      collateralCreate: true,
       collateralEdit: true,
       appDelete: true,
       tasksAllView: true,
       evalTaskApprove: true,
-      inspectTaskApprove: false,
+      inspectTaskApprove: true,
       docDelete: true,
       createTask: true,
       editCollateral: true,
@@ -112,6 +113,7 @@ export const roles = [
       reassign: true,
       reports: false,
       admin: false,
+      managerLevel1: true,
       print: true
     }
   },
@@ -128,11 +130,12 @@ export const roles = [
       inspectTaskView: true,
       regTaskView: true,
       appCreateEdit: true,
+      collateralCreate: true,
       appDelete: true,
       tasksAllView: true,
       collateralEdit: true,
       evalTaskApprove: true,
-      inspectTaskApprove: false,
+      inspectTaskApprove: true,
       docDelete: true,
       createTask: true,
       editCollateral: true,
@@ -141,6 +144,7 @@ export const roles = [
       reassign: true,
       reports: false,
       admin: false,
+      managerLevel2: true,
       print: true
     }
   },
@@ -159,7 +163,8 @@ export const roles = [
       appCreateEdit: true,
       appDelete: false,
       tasksAllView: false,
-      collateralEdit: false,
+      collateralCreate: true,
+      collateralEdit: true,
       evalTaskApprove: false,
       inspectTaskApprove: false,
       docDelete: false,
@@ -175,20 +180,50 @@ export const roles = [
   },
   {
     id: "verifier",
-    label: "Верификатор",
+    label: "Верификатор управления оценки",
     user: "Мария Петрова",
     department: "Управление оценки залогов",
-    menu: ["tasksEvaluation", "tasksInspection", "applications", "collaterals"],
+    menu: ["tasksEvaluation", "applications", "collaterals"],
     permissions: {
       appRegView: true,
       collateralView: true,
       evalTaskView: true,
-      inspectTaskView: true,
+      inspectTaskView: false,
       regTaskView: false,
       appCreateEdit: false,
       appDelete: false,
       tasksAllView: true,
-      collateralEdit: false,
+      collateralEdit: true,
+      evalTaskApprove: false,
+      inspectTaskApprove: false,
+      docDelete: false,
+      createTask: false,
+      editCollateral: false,
+      completeTask: true,
+      returnTask: true,
+      reassign: false,
+      reports: false,
+      admin: false,
+      print: true
+    }
+  },
+  {
+    id: "inspectionVerifier",
+    label: "Верификатор управления осмотра",
+    user: "Ольга Никифорова",
+    department: "Управление осмотра и мониторинга",
+    menu: ["tasksInspection", "applications", "collaterals"],
+    permissions: {
+      appRegView: true,
+      collateralView: true,
+      evalTaskView: false,
+      inspectTaskView: true,
+      regTaskView: false,
+      appCreateEdit: false,
+      appDelete: false,
+      collateralCreate: false,
+      collateralEdit: true,
+      tasksAllView: true,
       evalTaskApprove: false,
       inspectTaskApprove: false,
       docDelete: false,
@@ -207,15 +242,16 @@ export const roles = [
     label: "Оценщик",
     user: "Дмитрий Орлов",
     department: "Управление оценки залогов",
-    menu: ["tasksEvaluation", "collaterals"],
+    menu: ["tasksEvaluation", "tasksInspection", "collaterals"],
     permissions: {
       appRegView: false,
       collateralView: true,
       evalTaskView: true,
-      inspectTaskView: false,
+      inspectTaskView: true,
       regTaskView: false,
       appCreateEdit: false,
       appDelete: false,
+      collateralCreate: false,
       tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
@@ -245,6 +281,7 @@ export const roles = [
       regTaskView: false,
       appCreateEdit: false,
       appDelete: false,
+      collateralCreate: false,
       tasksAllView: false,
       collateralEdit: false,
       evalTaskApprove: false,
@@ -272,10 +309,11 @@ export const roles = [
       evalTaskView: false,
       inspectTaskView: false,
       regTaskView: true,
-      appCreateEdit: true,
+      appCreateEdit: false,
       appDelete: false,
-      tasksAllView: false,
-      collateralEdit: false,
+      collateralCreate: true,
+      tasksAllView: true,
+      collateralEdit: true,
       evalTaskApprove: false,
       inspectTaskApprove: false,
       docDelete: false,
@@ -303,6 +341,7 @@ export const roles = [
       regTaskView: false,
       appCreateEdit: true,
       appDelete: true,
+      collateralCreate: true,
       tasksAllView: true,
       collateralEdit: true,
       evalTaskApprove: false,
@@ -315,6 +354,7 @@ export const roles = [
       reassign: true,
       reports: false,
       admin: false,
+      managerLevel2: true,
       print: true
     }
   }
@@ -326,7 +366,8 @@ export const employees = [
   "Павел Смирнов",
   "Мария Петрова",
   "Алексей Соколов",
-  "Елена Морозова"
+  "Елена Морозова",
+  "Ольга Никифорова"
 ];
 
 export const taskTypes = [
@@ -2239,6 +2280,10 @@ export const initialData = {
         "Метод идентификации": "Бирки и ветеринарный журнал",
         "Место содержания": "Ферма Тихорецкая",
         "Последняя сверка": "2026-06-08"
+      },
+      ftMainInfo: {
+        "Единица измерения": "Голова (гол.)",
+        "Значение, в указанных ед.изм.": "340"
       },
       monitoring: {
         lastInspection: "2026-06-08",
@@ -4408,11 +4453,53 @@ export const initialData = {
     }
   ],
   importRows: [
-    { row: 2, collateralId: "COL-009", type: "Автотранспорт", reportAsset: "Автотранспорт", name: "Грузовой автомобиль КАМАЗ 54901", description: "Седельный тягач, 2024 г.в.", qualityCategory: "I", pledgeSign: "Основное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-AV-240", owner: "ООО Урал Доставка", ownerInn: "6679123456", contract: "AV-26/240", address: "Свердловская область, г. Екатеринбург", city: "Екатеринбург", countryCode: "643", okato: "65401000000", identifierType: "VIN", identifierValue: "XTC549010R0000123", source: "Excel", status: "Создать", message: "Новый VIN, проверка SpectrumData доступна" },
-    { row: 3, collateralId: "COL-003", type: "Недвижимость", reportAsset: "Объект недвижимости", name: "Квартира, г. Москва", description: "Жилое помещение, 58,4 кв. м", qualityCategory: "I", pledgeSign: "Основное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-IP-771", owner: "Смирнова Е.В.", ownerInn: "771512345678", contract: "IP-25/771", address: "г. Москва, ул. Петровка, д. 17", city: "Москва", countryCode: "643", okato: "45286585000", identifierType: "Кадастровый номер", identifierValue: "77:01:0004012:5841", source: "Excel", status: "Обновить", message: "Обновить дату оценки и рыночную стоимость" },
-    { row: 4, collateralId: "", type: "Оборудование", reportAsset: "Оборудование", name: "Термопластавтомат Haitian", description: "Производственное оборудование", qualityCategory: "II", pledgeSign: "Дополнительное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-KL-331", owner: "ООО Нью Пласт", ownerInn: "7728456123", contract: "KL-26/331", address: "Московская область, г. Клин, промзона", city: "Клин", countryCode: "643", okato: "46221501000", identifierType: "Заводской номер", identifierValue: "HTF2400-2023-88", source: "Excel", status: "Ошибка", message: "Не заполнен ID залога" },
-    { row: 5, collateralId: "COL-010", type: "Ценные бумаги", reportAsset: "Ценные бумаги", name: "Акции АО Капитал Инвест", description: "Пакет обыкновенных акций", qualityCategory: "II", pledgeSign: "Дополнительное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-BG-260", owner: "АО Капитал Инвест", ownerInn: "7704123987", contract: "BG-26/260", address: "г. Москва", city: "Москва", countryCode: "643", okato: "45286552000", identifierType: "ISIN", identifierValue: "RU000A0ZZZZ1", source: "Excel", status: "Ошибка", message: "Тип залога не входит в согласованный шаблон" },
-    { row: 6, collateralId: "COL-007", type: "Оборудование", reportAsset: "Оборудование", name: "Линия упаковки Bobst", description: "Производственная линия", qualityCategory: "I", pledgeSign: "Основное обеспечение", include310: "Да", account: "91414", groupCode: "GRP-KL-644", owner: "ООО Север Принт Пак", ownerInn: "7811456789", contract: "KL-24/644", address: "г. Санкт-Петербург, промзона Парнас", city: "Санкт-Петербург", countryCode: "643", okato: "40265000000", identifierType: "Заводской номер", identifierValue: "BST-2022-0091", source: "Excel", status: "Обновить", message: "Обновить статус страхования" }
+    {
+      row: 2,
+      type: "Автотранспорт",
+      subtype: "Залог автотранспортного средства категории В",
+      name: "LADA Granta, 2022 г.в.",
+      additionalInfo: "Легковой автомобиль в исправном состоянии.",
+      identifierType: "VIN",
+      identifierValue: "XTA219010N0000123",
+      owner: "ООО Урал Доставка",
+      ownerInn: "6679123456",
+      ownerSubjectType: "ЮЛ",
+      contract: "AV-26/240",
+      address: "Свердловская область, г. Екатеринбург, ул. Заводская, д. 8",
+      fields: { "Марка": "LADA", "Модель": "Granta", "Год выпуска": "2022", "Мощность двигателя, л.с.": "90" }
+    },
+    {
+      row: 3,
+      type: "Недвижимость",
+      subtype: "Помещения",
+      name: "Квартира, г. Новосибирск",
+      additionalInfo: "Жилое помещение, 68,4 кв. м.",
+      identifierType: "Кадастровый номер",
+      identifierValue: "54:35:074010:1201",
+      owner: "Петрова Ирина Николаевна",
+      ownerInn: "540612345667",
+      ownerSubjectType: "ФЛ",
+      contract: "IP-25/771",
+      address: "Новосибирская область, г. Новосибирск, ул. Ленина, д. 12, кв. 8",
+      unit: "Квадратный метр (м²)",
+      area: "68,4",
+      fields: { "Кадастровый номер": "54:35:074010:1201" }
+    },
+    {
+      row: 4,
+      type: "Оборудование",
+      subtype: "Машины и оборудование",
+      name: "Термопластавтомат Haitian",
+      additionalInfo: "Производственное оборудование, комплектность требует подтверждения.",
+      identifierType: "Заводской номер",
+      identifierValue: "HTF2400-2023-88",
+      owner: "ООО Нью Пласт",
+      ownerInn: "7728456123",
+      ownerSubjectType: "ЮЛ",
+      contract: "KL-26/331",
+      address: "Московская область, г. Клин, промзона",
+      fields: { "Марка": "Haitian", "Модель": "MA1600", "Год выпуска": "2023", "Инвентарный номер": "ИНВ-240088" }
+    }
   ],
   audit: [
     { date: "2026-06-16 10:15", user: "Конвейер", object: "tsk-10062026-002", action: "Создание задачи", oldValue: "-", newValue: "Назначена", source: "API конвейера" },
@@ -4426,6 +4513,296 @@ export const initialData = {
     { object: "tsk-15062026-006", date: "2026-06-15 16:05", user: "Мария Петрова", text: "Попросила страхователя подготовить обновленный страховой полис." }
   ]
 };
+
+const screenshotTaskScenarios = [
+  {
+    type: "Первичный осмотр", title: "Физически осмотреть сухогрузную баржу СТ-410", collateralIds: ["COL-056"],
+    application: { type: "Осмотр имущества", subtype: "Первоначальный осмотр", purpose: "Проверка предмета залога", product: "Кредит", limit: 1800000000, comment: "Подтвердить идентификационные данные баржи, регистрационные документы, место стоянки, комплектность и техническое состояние корпуса." },
+    inspectionFormat: "Физический осмотр", visitMethod: "Сотрудник банка (регионы)", dueDate: "2026-11-12",
+    result: "Осмотреть судно на стоянке в Нижнем Новгороде, сверить IMO и регистрационные сведения, зафиксировать состояние корпуса, оборудования и судовых документов.",
+    documents: ["Судовой билет СТ-410.pdf", "Акт последнего освидетельствования судна.pdf"]
+  },
+  {
+    type: "Первичный осмотр", title: "Провести осмотр трех воздушных судов АО АэроТех Лизинг", collateralIds: ["COL-052", "COL-053", "COL-054"],
+    application: { type: "Осмотр имущества", subtype: "Первоначальный осмотр", purpose: "Проверка предмета залога", product: "Лизинг", limit: 4300000000, comment: "Провести физический осмотр воздушных судов в местах базирования. Сверить серийные номера, опознавательные знаки, комплектность и документы о летной годности." },
+    inspectionFormat: "Физический осмотр", visitMethod: "Сюрвейер (СК)", dueDate: "2026-11-14",
+    result: "Сверить H125-904052, 208B-54053 и R66-04054 с формулярами и регистрационными свидетельствами; зафиксировать состояние и место базирования каждого борта.",
+    documents: ["Формуляры воздушных судов.zip", "Свидетельства о регистрации ВС.pdf"]
+  },
+  {
+    type: "Первичный осмотр", title: "Документарно проверить полувагон 58824157", collateralIds: ["COL-057"],
+    application: { type: "Осмотр имущества", subtype: "Документарный осмотр", purpose: "Проверка предмета залога", product: "Кредит", limit: 950000000, comment: "Сверить номер и модель вагона с паспортом, проверить право собственности и регистрационные сведения без выезда." },
+    inspectionFormat: "Документарный осмотр", dueDate: "2026-11-13",
+    result: "Сопоставить номер вагона 58824157 и заводской номер RW-12-132-410057 с паспортом, договором приобретения и данными реестра подвижного состава.",
+    documents: ["Паспорт вагона 58824157.pdf", "Договор приобретения вагона.pdf"]
+  },
+  {
+    type: "Повторный осмотр", title: "Повторно осмотреть автомобили Столичного Девелопмента после замечаний", collateralIds: ["COL-040", "COL-041"],
+    existingApplicationId: "app-19062026-001", parentTaskId: "tsk-19062026-001", inspectionFormat: "Физический осмотр",
+    visitMethod: "Сотрудник банка (регионы)", dueDate: "2026-11-13", author: "Дмитрий Орлов",
+    assignmentComment: "После первичного осмотра требуется дополнительно зафиксировать маркировочные таблички и состояние кузова двух автомобилей.",
+    result: "Повторно сверить VIN XW7BF3FK90S040001 и Z94K241CBNR040002, снять фотографии кузова и табличек, подтвердить фактическое состояние.",
+    documents: ["Замечания к фотофиксации автомобилей.pdf"]
+  },
+  {
+    type: "Повторный осмотр", title: "Повторно проверить документы по воздушным судам", collateralIds: ["COL-052", "COL-053"],
+    existingApplicationId: "app-19062026-002", parentTaskId: "tsk-19062026-002", inspectionFormat: "Документарный осмотр",
+    dueDate: "2026-11-15", author: "Мария Петрова",
+    assignmentComment: "Повторно сверить сведения после получения обновленных свидетельств о регистрации воздушных судов.",
+    result: "Сопоставить регистрационные знаки RA-04052 и RA-04053 с актуальными свидетельствами и формулярами; проверить срок действия документов.",
+    documents: ["Обновленные свидетельства о регистрации ВС.pdf"]
+  },
+  {
+    type: "Повторный осмотр", title: "Повторно осмотреть квартиру после уточнения сведений", collateralIds: ["COL-045"],
+    existingApplicationId: "app-19062026-001", parentTaskId: "tsk-19062026-001", inspectionFormat: "Физический осмотр",
+    visitMethod: "Сотрудник банка (регионы)", dueDate: "2026-11-16", author: "Дмитрий Орлов",
+    assignmentComment: "После первичного осмотра требуется повторно сверить фактическую планировку и площадь квартиры с техническим планом.",
+    result: "Осмотреть квартиру по адресу объекта, сверить площадь 74 кв. м и планировку с техническим планом, зафиксировать состояние помещений и выявленные изменения.",
+    documents: ["Акт предыдущего осмотра квартиры.pdf", "Технический план квартиры от 03.11.2026.pdf"]
+  },
+  {
+    type: "Единичная переоценка", title: "Переоценить складской комплекс после обновления кадастровых сведений", collateralIds: ["COL-001"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Кредит", limit: 3800000000, comment: "Обновить рыночную и залоговую стоимость складского комплекса с учетом актуального технического плана и рыночных предложений." },
+    dueDate: "2026-11-12", status: "В работе", result: "Сверить площадь и характеристики комплекса по актуальному техническому плану, заполнить три рыночных аналога и подготовить вывод по стоимости.",
+    documents: ["Технический план от 03.11.2026.pdf", "Выписка ЕГРН от 05.11.2026.pdf"],
+    analogs: [
+      { link: "Циан", name: "Складской комплекс, 3 900 кв. м", area: "3 900 кв. м", region: "Московская область, Домодедово", purpose: "Складское назначение", details: "Рабочее состояние, действующая инженерная инфраструктура", price: "3980000000", adjustedPrice: "3760000000" },
+      { link: "Авито Недвижимость", name: "Складской комплекс, 4 500 кв. м", area: "4 500 кв. м", region: "Московская область, Подольск", purpose: "Склад и офис", details: "Хорошее состояние, требуется корректировка на площадь", price: "4320000000", adjustedPrice: "4050000000" },
+      { link: "Коммерческая недвижимость", name: "Складской объект, 4 100 кв. м", area: "4 100 кв. м", region: "Московская область, Чехов", purpose: "Складское назначение", details: "Удовлетворительное состояние, без офисного блока", price: "3650000000", adjustedPrice: "3520000000" }
+    ]
+  },
+  {
+    type: "Единичная переоценка", title: "Переоценить печатную линию Heidelberg Speedmaster XL 106", collateralIds: ["COL-007"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Кредит", limit: 2100000000, comment: "Актуализировать стоимость печатной линии с учетом года выпуска, технического состояния и текущих предложений на вторичном рынке." },
+    dueDate: "2026-11-14", status: "В работе", result: "Проверить состав линии, год выпуска и состояние узлов; сопоставить не менее трех предложений на оборудование аналогичного класса.",
+    documents: ["Ведомость комплектации линии.xlsx", "Сервисный отчет от 28.10.2026.pdf"],
+    analogs: [
+      { link: "Machineryline", name: "Heidelberg Speedmaster XL 106, 2018 г.", year: "2018", configuration: "Листовая офсетная печатная машина", details: "Проведен капитальный сервис, рабочее состояние", price: "4620000000", adjustedPrice: "4380000000" },
+      { link: "Exapro", name: "Heidelberg Speedmaster XL 106, 2020 г.", year: "2020", configuration: "Печатная линия с лакировальной секцией", details: "Хорошее состояние, комплектность подтверждена", price: "5180000000", adjustedPrice: "4910000000" },
+      { link: "Рынок промышленного оборудования", name: "Heidelberg Speedmaster XL 105, 2019 г.", year: "2019", configuration: "Офсетная машина сопоставимой производительности", details: "Рабочее состояние, предпродажная диагностика", price: "4210000000", adjustedPrice: "3990000000" }
+    ]
+  },
+  {
+    type: "Единичная переоценка", title: "Переоценить земельный участок в Домодедове", collateralIds: ["COL-055"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Банковская гарантия", limit: 1200000000, comment: "Проверить актуальность рыночной стоимости земельного участка и сопоставимость разрешенного использования с предложениями в районе." },
+    dueDate: "2026-11-15", status: "Назначена", result: "Сопоставить участок площадью 2,4 га с предложениями промышленно-складского назначения в Домодедове и соседних районах.",
+    documents: ["Выписка ЕГРН по участку от 06.11.2026.pdf"],
+    analogs: [
+      { link: "Циан Коммерческая недвижимость", name: "Промышленный участок, 2,1 га", area: "2,1 га", region: "Московская область, Домодедово", purpose: "Складское и производственное использование", details: "Подъездные пути, электричество по границе", price: "328000000", adjustedPrice: "352000000" },
+      { link: "Авито Недвижимость", name: "Земельный участок, 2,7 га", area: "2,7 га", region: "Московская область, Подольск", purpose: "Промышленное назначение", details: "Требуется устройство подъездной дороги", price: "365000000", adjustedPrice: "344000000" },
+      { link: "Портал коммерческой недвижимости", name: "Участок под склад, 2,3 га", area: "2,3 га", region: "Московская область, Чехов", purpose: "Производственно-складской комплекс", details: "Коммуникации подведены, участок ровный", price: "349000000", adjustedPrice: "361000000" }
+    ]
+  },
+  {
+    type: "Списочная переоценка", title: "Списочно переоценить три грузовых автомобиля Волга Логистик", collateralIds: ["COL-020", "COL-021", "COL-022"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Кредит", limit: 1650000000, comment: "Обновить стоимость трех грузовых автомобилей в составе автопарка. Выделить объекты с существенным отклонением рыночной цены для ручной проверки." },
+    dueDate: "2026-11-12", status: "В работе", result: "Провести списочный расчет рыночной и залоговой стоимости трех автомобилей по актуальным предложениям и установленным дисконту и порогу отклонений.",
+    documents: ["Реестр автопарка на 09.11.2026.xlsx"], listRevaluation: { strategy: "Грузовой автопарк: 3 ТС", reason: "Плановая переоценка автопарка", valuationDate: "2026-11-09", method: "Рыночные источники", scope: "Все объекты", marketDelta: -3, pledgeMode: "От рыночной стоимости и дисконта", discount: 25, roundTo: "10 000", reviewThreshold: 8, source: "Ручной подбор рыночных аналогов", comment: "Отклонение свыше 8% передать на ручную проверку.", excludedCollateralIds: [], typeDiscounts: { "Автотранспорт": 25 }, rowOverrides: {} }
+  },
+  {
+    type: "Списочная переоценка", title: "Списочно переоценить квартиры Столичный Девелопмент", collateralIds: ["COL-045", "COL-046", "COL-047"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Кредит", limit: 7200000000, comment: "Обновить стоимость трех квартир по предложениям сопоставимых объектов в соответствующих районах Москвы." },
+    dueDate: "2026-11-14", status: "Назначена", result: "Рассчитать стоимость каждого помещения отдельно с учетом района, площади, состояния и ликвидности; существенные отклонения вынести на проверку.",
+    documents: ["Список квартир для переоценки.xlsx", "Выписки ЕГРН от 07.11.2026.zip"], listRevaluation: { strategy: "Пул квартир: 3 объекта", reason: "Переоценка жилой недвижимости", valuationDate: "2026-11-09", method: "Рыночные источники", scope: "Все объекты", marketDelta: 1, pledgeMode: "От рыночной стоимости и дисконта", discount: 22, roundTo: "100 000", reviewThreshold: 10, source: "Ручной подбор аналогов по районам Москвы", comment: "Для каждого объекта использовать аналоги того же района и близкой площади.", excludedCollateralIds: [], typeDiscounts: { "Недвижимость": 22 }, rowOverrides: {} }
+  },
+  {
+    type: "Списочная переоценка", title: "Списочно переоценить парк воздушных судов АэроТех Лизинг", collateralIds: ["COL-052", "COL-053", "COL-054"],
+    application: { type: "Оценка залога", subtype: "Переоценка", purpose: "Переоценка действующего обеспечения", product: "Лизинг", limit: 4300000000, comment: "Актуализировать стоимость трех воздушных судов по моделям, году выпуска, летному ресурсу и состоянию регистрационных документов." },
+    dueDate: "2026-11-17", status: "Назначена", result: "Выполнить списочный расчет по трем воздушным судам, сопоставив модели, год выпуска, ресурс и место базирования.",
+    documents: ["Реестр воздушных судов на 09.11.2026.xlsx"], listRevaluation: { strategy: "Парк воздушных судов: 3 единицы", reason: "Плановая переоценка авиационного обеспечения", valuationDate: "2026-11-09", method: "Рыночные источники", scope: "Все объекты", marketDelta: -2, pledgeMode: "От рыночной стоимости и дисконта", discount: 30, roundTo: "1 000 000", reviewThreshold: 12, source: "Ручной анализ предложений", comment: "Учитывать летный ресурс, комплектность и актуальность свидетельств о регистрации.", excludedCollateralIds: [], typeDiscounts: { "Воздушные суда": 30 }, rowOverrides: {} }
+  },
+  {
+    type: "Плановый мониторинг", title: "Проверить складские остатки текстильной продукции", collateralIds: ["COL-004"],
+    dueDate: "2026-11-16", inspectionFormat: "Документарный осмотр", author: "Анна Кузнецова", source: "Регламентный график",
+    assignmentComment: "Плановый контроль наличия и сохранности товаров в обороте по графику мониторинга.",
+    result: "Получить складской акт с остатками по номенклатуре, сверить объем 620 тонн с реестром и проверить условия хранения на складе готовой продукции.",
+    documents: ["Складской акт на 15.11.2026.xlsx", "Фото складских ячеек.zip"]
+  },
+  {
+    type: "Плановый мониторинг", title: "Провести плановую сверку поголовья КРС", collateralIds: ["COL-008"],
+    dueDate: "2026-11-18", inspectionFormat: "Физический осмотр", visitMethod: "Сотрудник банка (регионы)", author: "Елена Морозова", source: "Регламентный график",
+    assignmentComment: "Планово подтвердить поголовье, идентификацию животных и условия содержания на ферме.",
+    result: "Сверить поголовье по биркам и ветеринарному журналу, проверить выборку животных и условия содержания на ферме Тихорецкой.",
+    documents: ["Ветеринарный журнал за ноябрь 2026.pdf"]
+  },
+  {
+    type: "Плановый мониторинг", title: "Документарно проверить сведения по вагонам Северного Терминала", collateralIds: ["COL-061", "COL-062"],
+    dueDate: "2026-11-19", inspectionFormat: "Документарный осмотр", author: "Мария Петрова", source: "Регламентный график",
+    assignmentComment: "Плановая сверка документов на вагоны по графику контроля предмета залога.",
+    result: "Сверить номера вагонов 58824161 и 58824182 с паспортами и реестром; проверить актуальность регистрационных сведений и отсутствие изменений собственника.",
+    documents: ["Паспорта вагонов 58824161 и 58824182.pdf", "Выписка из реестра подвижного состава.pdf"]
+  },
+  {
+    type: "Внеплановый мониторинг", title: "Проверить сведения ЕГРН по квартире Смирновой", collateralIds: ["COL-003"],
+    dueDate: "2026-11-11", inspectionFormat: "Документарный осмотр", author: "Анна Кузнецова", source: "Сигнал внешней проверки",
+    assignmentComment: "Получен сигнал о возможном изменении сведений об объекте недвижимости. Требуется сверка актуальной выписки ЕГРН.",
+    result: "Сопоставить актуальную выписку с кадастровым номером 10:06:04:09:1148, проверить собственника, площадь и наличие новых ограничений.",
+    documents: ["Уведомление о расхождении сведений ЕГРН.pdf"]
+  },
+  {
+    type: "Внеплановый мониторинг", title: "Проверить состояние печатной линии после ремонта", collateralIds: ["COL-007"],
+    dueDate: "2026-11-12", inspectionFormat: "Физический осмотр", visitMethod: "Сотрудник банка (регионы)", author: "Дмитрий Орлов", source: "Обращение исполнителя",
+    assignmentComment: "Залогодатель сообщил о ремонте печатной линии. Необходимо проверить сохранность, комплектность и работоспособность основных узлов.",
+    result: "Провести осмотр Heidelberg Speedmaster XL 106, сверить серийный номер и состав линии, зафиксировать результаты ремонта и текущие дефекты.",
+    documents: ["Акт ремонта Heidelberg от 06.11.2026.pdf"]
+  },
+  {
+    type: "Внеплановый мониторинг", title: "Проверить местонахождение складского комплекса", collateralIds: ["COL-001"],
+    dueDate: "2026-11-13", inspectionFormat: "Документарный осмотр", author: "Павел Смирнов", source: "Сигнал внешней проверки",
+    assignmentComment: "Поступили противоречивые сведения о составе и использовании объекта. Проверить адрес и актуальные документы на комплекс.",
+    result: "Сверить адрес и состав комплекса с выпиской ЕГРН и техническим планом, установить причину расхождения сведений об использовании помещений.",
+    documents: ["Выписка ЕГРН от 08.11.2026.pdf", "Технический план складского комплекса.pdf"]
+  },
+  {
+    type: "Регистрация залога", title: "Подготовить регистрацию залога двух грузовых автомобилей", collateralIds: ["COL-023", "COL-024"],
+    application: { type: "Регистрация залога", subtype: "Регистрация залога движимого имущества", purpose: "Регистрация / учет залога", product: "Кредит", limit: 1650000000, comment: "Подготовить регистрацию двух автомобилей по одному договору залога. Сверить VIN, залогодателя и комплект правоустанавливающих документов." },
+    registrationScenario: "Регистрация залога движимого имущества", dueDate: "2026-11-12", status: "В работе",
+    result: "Проверить договор залога, документы на MAN TGX и Scania R450, сверить VIN и регистрационные знаки, подготовить сведения для учета в АБС.",
+    documents: ["Договор залога AV-26/192.pdf", "ПТС и СТС автомобилей.zip"]
+  },
+  {
+    type: "Регистрация залога", title: "Зарегистрировать залог самоходной техники АэроТех Лизинг", collateralIds: ["COL-050", "COL-051"],
+    application: { type: "Регистрация залога", subtype: "Регистрация залога движимого имущества", purpose: "Регистрация / учет залога", product: "Лизинг", limit: 4300000000, comment: "Зарегистрировать экскаватор и фронтальный погрузчик по общему договору залога; сверить заводские номера, ПСМ и данные залогодателя." },
+    registrationScenario: "Регистрация залога движимого имущества", dueDate: "2026-11-14", status: "Назначена",
+    result: "Сверить идентификационные номера KMTPC210NPM040050 и VLG936L0NN040051 с ПСМ и актами передачи, проверить комплектность документов и подготовить регистрацию.",
+    documents: ["Договор залога самоходной техники.pdf", "ПСМ экскаватора и погрузчика.zip"]
+  },
+  {
+    type: "Регистрация залога", title: "Подготовить учет двух вагонов по договору залога", collateralIds: ["COL-061", "COL-062"],
+    application: { type: "Регистрация залога", subtype: "Регистрация залога движимого имущества", purpose: "Регистрация / учет залога", product: "Банковская гарантия", limit: 950000000, comment: "Подготовить учет двух полувагонов, предоставленных в обеспечение банковской гарантии. Проверить номера вагонов, договор залога и полномочия залогодателя." },
+    registrationScenario: "Регистрация залога движимого имущества", dueDate: "2026-11-16", status: "Назначена",
+    result: "Сверить номера 58824161 и 58824182, модели 12-132-03 и заводские номера с паспортами; внести согласованные сведения в карточки залога и учетную систему.",
+    documents: ["Договор залога вагонов.pdf", "Паспорта вагонов.zip", "Документы о полномочиях залогодателя.pdf"]
+  }
+];
+
+function addScreenshotTaskScenario(spec, taskIndex) {
+  const taskId = `tsk-09112026-${String(taskIndex + 1).padStart(3, "0")}`;
+  const createdMinutes = taskIndex * 2;
+  const createdAt = `2026-11-09 ${String(9 + Math.floor(createdMinutes / 60)).padStart(2, "0")}:${String(createdMinutes % 60).padStart(2, "0")}`;
+  const collaterals = spec.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
+  if (collaterals.some((item) => !item)) throw new Error(`Missing collateral in screenshot scenario ${taskId}`);
+  let application = null;
+  if (spec.application) {
+    const applicationIndex = initialData.applications.filter((item) => item.number?.startsWith("app-09112026-")).length;
+    const applicationId = `app-09112026-${String(applicationIndex + 1).padStart(3, "0")}`;
+    const initiator = ["Анна Кузнецова", "Дмитрий Орлов", "Мария Петрова"][applicationIndex % 3];
+    const clientName = collaterals[0].clientName;
+    const clientInn = collaterals[0].clientId || collaterals[0].pledgors?.[0]?.idn || "";
+    const contractNumber = `CR-26/1109-${String(applicationIndex + 1).padStart(3, "0")}`;
+    const deal = {
+      clientName,
+      inn: clientInn,
+      contractId: "",
+      contractNumber,
+      contractDate: "2026-10-15",
+      product: spec.application.product,
+      limit: spec.application.limit,
+      currency: "RUB",
+      collateralIds: [...spec.collateralIds]
+    };
+    application = {
+      id: applicationId,
+      number: applicationId,
+      screenshotFixtureKey: `screenshot-application-${String(applicationIndex + 1).padStart(3, "0")}`,
+      createdAt,
+      source: "Ручное создание",
+      applicationType: spec.application.type,
+      applicationSubtype: spec.application.subtype,
+      applicationPurpose: spec.application.purpose,
+      initiator,
+      initiatorSegment: /АО|ПАО|банк/i.test(clientName) ? "Корпоративный бизнес" : applicationIndex % 2 ? "МСБ" : "Корпоративный бизнес",
+      clientName,
+      participantName: clientName,
+      participantInn: clientInn,
+      product: spec.application.product,
+      limit: spec.application.limit,
+      currency: "RUB",
+      status: "В работе",
+      decisionStatus: spec.type === "Регистрация залога" ? "Положительное решение по сделке" : "Ожидается заключение залоговой службы",
+      comment: spec.application.comment,
+      contractId: "",
+      contractIds: [],
+      deals: [deal],
+      collateralIds: [...spec.collateralIds],
+      taskIds: [taskId]
+    };
+    initialData.applications.push(application);
+  } else if (spec.existingApplicationId) {
+    application = initialData.applications.find((item) => item.id === spec.existingApplicationId) || null;
+    if (!application) throw new Error(`Missing application ${spec.existingApplicationId} for ${taskId}`);
+    application.taskIds = [...new Set([...(application.taskIds || []), taskId])];
+  }
+
+  const parentTask = spec.parentTaskId ? initialData.tasks.find((item) => item.id === spec.parentTaskId) : null;
+  const clientName = application?.clientName || collaterals[0].clientName;
+  const author = spec.author || application?.initiator || "Анна Кузнецова";
+  const contractNumber = application?.deals?.[0]?.contractNumber || "";
+  const autoCreated = Boolean(spec.application && !spec.parentTaskId);
+  const initiatorSegment = application?.initiatorSegment
+    || spec.initiatorSegment
+    || (/^(ООО|АО|ПАО|ИП)\b/i.test(clientName) ? "Корпоративный бизнес" : "Розничный бизнес");
+  const task = {
+    id: taskId,
+    screenshotFixtureKey: `screenshot-task-${String(taskIndex + 1).padStart(3, "0")}`,
+    type: spec.type,
+    title: spec.title,
+    collateralId: spec.collateralIds[0],
+    collateralIds: [...spec.collateralIds],
+    applicationId: application?.id || "",
+    applicationNumber: application?.number || "",
+    parentTaskId: spec.parentTaskId || "",
+    contractId: "",
+    contractNumber,
+    client: clientName,
+    clientInn: application?.participantInn || collaterals[0].clientId || "",
+    initiatorSegment,
+    author,
+    assignee: ["Павел Смирнов", "Мария Петрова", "Елена Морозова"][taskIndex % 3],
+    status: spec.status || "Назначена",
+    dueDate: spec.dueDate,
+    createdAt,
+    sla: "Норма",
+    priority: "Средний",
+    source: spec.parentTaskId ? "Задача" : application ? "Заявка" : spec.source,
+    applicationSource: application?.source || "",
+    createdFromApplicationAutomatically: autoCreated,
+    assignmentComment: spec.assignmentComment || application?.comment || "",
+    inspectionFormat: spec.inspectionFormat || "",
+    inspectionVisitMethod: spec.visitMethod || "",
+    inspectionVisitDate: spec.visitMethod ? spec.dueDate : "",
+    inspectionVisitTime: spec.visitMethod ? "10:00" : "",
+    documentCheckDate: spec.inspectionFormat === "Документарный осмотр" ? spec.dueDate : "",
+    registrationScenario: spec.registrationScenario || "",
+    registrationStatuses: spec.type === "Регистрация залога"
+      ? Object.fromEntries(spec.collateralIds.map((id) => [id, "Не проверено"]))
+      : {},
+    route: spec.type === "Регистрация залога" ? ["Заявка", "Исполнитель", "АБС"] : ["Заявка", "Исполнитель", "Руководитель"],
+    result: spec.result,
+    listRevaluation: spec.listRevaluation ? JSON.parse(JSON.stringify(spec.listRevaluation)) : undefined,
+    marketAnalogManualValues: spec.analogs
+      ? { [spec.collateralIds[0]]: Object.fromEntries(spec.analogs.map((analog, index) => [index, { ...analog }])) }
+      : {},
+    documents: spec.documents.map((name) => ({ name, target: "task", date: "2026-11-09", author })),
+    history: [{
+      date: createdAt,
+      user: author,
+      action: "Создание задачи",
+      status: spec.status || "Назначена",
+      oldValue: "-",
+      newValue: spec.status || "Назначена",
+      comment: spec.parentTaskId
+        ? `Создана задача ${taskId} из ${spec.parentTaskId} для продолжения работы по объекту.`
+        : application
+          ? `Первая задача создана автоматически из заявки ${application.number}.`
+          : spec.assignmentComment
+    }]
+  };
+  if (parentTask && !task.assignmentComment) task.assignmentComment = parentTask.result || "";
+  initialData.tasks.push(task);
+}
+
+screenshotTaskScenarios.forEach(addScreenshotTaskScenario);
 
 export function resolveCollateralSubtype(collateral) {
   collateral ||= {};

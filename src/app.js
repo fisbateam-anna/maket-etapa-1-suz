@@ -1,4 +1,4 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-collateral-v7-20261105-r1";
+import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-arm-v4-20261110-r24";
 import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
 
@@ -12,6 +12,7 @@ const TASK_TYPE_REGISTRATION = "Регистрация залога";
 const TASK_TYPE_DEFECT_INSPECTION = "Дефектовка";
 const TASK_STATE_STORAGE_KEY = "pledgeModuleR.mvp1.taskState.v4";
 const ROLE_STATE_STORAGE_KEY = "pledgeModuleR.mvp1.roleId";
+const REGISTRY_COLUMN_SETTINGS_STORAGE_KEY = "pledgeModuleR.registryColumnSettings.v1";
 const MVP1_TASK_TYPES = new Set(["Первичный осмотр", "Повторный осмотр", TASK_TYPE_DEFECT_INSPECTION, "Единичная переоценка", "Списочная переоценка", "Плановый мониторинг", "Внеплановый мониторинг", TASK_TYPE_REGISTRATION]);
 const MVP1_INTEGRATION_IDS = new Set(["email", "avito", "auto-ru", "spectrum-auto", "infosphere", "abs"]);
 const APPLICATION_DEAL_COLUMNS = ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки"];
@@ -162,7 +163,7 @@ const FT_COLLATERAL_TYPE_OPTIONS = [
   "Прочие движимые вещи (объекты)"
 ];
 const STAGE1_COLLATERAL_TYPE_SET = new Set(FT_COLLATERAL_TYPE_OPTIONS);
-const FT_COLLATERAL_V6_TYPE_FIELDS = {
+const FT_COLLATERAL_V8_TYPE_FIELDS = {
   "Объекты недвижимости": [
     "Описание по ЕГРН", "Кадастровый номер", "Условный номер", "Адрес по ЕГРН", "Кадастровая стоимость",
     "Дата определения кадастровой стоимости", "Дата регистрации права собственности",
@@ -174,8 +175,9 @@ const FT_COLLATERAL_V6_TYPE_FIELDS = {
   ],
   "Транспортные средства, прицепы (полуприцепы)": [
     "Идентификационный номер транспортного средства (VIN)", "Марка", "Модель", "Год выпуска", "Мощность двигателя, л.с.",
-    "Объем двигателя, куб. см", "Регион выдачи", "Адрес по СТС", "Пробег", "Категория транспорта", "Подкатегория",
-    "Тип транспорта", "Номер шасси (рамы)", "Мощность двигателя, кВт", "Тип автомобиля", "Инвентарный номер", "Гос.номер"
+    "Объем двигателя, куб. см", "Номер двигателя", "Модель двигателя", "Регион выдачи", "Адрес по СТС", "Пробег",
+    "Категория транспорта", "Подкатегория", "Тип транспорта", "Номер шасси (рамы)", "Мощность двигателя, кВт",
+    "Тип автомобиля", "Инвентарный номер", "Гос.номер"
   ],
   "Транспортные средства (самоходная техника)": [
     "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", "Год выпуска", "Марка", "Модель", "Мощность двигателя, л.с.",
@@ -193,7 +195,7 @@ const FT_COLLATERAL_V6_TYPE_FIELDS = {
     "Размер доли в праве общей долевой собственности, знаменатель"
   ],
   "Плавучие сооружения": [
-    "Идентификационный номер", "Номер IMO", "Класс судна", "Год постройки", "Название", "Регистровый номер",
+    "Идентификационный номер", "Группа", "Номер IMO", "Класс судна", "Год постройки", "Название", "Регистровый номер",
     "Номер ИМПС/MMSI", "Размер доли в праве общей долевой собственности, числитель",
     "Размер доли в праве общей долевой собственности, знаменатель"
   ],
@@ -204,7 +206,16 @@ const FT_COLLATERAL_V6_TYPE_FIELDS = {
   "Прочие движимые вещи (однородные группы)": ["Инвентарный номер"],
   "Прочие движимые вещи (объекты)": ["Инвентарный номер", "Идентификационный признак (значение)", "Идентификационный признак (наименование)"]
 };
-const FT_COLLATERAL_V6_MODAL_TYPE_FIELDS = FT_COLLATERAL_V6_TYPE_FIELDS;
+const FT_COLLATERAL_V6_TYPE_FIELDS = FT_COLLATERAL_V8_TYPE_FIELDS;
+const FT_COLLATERAL_V8_MODAL_TYPE_FIELDS = FT_COLLATERAL_V8_TYPE_FIELDS;
+const FT_COLLATERAL_V6_MODAL_TYPE_FIELDS = FT_COLLATERAL_V8_MODAL_TYPE_FIELDS;
+const FT_COLLATERAL_PROFILE_FIELDS_VISIBLE_IN_CHARACTERISTICS = new Set([
+  "Животные|Инвентарный номер",
+  "Имущественные права (требования)|Номер договора",
+  "Товары в обороте|Инвентарный номер",
+  "Прочие движимые вещи (однородные группы)|Инвентарный номер",
+  "Прочие движимые вещи (объекты)|Инвентарный номер"
+]);
 const COLLATERAL_ADDRESS_FIELDS = [
   "Адрес / место нахождения",
   "Почтовый индекс",
@@ -840,6 +851,60 @@ COLLATERAL_TYPE_FIELD_OPTIONS["Прочие движимые вещи (объе�
   "Подвид залога": ["Животное, индивидуально определенное", "Монета, содержащие драгоценные металлы", "Предмет бытового использования"],
   "Единица измерения": ["Штука", "Комплект"]
 };
+Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS["Объекты недвижимости"], {
+  "Назначение объекта": ["Нежилое здание", "Жилое здание", "Многоквартирный дом", "Жилое строение", "Садовый дом", "Гараж", "Жилой дом", "Нежилое помещение", "Жилое помещение", "Иное"],
+  "Функциональная группа": [
+    "Офисный объект класса С и ниже", "Высококлассный офисный центр", "Стрит-ритейл", "Торговый центр",
+    "Офисно-торговый объект свободного назначения", "Офисный объект класса C и ниже",
+    "Универсальные производственно складские объекты", "Специализированные высококлассные складские объекты",
+    "Объекты, предназначенные для пищевого производства", "Объекты сельскохозяйственного назначения",
+    "Сельскохозяйственного назначения", "Объекты придорожного сервиса, обслуживающие транспортные средства",
+    "Под ИЖС", "Под офисно-торг. застройку", "Под МЖС", "Под объекты рекреации", "Под придорожный сервис"
+  ],
+  "Вид сооружения": [
+    "Категория не установлена",
+    "Линейное сооружение (линии электропередачи, линии связи, трубопроводы и другие подобные сооружения (в том числе подземные))",
+    "Сооружения, предназначенные для хранения (ёмкостные сооружения для наземного и подземного хранения жидкостей и газов (например, нефтехранилища, газохранилища), сыпучих материалов)",
+    "Подземное", "Высотное сооружение (вышки, мачты)", "Иное"
+  ],
+  "Категория земель": [
+    "Земли сельскохозяйственного назначения", "Земли населенных пунктов",
+    "Земли промышленности, энергетики, транспорта, связи, радиовещания, телевидения, информатики, земли для обеспечения космической деятельности, земли обороны, безопасности и земли иного специального назначения",
+    "Земли особо охраняемых территорий и объектов", "Земли лесного фонда", "Земли водного фонда", "Земли запаса", "Категория не установлена"
+  ]
+});
+for (const typeLabel of ["Транспортные средства, прицепы (полуприцепы)", "Транспортные средства (самоходная техника)"]) {
+  Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS[typeLabel], {
+    "Тип автомобиля": ["Легковой автомобиль", "Грузовой автомобиль"]
+  });
+}
+Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS["Транспортные средства, прицепы (полуприцепы)"], {
+  "Категория транспорта": ["Категория L", "Категория M1", "Категория M2", "Категория M3", "Категория N", "Категория O"]
+});
+Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS["Транспортные средства (самоходная техника)"], {
+  "Категория транспорта": [
+    "Категория A (современные автомоторные средства, не предназначенные для дорог общего пользования или со скоростью до 50 км/ч)",
+    "Категория B (машины мощностью до 25,7 кВт)", "Категория C (машины мощностью от 25,7 до 110,3 кВт)",
+    "Категория D (машины мощностью свыше 110,3 кВт)", "Категория E (гусеничные машины мощностью свыше 25,7 кВт)", "Категория F (сельскохозяйственная техника)"
+  ]
+});
+Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS["Оборудование"], {
+  "Группа": [
+    "Сельскохозяйственное оборудование", "Оборудование для строительства", "Оборудование для добычи полезных ископаемых",
+    "Оборудование нефтеперерабатывающей и нефтехимической промышленности", "Оборудование черной и цветной металлургии",
+    "Оборудование металлообрабатывающее", "Оборудование деревообрабатывающее и целлюлозно-бумажной промышленности",
+    "Энергетическое оборудование", "Оборудование легкой промышленности", "Оборудование пищевой промышленности",
+    "Медицинское оборудование", "Вычислительное и телекоммуникационное оборудование", "Иное"
+  ]
+});
+Object.assign(COLLATERAL_TYPE_FIELD_OPTIONS["Имущественные права (требования)"], {
+  "Вид имущественных прав (требований)": ["Права пользования (аренды)", "Права требования", "Иное"],
+  "Договор имущественных прав": [
+    "Кредитный договор (права требования к заемщику)", "Договор займа (права требования к заемщику)",
+    "Договор поставки (права требования к покупателю)", "Договор подряда (права требования к заказчику)",
+    "Договор аренды (права арендодателя)", "Договор уступки права требования (цессии)"
+  ]
+});
 
 function getUnifiedTaskType(type) {
   const value = String(type || "")
@@ -857,14 +922,22 @@ const FT_COLLATERAL_IMPORT_BASE_COLUMNS = [
   "Профильный идентификатор объекта", "Статус объекта", "Залогодатель", "ИНН залогодателя",
   "Тип субъекта залогодателя", "Собственник", "ИНН собственника", "Тип субъекта собственника",
   "Номер кредитного договора / продукт заявки", "Дата кредитного договора", "Номер договора залога", "Дата договора залога",
-  "Документ-основание", "Дата документа-основания", "Серия документа-основания", "Номер документа-основания", "Статус ЭПТС",
-  "Адрес / местонахождение", "Осмотр произведен", "Контактное лицо для осмотра", "Единица измерения",
-  "Значение, в указанных ед.изм."
+  "Документ-основание", "Дата документа-основания", "Номер документа-основания", "Адрес / местонахождение"
 ];
-const FT_COLLATERAL_IMPORT_TYPE_COLUMNS = Object.fromEntries(FT_COLLATERAL_TYPE_OPTIONS.map((typeLabel) => [
-  typeLabel,
-  [...(FT_COLLATERAL_V6_MODAL_TYPE_FIELDS[typeLabel] || [])]
-]));
+const FT_COLLATERAL_IMPORT_TYPE_COLUMNS = {
+  "Объекты недвижимости": ["Единица измерения", "S", "Кадастровый номер в пределах, кот находится объект"],
+  "Транспортные средства, прицепы (полуприцепы)": ["Марка", "Модель", "Гос.номер", "Год выпуска", "Мощность, л.с.", "Объем двигателя, куб.м.", "Пробег/наработка"],
+  "Транспортные средства (самоходная техника)": ["Марка", "Модель", "Гос.номер", "Год выпуска", "Мощность, л.с.", "Объем двигателя, куб.м.", "Пробег/наработка"],
+  "Оборудование": ["Марка", "Модель", "Год выпуска", "Производитель", "Инвентарный номер", "Дата ввода в эксплуатацию", "Первоначальная стоимость", "Остаточная стоимость"],
+  "Воздушные суда": [],
+  "Плавучие сооружения": [],
+  "Железнодорожный подвижной состав": [],
+  "Животные": [],
+  "Имущественные права (требования)": [],
+  "Товары в обороте": [],
+  "Прочие движимые вещи (однородные группы)": [],
+  "Прочие движимые вещи (объекты)": []
+};
 
 function normalizeTaskStatus(status) {
   if (status === LEGACY_TASK_STATUS_REWORK) return "Ожидание";
@@ -956,27 +1029,26 @@ function getTaskHistoryEvents(task) {
 }
 
 function getImportTemplateValue(row, column) {
-  const typeLabel = getCollateralTypeLabel({ type: row.type });
+  const typeLabel = row.collateralTypeLabel || getCollateralTypeLabel({ type: row.type });
   const profileIdentifier = row.profileIdentifier
     || row.identifierValue
-    || row.collateralId
     || row.vin
     || row.cadastralNumber
     || row.factoryNumber
     || "";
   const values = {
     "Идентификатор в АБС": row.absId || row.absIdentifier,
-    "Наименование": row.name || row.object || row.type,
-    "Дополнительная информация": row.additionalInfo || row.description || row.message,
+    "Наименование": row.name || row.object,
+    "Дополнительная информация": row.additionalInfo || row.fields?.["Дополнительная информация"] || row.description,
     "Вид профильного идентификатора": row.identifierType,
     "Профильный идентификатор объекта": profileIdentifier,
     "Статус объекта": row.objectStatus || row.fields?.["Статус объекта"],
     "Залогодатель": row.owner,
     "ИНН залогодателя": row.ownerInn,
     "Тип субъекта залогодателя": row.ownerSubjectType || row.fields?.["Тип субъекта залогодателя"],
-    "Собственник": row.ownerName || row.owner,
-    "ИНН собственника": row.ownerInn || row.fields?.["ИНН собственника"],
-    "Тип субъекта собственника": row.ownerSubjectType || row.fields?.["Тип субъекта собственника"],
+    "Собственник": row.ownerName || row.fields?.["Собственник"],
+    "ИНН собственника": row.ownerIdn || row.fields?.["ИНН собственника"],
+    "Тип субъекта собственника": row.ownerEntityType || row.fields?.["Тип субъекта собственника"],
     "Номер кредитного договора / продукт заявки": row.dealContract || row.contract,
     "Дата кредитного договора": row.creditContractDate || row.fields?.["Дата кредитного договора"],
     "Номер договора залога": row.pledgeContractNumber,
@@ -984,15 +1056,10 @@ function getImportTemplateValue(row, column) {
     "Документ-основание": row.basisDocument?.type || row.basisDocumentType,
     "Дата документа-основания": row.basisDocument?.date || row.basisDocumentDate,
     "Номер документа-основания": row.basisDocument?.number || row.basisDocumentNumber,
-    "Серия документа-основания": row.basisDocument?.series || row.basisDocumentSeries,
-    "Статус ЭПТС": row.basisDocument?.status || row.eptsStatus,
     "Адрес / местонахождение": row.address,
-    "Осмотр произведен": row.inspectionStatus || row.fields?.["Осмотр произведен"] || row.fields?.["Осмотр (проведен/не проведен)"],
-    "Контактное лицо для осмотра": row.inspectionContact,
     "Единица измерения": row.unit || row.fields?.["Единица измерения"],
-    "Значение, в указанных ед.изм.": row.unitValue || row.unitParameters || row.fields?.["Значение, в указанных ед.изм."] || row.fields?.["Параметры единицы измерения"],
-    "Площадь, кв. м": row.area || row.fields?.["S"] || row.fields?.["Площадь, кв. м"] || row.fields?.["Площадь"],
-    "Кадастровый номер в пределах, которого находится объект": row.parentCadastralNumber || row.fields?.["Кадастровый номер в пределах, которого находится объект"],
+    "S": row.area || row.fields?.["S"] || row.fields?.["Площадь, кв. м"],
+    "Кадастровый номер в пределах, кот находится объект": row.parentCadastralNumber || row.fields?.["Кадастровый номер в пределах, кот находится объект"] || row.fields?.["Кадастровый номер в пределах, которого находится объект"],
     "Марка": row.fields?.["Марка"] || row.make,
     "Модель": row.fields?.["Модель"] || row.model,
     "Год выпуска": row.fields?.["Год выпуска"] || row.year,
@@ -1011,17 +1078,148 @@ function getImportTemplateValue(row, column) {
 }
 
 function getImportTemplateColumns(typeLabel) {
-  return [...FT_COLLATERAL_IMPORT_BASE_COLUMNS, ...(FT_COLLATERAL_IMPORT_TYPE_COLUMNS[typeLabel] || [])];
+  return uniqueItems([...FT_COLLATERAL_IMPORT_BASE_COLUMNS, ...(FT_COLLATERAL_IMPORT_TYPE_COLUMNS[typeLabel] || [])]);
+}
+
+function getImportExistingCollateral(row) {
+  const identifier = row.profileIdentifier || row.identifierValue || row.vin || row.cadastralNumber || row.factoryNumber || "";
+  const absId = String(row.absId || row.absIdentifier || "").trim().toLocaleLowerCase("ru-RU");
+  return state.data.collaterals.find((item) => item.id === row.collateralId)
+    || (absId ? state.data.collaterals.find((item) => String(item.absId || "").trim().toLocaleLowerCase("ru-RU") === absId) : null)
+    || (identifier
+      ? state.data.collaterals.find((item) => normalizeProfileIdentifier(getCollateralObjectIdentifier(item)) === normalizeProfileIdentifier(identifier))
+      : null)
+    || null;
+}
+
+function getImportPreviewStatus(row, context) {
+  if (row.importError) return { status: "Ошибка", message: row.importError, warnings: [] };
+  const typeLabel = row.collateralTypeLabel || getCollateralTypeLabel({ type: row.type });
+  const requiredColumns = ["Наименование", "Дополнительная информация", "Вид профильного идентификатора"];
+  for (const column of requiredColumns) {
+    if (isBlankFieldValue(getImportTemplateValue(row, column))) {
+      return { status: "Ошибка", message: `Не заполнено обязательное поле «${column}».`, warnings: [] };
+    }
+  }
+  const identifierOption = getNewCollateralProfileIdentifierOptions(typeLabel)
+    .find((option) => option.label === getImportTemplateValue(row, "Вид профильного идентификатора"));
+  if (!identifierOption) return { status: "Ошибка", message: "Недопустимый вид профильного идентификатора для выбранного вида залога.", warnings: [] };
+  const rawProfileIdentifier = getImportTemplateValue(row, "Профильный идентификатор объекта");
+  const profileIdentifier = isBlankFieldValue(rawProfileIdentifier) ? "" : String(rawProfileIdentifier).trim();
+  if (profileIdentifier.length > 50) return { status: "Ошибка", message: "Профильный идентификатор превышает 50 символов.", warnings: [] };
+  if (typeLabel === "Объекты недвижимости" && (identifierOption.field !== "Кадастровый номер" || !profileIdentifier)) {
+    return { status: "Ошибка", message: "Для недвижимости укажите кадастровый номер как профильный идентификатор.", warnings: [] };
+  }
+  if (identifierOption.group !== "system" && !profileIdentifier) {
+    return { status: "Ошибка", message: "Заполните выбранный профильный идентификатор объекта.", warnings: [] };
+  }
+  if (identifierOption.field === "Кадастровый номер" && profileIdentifier
+      && !/^\d{2}:\d{2}:\d{6,7}:\d+$/.test(profileIdentifier)) {
+    return { status: "Ошибка", message: "Кадастровый номер не соответствует формату ЕГРН.", warnings: [] };
+  }
+  if (identifierOption.label === "VIN" && profileIdentifier
+      && !/^[A-HJ-NPR-Z0-9]{17}$/.test(profileIdentifier.toUpperCase())) {
+    return { status: "Ошибка", message: "VIN должен содержать 17 символов; латинские I, O и Q не допускаются.", warnings: [] };
+  }
+  const readOptionalImportText = (column) => {
+    const value = getImportTemplateValue(row, column);
+    return isBlankFieldValue(value) ? "" : String(value).trim();
+  };
+  const owner = readOptionalImportText("Залогодатель");
+  const ownerInn = readOptionalImportText("ИНН залогодателя");
+  const ownerSubjectType = readOptionalImportText("Тип субъекта залогодателя");
+  const hasOwnerData = [owner, ownerInn, ownerSubjectType].some((value) => !isBlankFieldValue(value));
+  if (hasOwnerData) {
+    if (!owner) return { status: "Ошибка", message: "Для сведений о залогодателе заполните имя или наименование.", warnings: [] };
+    if (!ownerSubjectType) {
+      return { status: "Ошибка", message: "Не заполнен тип субъекта залогодателя.", warnings: [] };
+    }
+    if (ownerInn && !/^(?:\d{10}|\d{12})$/.test(ownerInn)) {
+      return { status: "Ошибка", message: "ИНН залогодателя должен содержать 10 или 12 цифр.", warnings: [] };
+    }
+    if (ownerInn && ((ownerInn.length === 10 && !["ЮЛ", "Юридическое лицо"].includes(ownerSubjectType))
+        || (ownerInn.length === 12 && !["ФЛ", "Физическое лицо", "Физическое лицо / индивидуальный предприниматель"].includes(ownerSubjectType)))) {
+      return { status: "Ошибка", message: "Тип субъекта залогодателя не соответствует длине ИНН.", warnings: [] };
+    }
+  }
+  if (typeLabel === "Оборудование") {
+    const requiredEquipment = [["Год выпуска", getImportTemplateValue(row, "Год выпуска")]];
+    const missingEquipment = requiredEquipment.filter(([, value]) => isBlankFieldValue(value)).map(([field]) => field);
+    if (missingEquipment.length) {
+      return {
+        status: "Ошибка",
+        message: `Для создания карточки оборудования не заполнены обязательные поля: ${missingEquipment.join(", ")}.`,
+        warnings: []
+      };
+    }
+  }
+
+  if (typeLabel === "Транспортные средства, прицепы (полуприцепы)") {
+    const requiredVehicleFields = [
+      ["Год выпуска", getImportTemplateValue(row, "Год выпуска")],
+      ["Мощность двигателя, л.с.", getImportTemplateValue(row, "Мощность, л.с.")]
+    ];
+    const missingVehicleFields = requiredVehicleFields.filter(([, value]) => isBlankFieldValue(value)).map(([field]) => field);
+    if (missingVehicleFields.length) {
+      return {
+        status: "Ошибка",
+        message: `Для создания карточки транспортного средства не заполнены обязательные поля: ${missingVehicleFields.join(", ")}.`,
+        warnings: []
+      };
+    }
+  }
+
+  const existing = getImportExistingCollateral(row);
+  const warnings = [];
+  if (!existing) return { status: "Создать", message: "Новая карточка залога.", warnings };
+
+  const rowType = typeLabel;
+  const existingType = getCollateralTypeLabel(existing);
+  const rowSubtype = row.subtype || row.fields?.["Подвид залога"] || "";
+  const existingSubtype = getCollateralSubtype(existing);
+  const rowIdentifier = profileIdentifier;
+  const existingIdentifier = getCollateralObjectIdentifier(existing);
+  const existingIdentifierType = String(existing.profileIdentifierType || "").trim();
+  const mismatch = rowType !== existingType
+    || (rowSubtype && existingSubtype && rowSubtype !== existingSubtype)
+    || (rowIdentifier && existingIdentifier && normalizeProfileIdentifier(rowIdentifier) !== normalizeProfileIdentifier(existingIdentifier))
+    || (existingIdentifierType && identifierOption.label !== "Номер карточки залога" && existingIdentifierType !== identifierOption.label);
+  if (mismatch) return { status: "Ошибка", message: "Не совпадают неизменяемые реквизиты существующей карточки: вид, подвид или профильный идентификатор.", warnings };
+
+  if (context === "registry") {
+    return { status: "Уже есть в системе", message: `Карточка ${existing.id} не будет изменена при загрузке из реестра.`, warnings };
+  }
+  const updateConfirmed = (state.modal?.updateConfirmedRows || []).includes(String(row.row));
+  return {
+    status: updateConfirmed ? "Обновить после подтверждения" : "Найдено в системе",
+    message: `Карточка ${existing.id}; обновление возможно только после подтверждения пользователем.`,
+    warnings,
+    updateConfirmed
+  };
 }
 
 function getImportPreviewRows() {
   const modal = state.modal || {};
   if (!modal.fileLoaded || !modal.collateralType || !modal.collateralSubtype) return [];
-  return (state.data.importRows || []).filter((row) => {
+  const rows = (state.data.importRows || []).filter((row) => {
     const rowType = row.type ? getCollateralTypeLabel({ type: row.type }) : modal.collateralType;
     if (rowType !== modal.collateralType) return false;
     const rowSubtype = row.subtype || row.fields?.["Подвид залога"] || row.fields?.["Подвид"] || "";
     return !rowSubtype || rowSubtype === modal.collateralSubtype;
+  });
+  const seenIdentifiers = new Set();
+  return rows.map((row) => {
+    const preview = getImportPreviewStatus(row, modal.context || "registry");
+    const identifier = String(getImportTemplateValue(row, "Профильный идентификатор объекта") || "").trim();
+    const absId = String(getImportTemplateValue(row, "Идентификатор в АБС") || "").trim();
+    const key = identifier
+      ? `${modal.collateralType}:${modal.collateralSubtype}:${normalizeProfileIdentifier(identifier)}`
+      : absId ? `abs:${absId.toLocaleLowerCase("ru-RU")}` : "";
+    if (key && seenIdentifiers.has(key) && preview.status !== "Ошибка") {
+      return { ...row, status: "Ошибка", message: "В файле повторяется идентификатор объекта.", warnings: [] };
+    }
+    if (key) seenIdentifiers.add(key);
+    return { ...row, ...preview };
   });
 }
 
@@ -1178,11 +1376,78 @@ function normalizeDataApplicationSingleClient(data, application) {
 
 let deletedApplicationIds = [];
 
+function remapScreenshotFixtureIdsForSavedState(data, savedState) {
+  const idMappings = new Map();
+  const savedTasks = Array.isArray(savedState?.tasks) ? savedState.tasks : [];
+  const savedApplications = Array.isArray(savedState?.applications) ? savedState.applications : [];
+
+  const replaceReferences = (value) => {
+    if (typeof value === "string") {
+      let result = value;
+      for (const [oldId, newId] of idMappings) result = result.split(oldId).join(newId);
+      return result;
+    }
+    if (Array.isArray(value)) return value.map(replaceReferences);
+    if (value && typeof value === "object") {
+      Object.entries(value).forEach(([key, nested]) => { value[key] = replaceReferences(nested); });
+    }
+    return value;
+  };
+  const applyReferenceMappings = () => {
+    if (!idMappings.size) return;
+    data.applications = (data.applications || []).map(replaceReferences);
+    data.tasks = (data.tasks || []).map(replaceReferences);
+    idMappings.clear();
+  };
+
+  const restorePersistedFixtureIds = (records, savedRecords, prefix) => {
+    const savedFixtures = new Map(savedRecords
+      .filter((record) => record?.screenshotFixtureKey && record?.id && record?.number)
+      .map((record) => [record.screenshotFixtureKey, record]));
+    for (const record of records) {
+      if (!String(record?.id || "").startsWith(prefix)) continue;
+      const savedFixture = savedFixtures.get(record.screenshotFixtureKey);
+      if (!savedFixture) continue;
+      if (record.id !== savedFixture.id) idMappings.set(record.id, savedFixture.id);
+      if (record.number !== savedFixture.number) idMappings.set(record.number, savedFixture.number);
+      record.id = savedFixture.id;
+      record.number = savedFixture.number;
+    }
+  };
+
+  const remapConflictingRecords = (records, savedRecords, prefix, numberPrefix) => {
+    const savedIdentifiers = new Set(savedRecords.filter((record) => !record?.screenshotFixtureKey)
+      .flatMap((record) => [record?.id, record?.number]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)));
+    for (const record of records) {
+      if (!String(record?.id || "").startsWith(prefix) || !record?.screenshotFixtureKey) continue;
+      const identifiers = [record.id, record.number].map((value) => String(value || "").trim()).filter(Boolean);
+      if (!identifiers.some((value) => savedIdentifiers.has(value))) continue;
+      const nextNumber = getNextDailyObjectNumber(numberPrefix, [...records, ...savedRecords], record.createdAt);
+      identifiers.forEach((value) => idMappings.set(value, nextNumber));
+      record.id = nextNumber;
+      record.number = nextNumber;
+      savedIdentifiers.add(nextNumber);
+    }
+  };
+
+  restorePersistedFixtureIds(data.tasks || [], savedTasks, "tsk-09112026-");
+  restorePersistedFixtureIds(data.applications || [], savedApplications, "app-09112026-");
+  applyReferenceMappings();
+
+  remapConflictingRecords(data.tasks || [], savedTasks, "tsk-09112026-", "tsk");
+  remapConflictingRecords(data.applications || [], savedApplications, "app-09112026-", "app");
+  applyReferenceMappings();
+  return data;
+}
+
 function buildRuntimeData() {
   const data = clone(initialData);
   const savedSnapshot = readSavedStateSnapshot();
   const migratedSnapshot = migrateSavedObjectNumbers(savedSnapshot, data);
   const savedState = migratedSnapshot.state;
+  remapScreenshotFixtureIdsForSavedState(data, savedState);
   deletedApplicationIds = [...new Set((Array.isArray(savedState.deletedApplicationIds) ? savedState.deletedApplicationIds : [])
     .map((value) => String(value || "").trim())
     .filter(Boolean))];
@@ -1812,6 +2077,16 @@ function rememberSelectedRole(roleId) {
   }
 }
 
+function readSavedRegistryColumnSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(REGISTRY_COLUMN_SETTINGS_STORAGE_KEY) || "{}");
+    return isPlainObject(saved) ? saved : {};
+  } catch (error) {
+    console.warn("Не удалось прочитать настройки колонок реестров", error);
+    return {};
+  }
+}
+
 const state = {
   data: buildRuntimeData(),
   roleId: getInitialRoleId(),
@@ -1821,6 +2096,10 @@ const state = {
   taskRegistryTab: "",
   registryFiltersExpanded: { tasks: true, applications: true, collaterals: true },
   registryMultiSelectExpanded: {},
+  registryColumnSettings: readSavedRegistryColumnSettings(),
+  registryColumnSettingsOpen: "",
+  registryColumnDrag: null,
+  pendingRegistryColumnScroll: null,
   registryPages: {},
   registrySorts: {
     tasks: {
@@ -1849,13 +2128,15 @@ const state = {
       status: "",
       author: "",
       assignee: "",
+      initiator: "",
       initiatorSegment: "",
       pledgor: "",
-      pledgorInn: "",
       createdFrom: "",
       createdTo: "",
       dueFrom: "",
-      dueTo: ""
+      dueTo: "",
+      completedFrom: "",
+      completedTo: ""
     },
     applications: {
       number: "",
@@ -1870,20 +2151,18 @@ const state = {
       contractNumber: "",
       collateralId: "",
       collateralName: "",
-      collateralType: "",
       createdFrom: "",
       createdTo: ""
     },
     collateralPicker: Object.fromEntries(APPLICATION_COLLATERAL_PICKER_FILTERS.map(([key]) => [key, ""])),
     contracts: { number: "", clientName: "", product: "", status: "Активен", coverageStatus: "", collateralId: "" },
     collaterals: {
+      number: "",
       name: "",
       collateralId: "",
       type: "",
       clientName: "",
-      clientInn: "",
       pledgor: "",
-      pledgorInn: "",
       creditContractNumber: "",
       pledgeContractNumber: "",
       address: "",
@@ -1893,9 +2172,10 @@ const state = {
       pledgeTo: "",
       fairFrom: "",
       fairTo: "",
+      createdFrom: "",
+      createdTo: "",
       appraisalDateFrom: "",
       appraisalDateTo: "",
-      quality: "",
       status: COLLATERAL_STATUS_OPTIONS.filter((status) => status !== "Недействующий")
     },
     insurances: { policy: "", clientId: "", clientName: "", collateralId: "", company: "", status: "" },
@@ -2239,6 +2519,12 @@ function canViewTask(task, role = getRole()) {
   return canViewTaskDirection(getTaskDirection(task), role);
 }
 
+function canViewTaskRecord(task, role = getRole()) {
+  return isTaskRegistryStage1Type(task?.type)
+    && canViewTask(task, role)
+    && (hasPermission(role, "tasksAllView") || task.assignee === role?.user);
+}
+
 function getRoute() {
   return window.location.hash.replace(/^#/, "") || getDefaultRouteForRole(getRole());
 }
@@ -2282,6 +2568,28 @@ function getTask(id) {
 
 function getCollateral(id) {
   return state.data.collaterals.find((item) => item.id === id);
+}
+
+function getCollateralClientType(collateral) {
+  const application = (state.data.applications || []).find((item) =>
+    (item.collateralIds || []).includes(collateral?.id)
+    || (item.deals || []).some((deal) => (deal.collateralIds || []).includes(collateral?.id))
+  );
+  const linkedDeal = (application?.deals || []).find((deal) => (deal.collateralIds || []).includes(collateral?.id));
+  const contract = (state.data.contracts || []).find((item) =>
+    (collateral?.contractIds || []).includes(item.id) || item.number === collateral?.contractNumber
+  );
+  const linkedClientType = String(linkedDeal?.clientType || application?.clientType || application?.fields?.["Тип клиента"] || "").trim();
+  if (["ЮЛ", "Юридическое лицо"].includes(linkedClientType)) return "ЮЛ";
+  if (["ФЛ", "Физическое лицо", "Физическое лицо / индивидуальный предприниматель"].includes(linkedClientType)) return "ФЛ";
+  const linkedInn = String(linkedDeal?.inn || application?.participantInn || application?.inn || contract?.inn || "").replace(/\D/g, "");
+  if (linkedInn.length === 10) return "ЮЛ";
+  if (linkedInn.length === 12) return "ФЛ";
+  const directType = String(collateral?.clientType || collateral?.fields?.["Тип клиента"] || "").trim();
+  if (["ЮЛ", "Юридическое лицо"].includes(directType)) return "ЮЛ";
+  if (["ФЛ", "Физическое лицо", "Физическое лицо / индивидуальный предприниматель"].includes(directType)) return "ФЛ";
+  const inn = String(collateral?.clientId || "").replace(/\D/g, "");
+  return inn.length === 10 ? "ЮЛ" : inn.length === 12 ? "ФЛ" : "";
 }
 
 function getCollateralSuzNumber(collateral) {
@@ -2890,6 +3198,27 @@ function getDealContractDate(row = {}, contract = null) {
   return row.contractDate || row.date || row.contractStartDate || row.startDate || contract?.startDate || contract?.date || contract?.contractDate || "";
 }
 
+function normalizeApplicationPledgeContractLinks(value = []) {
+  const source = Array.isArray(value) ? value : [];
+  const links = new Map();
+  source.forEach((item) => {
+    const number = String(item?.number || item?.pledgeContractNumber || "").trim();
+    const date = String(item?.date || item?.pledgeContractDate || "").trim();
+    const collateralIds = uniqueItems([...(item?.collateralIds || []), item?.collateralId].filter(Boolean));
+    if (!collateralIds.length || (!number && !date)) return;
+    const link = { number, date, collateralIds };
+    links.set(getApplicationPledgeContractLinkKey(link), link);
+  });
+  return [...links.values()];
+}
+
+function getApplicationPledgeContractLinkKey(link = {}) {
+  const number = String(link.number || link.pledgeContractNumber || "").trim().toLocaleLowerCase("ru-RU");
+  const date = String(link.date || link.pledgeContractDate || "").trim();
+  const collateralIds = uniqueItems([...(link.collateralIds || []), link.collateralId].filter(Boolean)).sort();
+  return JSON.stringify([number, date, collateralIds]);
+}
+
 function normalizeApplicationDealRow(row = {}, index = 0) {
   const contract = getContract(row.contractId) || getContractByNumber(row.contractNumber);
   const limit = parseNumericInput(row.limit ?? row.amount ?? contract?.limit ?? 0);
@@ -2904,6 +3233,7 @@ function normalizeApplicationDealRow(row = {}, index = 0) {
     limit: limit || "",
     currency: row.currency || contract?.currency || "RUB",
     collateralIds: uniqueItems([...(row.collateralIds || []), ...parseListValue(row.collateralId)].filter(Boolean)),
+    pledgeContractLinks: normalizeApplicationPledgeContractLinks(row.pledgeContractLinks),
     comment: row.comment || ""
   };
 }
@@ -3044,7 +3374,7 @@ function renderTaskRegistryApplicationCell(task) {
   const number = application?.number || task?.applicationNumber;
   if (!number) return `<span class="muted">-</span>`;
   if (!application || !hasPermission(getRole(), "appRegView")) return `<span>${escapeHtml(number)}</span>`;
-  return `<button class="link registry-object-link" data-route="${getApplicationCardRoute(application)}">${escapeHtml(number)}</button>`;
+  return renderRegistryRecordLink(getApplicationCardRoute(application), number);
 }
 
 function renderApplicationTasksLink(number) {
@@ -3052,7 +3382,7 @@ function renderApplicationTasksLink(number) {
   const direction = getAvailableTaskDirections(getRole())[0];
   if (!direction) return `<span>${escapeHtml(number)}</span>`;
   const route = getTaskDirectionConfig(direction).path;
-  return `<button class="link registry-object-link" data-route="${route}?applicationNumber=${encodeURIComponent(number)}">${escapeHtml(number)}</button>`;
+  return renderRegistryRecordLink(`${route}?applicationNumber=${encodeURIComponent(number)}`, number);
 }
 
 function renderTaskRegistryContractCell(task, contracts) {
@@ -3126,6 +3456,12 @@ function getTaskCreatedDateTime(task) {
   const createdEvent = (task?.history || [])
     .find((event) => /создани[ея]\s+задач|задач[а-я\s]*создан/i.test(String(event.action || "")) && event.date);
   return createdEvent?.date || task?.createdAt || "-";
+}
+
+function getTaskCompletedDateTime(task) {
+  const completedEvent = [...(task?.history || [])].reverse()
+    .find((event) => /завершение задачи|задача завершена|задача выполнена/i.test(String(event.action || "")) && event.date);
+  return completedEvent?.date || task?.completedAt || task?.closedAt || "";
 }
 
 function getTaskInitiator(task) {
@@ -3235,6 +3571,7 @@ function render() {
         ${renderToasts()}
       </div>
     `;
+    restorePendingRegistryColumnScroll();
     initializeTaskHistoryControlBaselines(app);
     restorePendingScrollPosition();
     restorePendingMobileScrollPosition();
@@ -3256,6 +3593,7 @@ function render() {
       ${renderToasts()}
     </div>
   `;
+  restorePendingRegistryColumnScroll();
   initializeTaskHistoryControlBaselines(app);
   restorePendingScrollPosition();
   restorePendingFilterFocus();
@@ -3351,7 +3689,7 @@ function renderTopbar(role, path) {
 function renderSidebarNavItems(items, path, activeTaskPath) {
   const itemsById = new Map(items.map((item) => [item.id, item]));
   // Keep menu display order aligned with the requested navigation sequence, independently of route definitions.
-  const taskItems = ["tasksInspection", "tasksEvaluation", "tasksRegistration"]
+  const taskItems = ["tasksEvaluation", "tasksInspection", "tasksRegistration"]
     .map((id) => itemsById.get(id))
     .filter(Boolean);
   const topLevelItems = ["applications", "collaterals"]
@@ -3417,7 +3755,7 @@ function renderRoute(path, query) {
     const requestedId = decodeURIComponent(path.split("/").pop() || "");
     const task = getTask(requestedId);
     if (!task) return renderNotFound("Задача не найдена", defaultRoute);
-    if (!canViewTask(task, role)) return renderNotFound("Задача недоступна для выбранной роли", defaultRoute);
+    if (!canViewTaskRecord(task, role)) return renderNotFound("Задача недоступна для выбранной роли", defaultRoute);
     replaceEntityCardUrl("/app/tasks", requestedId, task.id, query);
     return renderTaskCard(task.id);
   }
@@ -3427,6 +3765,7 @@ function renderRoute(path, query) {
     if (!hasPermission(role, "appRegView")) return renderNotFound("Раздел недоступен", defaultRoute);
     const requestedId = decodeURIComponent(path.split("/").pop() || "");
     const application = getApplication(requestedId);
+    if (application && !isApplicationVisibleInRegistry(application, role)) return renderNotFound("Заявка недоступна для выбранной роли", defaultRoute);
     if (!application) return renderApplicationCard(requestedId);
     const canonicalId = application.number || application.id;
     replaceEntityCardUrl("/app/applications", requestedId, canonicalId, query);
@@ -3656,7 +3995,7 @@ function matchesTaskRegistryTab(task, tabId, role = getRole()) {
 function renderTaskRegistryTabs(activeTab, role = getRole()) {
   const tabs = [
     { id: "mine", label: "Мои задачи" },
-    { id: "all", label: "Все задачи" },
+    { id: "all", label: "Все активные задачи" },
     { id: "completed", label: "Завершенные задачи" }
   ].filter((tab) => tab.id !== "all" || hasPermission(role, "tasksAllView"));
   return `
@@ -3790,6 +4129,10 @@ function restorePendingTaskRegistryTableScrollLeft() {
 function isTextRegistryFilter(field) {
   return field?.matches?.("input[data-filter-scope]")
     && !["date", "checkbox", "radio", "file"].includes(field.type);
+}
+
+function isMenuRegistryFilter(field) {
+  return ["tasks", "applications", "collaterals"].includes(field?.dataset?.filterScope);
 }
 
 function updateRegistryFilter(field) {
@@ -4158,21 +4501,36 @@ function renderTaskRiskHeatmapPanel(baseRows, visual) {
 }
 
 function getTaskRegistryTypeOptions(direction) {
-  return ["", ...taskTypes.filter((type) => getTaskDirection({ type }) === direction)];
+  return ["", ...taskTypes.filter((type) => getTaskDirection({ type }) === direction && isTaskRegistryStage1Type(type))];
 }
 
 function getTaskRegistryStatusOptions(direction) {
   const dataStatuses = state.data.tasks
-    .filter((task) => getTaskDirection(task) === direction && isStage1TaskType(task.type))
+    .filter((task) => getTaskDirection(task) === direction && isTaskRegistryStage1Type(task.type))
     .map((task) => task.status);
   return ["", ...uniqueItems([...TASK_STATUSES, ...dataStatuses].filter(Boolean))];
 }
 
+function getRegistryUserOptions() {
+  return uniqueItems([
+    ...employees,
+    ...roles.map((role) => role.user)
+  ].filter((name) => name && name !== "-" && name !== "Система"));
+}
+
 function getTaskRegistryAssigneeOptions(direction) {
   const dataAssignees = state.data.tasks
-    .filter((task) => getTaskDirection(task) === direction && isStage1TaskType(task.type))
-    .map((task) => task.assignee);
-  return ["", ...uniqueItems([...employees, ...dataAssignees].filter(Boolean))];
+    .filter((task) => getTaskDirection(task) === direction && isTaskRegistryStage1Type(task.type))
+    .flatMap((task) => getTaskRegistryAssigneeNames(task));
+  return ["", ...uniqueItems([...getRegistryUserOptions(), ...dataAssignees].filter(Boolean))];
+}
+
+function getTaskRegistryAssigneeNames(task) {
+  return uniqueItems([
+    ...getTaskVerifierNames(task),
+    ...getTaskExecutorNames(task),
+    ...getTaskManagerNames(task)
+  ].filter(Boolean));
 }
 
 function isStage1TaskType(type) {
@@ -4180,18 +4538,22 @@ function isStage1TaskType(type) {
   return taskTypes.some((candidate) => getUnifiedTaskType(candidate) === normalized);
 }
 
+function isTaskRegistryStage1Type(type) {
+  return isStage1TaskType(type) && !isDefectInspectionTaskType(type);
+}
+
 function getTaskRegistryAuthorOptions(direction) {
   return ["", ...uniqueItems([
-    ...employees,
+    ...getRegistryUserOptions(),
     ...(state.data.tasks || [])
-      .filter((task) => getTaskDirection(task) === direction && isStage1TaskType(task.type))
+      .filter((task) => getTaskDirection(task) === direction && isTaskRegistryStage1Type(task.type))
       .map(getTaskRegistryAuthor)
-  ].filter((name) => name && name !== "-"))];
+  ].filter((name) => name && name !== "-" && name !== "Система"))];
 }
 
 function getApplicationInitiatorOptions() {
   return ["", ...uniqueItems([
-    ...employees,
+    ...getRegistryUserOptions(),
     ...(state.data.applications || []).map(getApplicationInitiator)
   ].filter((name) => name && name !== "-" && name !== "Система"))];
 }
@@ -4235,8 +4597,9 @@ function getTaskRegistryPledgorSearch(collaterals) {
   ].filter(Boolean)));
 }
 
-function getTaskRegistryPledgorInns(collaterals) {
+function getTaskRegistryPledgorFilterSearch(collaterals) {
   return uniqueItems((collaterals || []).flatMap((collateral) => [
+    ...getTaskRegistryPledgorSearch([collateral]),
     getMainPledgor(collateral).idn,
     ...(collateral?.pledgors || []).map((pledgor) => pledgor?.idn)
   ].filter(Boolean)));
@@ -4387,11 +4750,18 @@ function getTaskRegistrationConclusions(task) {
   return task?.registrationResult || task?.registration?.result || "";
 }
 
-function getTaskRegistrationNumberDate(collaterals) {
-  const values = uniqueItems(collaterals.flatMap((collateral) => (collateral?.encumbrances || []).map((encumbrance) =>
-    [encumbrance.number, encumbrance.date].filter(Boolean).join(" от ")
-  )).filter(Boolean));
-  return values.length ? values.join(", ") : "-";
+function getTaskRegistrationNumberDate(task, collaterals) {
+  const values = uniqueItems((collaterals || []).flatMap((collateral) => {
+    const collateralId = collateral?.id;
+    const number = task?.registrationNumbers?.[collateralId]
+      || task?.registration?.[collateralId]?.number
+      || "";
+    const date = task?.registrationDates?.[collateralId]
+      || task?.registration?.[collateralId]?.date
+      || "";
+    return [[number, date].filter(Boolean).join(" от ")];
+  }).filter(Boolean));
+  return values.length ? values.join(", ") : "";
 }
 
 function formatRegistryDateTime(value) {
@@ -4481,30 +4851,188 @@ function sortRegistryRows(rows, columns, sortEntries, getContext = () => ({})) {
 
 function renderRegistrySortHeader(column, scope, partition = "", sortEntries = getRegistrySortEntries(scope, partition)) {
   const index = sortEntries.findIndex((entry) => entry.key === column.key);
-  if (!column.sortValue) return `<th>${escapeHtml(column.label)}</th>`;
+  const dragAttrs = `class="${escapeHtml(column.headerClass || "")}"${column.draggable === false ? "" : ' draggable="true" title="Перетащите заголовок, чтобы изменить порядок"'} data-registry-column-key="${escapeHtml(column.key)}" data-registry-column-scope="${escapeHtml(scope)}" data-registry-column-partition="${escapeHtml(partition)}"`;
+  const labelMarkup = column.headerMarkup || escapeHtml(column.label);
+  if (!column.sortValue) return `<th ${dragAttrs}>${labelMarkup}</th>`;
   const direction = index >= 0 ? sortEntries[index].direction : "";
   const marker = direction ? `<span class="registry-sort-marker registry-sort-marker-active" aria-hidden="true">${direction === "asc" ? "↑" : "↓"}${sortEntries.length > 1 ? `<sup>${index + 1}</sup>` : ""}</span>` : `<span class="registry-sort-marker registry-sort-marker-empty" aria-hidden="true">↕</span>`;
   const ariaSort = index < 0 ? "none" : index === 0 ? (direction === "asc" ? "ascending" : "descending") : "other";
-  const title = "Нажмите, чтобы сортировать; Shift+нажатие добавляет уровень сортировки";
-  return `<th aria-sort="${ariaSort}"><button type="button" class="registry-sort-button" data-action="registry-sort" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" data-sort-key="${escapeHtml(column.key)}" title="${title}"><span>${escapeHtml(column.label)}</span>${marker}</button></th>`;
+  const title = "Нажмите, чтобы сортировать; Shift+нажатие добавляет уровень; перетащите заголовок, чтобы изменить порядок";
+  return `<th ${dragAttrs} aria-sort="${ariaSort}"><button type="button" class="registry-sort-button" data-action="registry-sort" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" data-sort-key="${escapeHtml(column.key)}" title="${title}"><span>${labelMarkup}</span>${marker}</button></th>`;
+}
+
+function getRegistryColumnPreferenceKey(scope, partition = "") {
+  const role = getRole();
+  const userKey = String(role?.user || role?.id || "anonymous").trim();
+  return `${userKey}:${scope}${partition ? `:${partition}` : ""}`;
+}
+
+function getRegistryColumnPreferences(scope, partition = "") {
+  return state.registryColumnSettings?.[getRegistryColumnPreferenceKey(scope, partition)] || { order: [], hidden: [] };
+}
+
+function getOrderedRegistryColumns(columns, scope, partition = "") {
+  const preferences = getRegistryColumnPreferences(scope, partition);
+  const savedOrder = Array.isArray(preferences.order) ? preferences.order : [];
+  const savedRanks = new Map(savedOrder.map((key, index) => [key, index]));
+  const defaults = new Map(columns.map((column, index) => [column.key, index]));
+  return [...columns].sort((left, right) => {
+    const leftRank = savedRanks.has(left.key) ? savedRanks.get(left.key) : savedOrder.length + defaults.get(left.key);
+    const rightRank = savedRanks.has(right.key) ? savedRanks.get(right.key) : savedOrder.length + defaults.get(right.key);
+    return leftRank - rightRank;
+  });
+}
+
+function getVisibleRegistryColumns(columns, scope, partition = "") {
+  const ordered = getOrderedRegistryColumns(columns, scope, partition);
+  const hidden = new Set(getRegistryColumnPreferences(scope, partition).hidden || []);
+  const visible = ordered.filter((column) => !hidden.has(column.key));
+  return visible.length ? visible : ordered.slice(0, 1);
+}
+
+function saveRegistryColumnPreferences(scope, partition, preferences) {
+  const key = getRegistryColumnPreferenceKey(scope, partition);
+  state.registryColumnSettings[key] = {
+    order: [...new Set(preferences.order || [])],
+    hidden: [...new Set(preferences.hidden || [])]
+  };
+  try {
+    localStorage.setItem(REGISTRY_COLUMN_SETTINGS_STORAGE_KEY, JSON.stringify(state.registryColumnSettings));
+  } catch (error) {
+    console.warn("Не удалось сохранить настройки колонок реестров", error);
+  }
+}
+
+function renderRegistryColumnSettings(columns, scope, partition = "") {
+  const preferenceKey = getRegistryColumnPreferenceKey(scope, partition);
+  const preferences = getRegistryColumnPreferences(scope, partition);
+  const ordered = getOrderedRegistryColumns(columns, scope, partition);
+  const hidden = new Set(preferences.hidden || []);
+  const visibleCount = ordered.filter((column) => !hidden.has(column.key)).length;
+  const open = state.registryColumnSettingsOpen === preferenceKey;
+  const menuId = `registry-columns-${scope}${partition ? `-${partition}` : ""}`;
+  return `
+    <div class="registry-column-settings" data-registry-column-settings>
+      <button type="button" class="btn btn-secondary registry-column-settings-toggle" data-action="toggle-registry-column-settings" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" aria-expanded="${open}" aria-controls="${escapeHtml(menuId)}">Столбцы</button>
+      <div class="registry-column-settings-menu" id="${escapeHtml(menuId)}"${open ? "" : " hidden"}>
+        <strong>Отображаемые столбцы</strong>
+        ${ordered.map((column) => {
+          const checked = !hidden.has(column.key);
+          return `<label><input type="checkbox" data-registry-column-visibility data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" data-column-key="${escapeHtml(column.key)}" ${checked ? "checked" : ""} ${checked && visibleCount === 1 ? "disabled" : ""} /><span>${escapeHtml(column.label)}</span></label>`;
+        }).join("")}
+        <button type="button" class="registry-column-settings-reset" data-action="reset-registry-column-settings" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}">Сбросить настройки</button>
+      </div>
+    </div>
+  `;
+}
+
+function reorderRegistryColumns(columns, scope, partition, sourceKey, targetKey) {
+  const orderedKeys = getOrderedRegistryColumns(columns, scope, partition).map((column) => column.key);
+  const sourceIndex = orderedKeys.indexOf(sourceKey);
+  const targetIndex = orderedKeys.indexOf(targetKey);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return false;
+  orderedKeys.splice(targetIndex, 0, orderedKeys.splice(sourceIndex, 1)[0]);
+  saveRegistryColumnPreferences(scope, partition, {
+    ...getRegistryColumnPreferences(scope, partition),
+    order: orderedKeys
+  });
+  return true;
+}
+
+function getRegistryColumnsForSettings(scope, partition = "") {
+  if (scope === "tasks") return getTaskRegistryColumns(partition, state.taskRegistryTab || "mine");
+  if (scope === "applications") return getApplicationRegistryColumns();
+  if (scope === "collaterals") return getCollateralRegistryColumns();
+  return [];
+}
+
+function updateRegistryColumnVisibility(field) {
+  const { scope, partition = "", columnKey } = field.dataset;
+  const preferences = getRegistryColumnPreferences(scope, partition);
+  const hidden = new Set(preferences.hidden || []);
+  const columns = getRegistryColumnsForSettings(scope, partition);
+  const currentlyVisible = columns.filter((column) => !hidden.has(column.key)).length;
+  if (!field.checked && currentlyVisible <= 1) return;
+  if (field.checked) hidden.delete(columnKey);
+  else hidden.add(columnKey);
+  saveRegistryColumnPreferences(scope, partition, { ...preferences, hidden: [...hidden] });
+  resetRegistryPagination(scope);
+}
+
+function restorePendingRegistryColumnScroll() {
+  const pending = state.pendingRegistryColumnScroll;
+  if (!pending) return;
+  state.pendingRegistryColumnScroll = null;
+  const table = [...app.querySelectorAll("[data-registry-column-table]")]
+    .find((element) => element.dataset.registryScope === pending.scope
+      && (element.dataset.registryPartition || "") === pending.partition);
+  const scroll = table?.closest(".registry-table-scroll");
+  if (scroll) scroll.scrollLeft = pending.scrollLeft;
 }
 
 const REGISTRY_COLUMN_WIDTHS = {
   tasks: {
-    evaluation: [145, 160, 170, 140, 135, 130, 130, 175, 100, 140, 145, 145, 125, 145],
-    inspection: [145, 160, 160, 140, 120, 130, 95, 150, 150, 100, 130, 145, 145, 120, 175, 165, 120],
-    registration: [145, 160, 150, 130, 110, 160, 130, 120, 135, 140, 120, 140, 140, 110, 140, 135, 135, 140, 100, 120, 135]
+    evaluation: { task: 125, application: 160, client: 148, clientInn: 100, type: 120, author: 125, initiatorSegment: 120, initiator: 125, purpose: 128, contract: 140, collateral: 98, executor: 140, createdAt: 115, dueDate: 115, status: 115, inspectionDone: 110, remainingTerm: 100, completedAt: 120 },
+    inspection: { task: 110, application: 150, client: 130, clientInn: 90, type: 105, author: 100, initiatorSegment: 95, initiator: 100, purpose: 105, contract: 110, collateral: 84, collateralType: 100, pledgor: 120, city: 85, executor: 110, createdAt: 105, dueDate: 105, status: 95, inspectionMethod: 110, remainingTerm: 80, completedAt: 115 },
+    registration: { task: 110, application: 150, client: 130, clientInn: 90, type: 105, author: 95, initiatorSegment: 95, initiator: 100, purpose: 105, contract: 110, collateral: 84, collateralType: 100, pledgor: 120, executor: 110, createdAt: 105, dueDate: 105, status: 95, registrationStatus: 110, registrationNumberDate: 115, completedAt: 115 }
   },
-  applications: [170, 135, 130, 150, 155, 135, 145, 180, 120, 120, 88, 115],
-  collaterals: [88, 160, 140, 140, 150, 150, 150, 120, 120, 165, 115, 115, 115, 125, 115, 110]
+  applications: { application: 160, createdAt: 130, type: 120, subtype: 130, purpose: 135, initiator: 145, initiatorSegment: 125, client: 160, inn: 100, status: 125, tasks: 90, collateral: 90, contract: 125, actions: 48 },
+  collaterals: { number: 100, name: 145, type: 115, identifier: 130, createdAt: 105, pledgor: 145, client: 130, creditContract: 125, pledgeContract: 125, address: 150, marketValue: 115, pledgeValue: 115, fairValue: 115, appraisalDate: 120, status: 110 }
 };
 
-function renderRegistryColumnWidths(columns, scope, partition = "") {
+const REGISTRY_COLUMN_MIN_WIDTHS = {
+  tasks: {
+    evaluation: { task: 110, application: 115, client: 125, clientInn: 85, type: 105, author: 105, initiatorSegment: 100, initiator: 105, purpose: 105, contract: 110, collateral: 75, executor: 105, createdAt: 100, dueDate: 100, status: 90, inspectionDone: 90, remainingTerm: 75, completedAt: 95 },
+    inspection: { task: 105, application: 110, client: 120, clientInn: 80, type: 95, author: 95, initiatorSegment: 90, initiator: 95, purpose: 100, contract: 105, collateral: 75, collateralType: 85, pledgor: 105, city: 75, executor: 100, createdAt: 95, dueDate: 90, status: 85, inspectionMethod: 95, remainingTerm: 70, completedAt: 85 },
+    registration: { task: 105, application: 110, client: 120, clientInn: 80, type: 95, initiatorSegment: 90, initiator: 95, purpose: 100, contract: 105, collateral: 75, collateralType: 85, pledgor: 105, executor: 100, createdAt: 95, dueDate: 90, status: 85, registrationStatus: 85, registrationNumberDate: 85, completedAt: 85 }
+  },
+  applications: { application: 110, createdAt: 105, type: 90, subtype: 95, purpose: 100, initiator: 110, initiatorSegment: 95, client: 125, inn: 80, status: 90, tasks: 65, collateral: 70, contract: 92, actions: 48 },
+  collaterals: { number: 90, name: 120, type: 95, identifier: 110, createdAt: 95, pledgor: 120, client: 110, creditContract: 100, pledgeContract: 100, address: 120, marketValue: 95, pledgeValue: 95, fairValue: 95, appraisalDate: 105, status: 90 }
+};
+
+function getRegistryColumnWidthValues(columns, scope, partition = "") {
   const widths = scope === "tasks"
     ? REGISTRY_COLUMN_WIDTHS.tasks[partition]
     : REGISTRY_COLUMN_WIDTHS[scope];
-  if (!Array.isArray(widths) || widths.length !== columns.length) return "";
-  return `<colgroup>${widths.map((width) => `<col style="width:${width}px" />`).join("")}</colgroup>`;
+  if (!widths) return [];
+  const baseWidths = Array.isArray(widths)
+    ? (widths.length === columns.length ? widths : [])
+    : columns.map((column) => widths[column.key] || 140);
+  if (baseWidths.length !== columns.length) return [];
+  const viewportWidth = typeof window === "undefined" ? Number.POSITIVE_INFINITY : Number(window.innerWidth);
+  const targetWidth = Number.isFinite(viewportWidth) ? Math.max(720, Math.floor(viewportWidth - 260)) : Number.POSITIVE_INFINITY;
+  const totalWidth = baseWidths.reduce((total, width) => total + width, 0);
+  if (totalWidth <= targetWidth) return baseWidths;
+  const minimums = scope === "tasks"
+    ? REGISTRY_COLUMN_MIN_WIDTHS.tasks[partition]
+    : REGISTRY_COLUMN_MIN_WIDTHS[scope];
+  const result = [...baseWidths];
+  let excess = totalWidth - targetWidth;
+  let flexible = columns.map((column, index) => index)
+    .filter((index) => result[index] > (minimums?.[columns[index].key] || 70));
+  while (excess > 0 && flexible.length) {
+    const reduction = Math.max(1, Math.ceil(excess / flexible.length));
+    const nextFlexible = [];
+    for (const index of flexible) {
+      const minimum = minimums?.[columns[index].key] || 70;
+      const applied = Math.min(reduction, result[index] - minimum, excess);
+      result[index] -= applied;
+      excess -= applied;
+      if (result[index] > minimum) nextFlexible.push(index);
+    }
+    flexible = nextFlexible;
+  }
+  return result.map((width) => Math.floor(width));
+}
+
+function renderRegistryColumnWidths(columns, scope, partition = "") {
+  const columnWidths = getRegistryColumnWidthValues(columns, scope, partition);
+  if (!columnWidths.length) return "";
+  return `<colgroup>${columnWidths.map((width) => `<col style="width:${width}px" />`).join("")}</colgroup>`;
+}
+
+function getRegistryTableMinWidth(columns, scope, partition = "") {
+  return getRegistryColumnWidthValues(columns, scope, partition).reduce((total, width) => total + width, 0);
 }
 
 function getTaskRegistrySortContext(task) {
@@ -4512,44 +5040,52 @@ function getTaskRegistrySortContext(task) {
   return { task, collaterals, contracts: getTaskContracts(task, collaterals), application: getTaskApplication(task) };
 }
 
-function getTaskRegistryColumns(direction) {
-  const taskLink = { key: "task", label: "Задача", render: (task) => `<a class="link registry-object-link" href="#${escapeHtml(getTaskCardRoute(task))}">${escapeHtml(task.id)}</a>` };
-  const applicationLink = { key: "application", label: "Заявка", render: (task) => renderTaskRegistryApplicationCell(task) };
+function getTaskRegistryColumns(direction, activeTab = "mine") {
+  const completedTab = activeTab === "completed";
+  const taskLink = { key: "task", label: "Номер задачи", render: (task) => renderRegistryRecordLink(getTaskCardRoute(task), task.id) };
+  const applicationLink = { key: "application", label: "Номер заявки", render: (task) => renderTaskRegistryApplicationCell(task) };
   const client = { key: "client", label: "Клиент", sortType: "text", sortValue: (task, ctx) => getTaskRegistryClientDisplay(task, ctx.application, ctx.contracts, ctx.collaterals), render: (task, ctx) => escapeHtml(getTaskRegistryClientDisplay(task, ctx.application, ctx.contracts, ctx.collaterals)) };
+  const clientInn = { key: "clientInn", label: "ИНН клиента", render: (_task, ctx) => escapeHtml(getApplicationInn(ctx.application)) };
   const type = { key: "type", label: "Тип задачи", sortType: "text", sortValue: (task) => getUnifiedTaskType(task.type), render: (task) => escapeHtml(getUnifiedTaskType(task.type)) };
-  const initiator = { key: "initiator", label: "Инициатор заявки", render: (_task, ctx) => escapeHtml(getApplicationInitiator(ctx.application) || "-") };
+  const initiator = { key: "initiator", label: "Инициатор заявки", sortType: "text", sortValue: (_task, ctx) => getApplicationInitiator(ctx.application), render: (_task, ctx) => escapeHtml(getApplicationInitiator(ctx.application)) };
   const author = { key: "author", label: "Автор задачи", sortType: "text", sortValue: (task) => getTaskRegistryAuthor(task), render: (task) => escapeHtml(getTaskRegistryAuthor(task)) };
-  const authorUnsorted = { key: "author", label: "Автор задачи", render: (task) => escapeHtml(getTaskRegistryAuthor(task)) };
+  const authorUnsorted = { ...author, sortType: undefined, sortValue: undefined };
   const purpose = { key: "purpose", label: "Цель заявки", sortType: "text", sortValue: (task, ctx) => getTaskRegistryPurpose(task, ctx.application), render: (task, ctx) => renderRegistryClampedText(getTaskRegistryPurpose(task, ctx.application)) };
   const collateralCount = { key: "collateral", label: "Залог", render: (task, ctx) => renderTaskRegistryCollateralCell(task, ctx.collaterals) };
-  const executor = { key: "executor", label: "Исполнитель", sortType: "text", sortValue: (task) => task.assignee || "", render: (task) => escapeHtml(task.assignee || "-") };
-  const createdAt = { key: "createdAt", label: "Дата и время создания", sortType: "date", sortValue: (task) => getTaskCreatedDateTime(task), render: (task) => escapeHtml(formatRegistryDateTime(getTaskCreatedDateTime(task))) };
-  const dueDate = (label) => ({ key: "dueDate", label, sortType: "date", sortValue: (task) => task.dueDate || "", render: (task) => escapeHtml(formatRegistryDateTime(task.dueDate)) });
-  const status = { key: "status", label: "Статус", sortType: "text", sortValue: (task) => task.status, render: (task) => badge(task.status) };
+  const executor = { key: "executor", label: "Исполнитель задачи", sortType: "text", sortValue: (task) => task.assignee || "", render: (task) => escapeHtml(task.assignee || "-") };
+  const createdAt = { key: "createdAt", label: "Дата создания задачи", sortType: "date", sortValue: (task) => getTaskCreatedDateTime(task), render: (task) => escapeHtml(formatRegistryDateTime(getTaskCreatedDateTime(task))) };
+  const dueDate = { key: "dueDate", label: "Срок исполнения задачи", sortType: "date", sortValue: (task) => task.dueDate || "", render: (task) => escapeHtml(formatRegistryDateTime(task.dueDate)) };
+  const status = { key: "status", label: "Статус задачи", sortType: "text", sortValue: (task) => task.status, render: (task) => badge(task.status) };
   const initiatorSegment = { key: "initiatorSegment", label: "Сегмент инициатора", sortType: "text", sortValue: (task, ctx) => getTaskRegistryInitiatorSegment(task, ctx.application), render: (task, ctx) => escapeHtml(getTaskRegistryInitiatorSegment(task, ctx.application)) };
-  const initiatorApplicationSegment = { ...initiatorSegment, label: "Сегмент инициатора заявки" };
-  const pledgor = { key: "pledgor", label: "Залогодатель", sortType: "text", sortValue: (_task, ctx) => getTaskRegistryPledgorSearch(ctx.collaterals).join(", "), render: (_task, ctx) => renderTaskRegistryPledgorCell(ctx.collaterals) };
+  const pledgor = { key: "pledgor", label: "Залогодатель", render: (_task, ctx) => renderTaskRegistryPledgorCell(ctx.collaterals) };
   const collateralType = { key: "collateralType", label: "Вид залога", sortType: "text", sortValue: (_task, ctx) => getTaskRegistryCollateralType(ctx.collaterals), render: (_task, ctx) => renderRegistryClampedText(getTaskRegistryCollateralType(ctx.collaterals)) };
   const remainingTerm = { key: "remainingTerm", label: "Осталось дней", sortType: "overdue-first-number", sortValue: (task) => getTaskRegistryRemainingDays(task), render: (task) => badge(getTaskRegistryRemainingDaysDisplay(task), getTaskRegistryRemainingTermTone(task)) };
+  const completionDate = { key: "completedAt", label: "Дата завершения задачи", sortType: "date", sortValue: (task) => getTaskCompletedDateTime(task), render: (task) => escapeHtml(formatRegistryDateTime(getTaskCompletedDateTime(task))) };
+  const activeOrCompletedDate = completedTab ? completionDate : remainingTerm;
+  const contract = { key: "contract", label: "Кредитный договор", render: (task, ctx) => renderTaskRegistryContractCell(task, ctx.contracts) };
+
   if (direction === "inspection") {
     return [
       taskLink,
       applicationLink,
       client,
+      clientInn,
       type,
-      initiator,
       author,
+      initiatorSegment,
+      initiator,
+      purpose,
+      contract,
       collateralCount,
       collateralType,
       pledgor,
       { key: "city", label: "Город", sortType: "text", sortValue: (task, ctx) => getTaskRegistryCity(ctx.collaterals, task), render: (task, ctx) => escapeHtml(getTaskRegistryCity(ctx.collaterals, task)) },
       executor,
       createdAt,
-      dueDate("Срок исполнения"),
+      dueDate,
       status,
-      purpose,
       { key: "inspectionMethod", label: "Способ проведения осмотра", sortType: "text", sortValue: (task) => getTaskRegistryInspectionMethod(task), render: (task) => escapeHtml(getTaskRegistryInspectionMethod(task)) },
-      remainingTerm
+      activeOrCompletedDate
     ];
   }
   if (direction === "registration") {
@@ -4557,58 +5093,63 @@ function getTaskRegistryColumns(direction) {
       taskLink,
       applicationLink,
       client,
+      clientInn,
       type,
+      initiatorSegment,
       initiator,
       purpose,
-      { key: "contract", label: "Номер договора", sortType: "text", sortValue: (_task, ctx) => getTaskContracts(ctx.task, ctx.collaterals).map((contract) => contract.number).join(", "), render: (task, ctx) => renderTaskRegistryContractCell(task, ctx.contracts) },
+      contract,
       collateralCount,
       collateralType,
       pledgor,
       executor,
       createdAt,
-      dueDate("Срок исполнения задачи"),
+      dueDate,
       status,
-      { key: "registrationScenario", label: "Сценарий регистрации", sortType: "text", sortValue: (task, ctx) => getTaskRegistrationScenario(task, ctx.collaterals), render: (task, ctx) => renderRegistryClampedText(getTaskRegistrationScenario(task, ctx.collaterals) || "-") },
       { key: "registrationStatus", label: "Статус регистрации", sortType: "text", sortValue: (task, ctx) => getTaskRegistrationStatus(task, ctx.collaterals), render: (task, ctx) => renderRegistryClampedText(getTaskRegistrationStatus(task, ctx.collaterals)) },
-      { key: "registrationBasis", label: "Основание", sortType: "text", sortValue: (task) => getTaskRegistrationBasis(task), render: (task) => renderRegistryClampedText(getTaskRegistrationBasis(task) || "-") },
-      { key: "registrationResult", label: "Результат регистрации", sortType: "text", sortValue: (task) => getTaskRegistrationConclusions(task), render: (task) => renderRegistryClampedText(getTaskRegistrationConclusions(task) || "-") },
-      remainingTerm,
-      initiatorSegment,
-      { key: "registrationNumberDate", label: "Регистрационный номер / дата", render: (_task, ctx) => renderRegistryClampedText(getTaskRegistrationNumberDate(ctx.collaterals)) }
+      { key: "registrationNumberDate", label: "Регистрационный номер / дата", render: (task, ctx) => {
+        const value = getTaskRegistrationNumberDate(task, ctx.collaterals);
+        return value ? renderRegistryClampedText(value) : "";
+      } },
+      ...(completedTab ? [completionDate] : [])
     ];
   }
+  const inspectionDone = { key: "inspectionDone", label: "Осмотр произведен", sortType: "text", sortValue: (task, ctx) => getTaskRegistryInspectionDone(task, ctx.collaterals), render: (task, ctx) => escapeHtml(getTaskRegistryInspectionDone(task, ctx.collaterals)) };
   return [
     taskLink,
     applicationLink,
     client,
+    clientInn,
     type,
-    initiatorApplicationSegment,
-    initiator,
     authorUnsorted,
+    initiatorSegment,
+    { ...initiator, sortType: undefined, sortValue: undefined },
     purpose,
+    contract,
     collateralCount,
     executor,
     createdAt,
-    dueDate("Срок исполнения"),
+    dueDate,
     status,
-    { key: "inspectionDate", label: "Осмотр", sortType: "date", sortValue: (task, ctx) => getTaskRegistryInspectionDateTime(task, ctx.collaterals), render: (task, ctx) => escapeHtml(formatRegistryDateTime(getTaskRegistryInspectionDateTime(task, ctx.collaterals)) || "-") }
+    inspectionDone,
+    activeOrCompletedDate
   ];
 }
 
-function renderTaskRegistryTable(rows, direction) {
-  const columns = getTaskRegistryColumns(direction);
+function renderTaskRegistryTable(rows, direction, activeTab = "mine", columns = null) {
+  const visibleColumns = columns || getVisibleRegistryColumns(getTaskRegistryColumns(direction, activeTab), "tasks", direction);
   const sortEntries = getRegistrySortEntries("tasks", direction);
   return `
-    <table class="task-table-modern task-table-modern--${escapeHtml(direction)}" aria-label="Реестр задач">
-      ${renderRegistryColumnWidths(columns, "tasks", direction)}
-      <thead><tr>${columns.map((column) => renderRegistrySortHeader(column, "tasks", direction, sortEntries)).join("")}</tr></thead>
+    <table class="task-table-modern task-table-modern--${escapeHtml(direction)}" aria-label="Реестр задач" data-registry-column-table data-registry-scope="tasks" data-registry-partition="${escapeHtml(direction)}" style="min-width:${getRegistryTableMinWidth(visibleColumns, "tasks", direction)}px">
+      ${renderRegistryColumnWidths(visibleColumns, "tasks", direction)}
+      <thead><tr>${visibleColumns.map((column) => renderRegistrySortHeader(column, "tasks", direction, sortEntries)).join("")}</tr></thead>
       <tbody>${rows.length ? rows.map((task) => {
         const collaterals = getTaskCollaterals(task);
         const contracts = getTaskContracts(task, collaterals);
         const application = getTaskApplication(task);
         const ctx = { task, collaterals, contracts, application };
-        return `<tr>${columns.map((column) => `<td>${column.render(task, ctx)}</td>`).join("")}</tr>`;
-      }).join("") : `<tr><td colspan="${columns.length}"><span class="muted">Задачи не найдены</span></td></tr>`}</tbody>
+        return `<tr>${visibleColumns.map((column) => `<td>${column.render(task, ctx)}</td>`).join("")}</tr>`;
+      }).join("") : `<tr><td colspan="${visibleColumns.length}"><span class="muted">Задачи не найдены</span></td></tr>`}</tbody>
     </table>
   `;
 }
@@ -4619,24 +5160,26 @@ function renderTaskRegistryCollateralDrawerContent(task, collaterals, drawerStat
   const rowsMarkup = visible.map((collateral) => {
     const identifier = getCollateralObjectIdentifier(collateral);
     const type = getCollateralTypeLabel(collateral);
+    const pledgeNumber = getCollateralSuzNumber(collateral) || collateral.id || "—";
     const pledgorNames = [...new Set((Array.isArray(collateral.pledgors) ? collateral.pledgors : [])
       .map((pledgor) => String(pledgor?.name || "").trim())
       .filter(Boolean))];
-    const objectMarkup = hasPermission(getRole(), "collateralView")
-      ? `<a class="link task-registry-collateral-object-link" href="#${escapeHtml(getCollateralCardRoute(collateral.id, { task }))}">${escapeHtml(identifier)}</a>`
-      : `<strong class="task-registry-collateral-object-id">${escapeHtml(identifier)}</strong>`;
+    const pledgeNumberMarkup = hasPermission(getRole(), "collateralView")
+      ? renderRegistryRecordLink(getCollateralCardRoute(collateral.id, { task }), pledgeNumber, "link task-registry-collateral-object-link")
+      : `<strong class="task-registry-collateral-object-id">${escapeHtml(pledgeNumber)}</strong>`;
     return `
       <tr>
-        <td>${objectMarkup}</td>
-        <td>${escapeHtml(type)}</td>
-        <td>${escapeHtml(getCollateralCreatedDate(collateral))}</td>
+        <td>${pledgeNumberMarkup}</td>
+        <td>${escapeHtml(identifier || "—")}</td>
+        <td>${escapeHtml(type || "—")}</td>
+        <td>${escapeHtml(getCollateralStatusForFt(collateral))}</td>
         <td>${escapeHtml(pledgorNames.join(", ") || "—")}</td>
       </tr>
     `;
   }).join("");
   return `
     <table class="task-registry-collateral-table">
-      <thead><tr><th>Идентификатор залога</th><th>Вид залога</th><th>Дата создания</th><th>Залогодатель</th></tr></thead>
+      <thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Вид залога</th><th>Статус объекта</th><th>Залогодатель</th></tr></thead>
       <tbody>${rowsMarkup}</tbody>
     </table>
   `;
@@ -4694,7 +5237,7 @@ function renderTasksRegistry(query = new URLSearchParams(), direction = getAvail
   const activeTab = requestedTab === "all" && !hasPermission(role, "tasksAllView") ? "mine" : requestedTab;
   state.taskRegistryTab = activeTab;
   const filteredRows = state.data.tasks.filter((task) => {
-    if (getTaskDirection(task) !== direction || !isStage1TaskType(task.type)) return false;
+    if (getTaskDirection(task) !== direction || !isTaskRegistryStage1Type(task.type)) return false;
     const collaterals = getTaskCollaterals(task);
     const contracts = getTaskContracts(task, collaterals);
     const application = getTaskApplication(task);
@@ -4706,14 +5249,15 @@ function renderTasksRegistry(query = new URLSearchParams(), direction = getAvail
       && matches(getTaskRegistryCollateralNameSearch(collaterals, task), filters.collateralName)
       && matchesAnyExact(getTaskRegistryCollateralTypes(collaterals), filters.collateralType)
       && matchesExact(getUnifiedTaskType(task.type), filters.type)
-      && matchesExact(task.status, filters.status)
-      && matchesExact(getTaskRegistryAuthor(task), filters.author)
-      && matchesExact(task.assignee, filters.assignee)
+      && (activeTab === "completed" || matchesExact(task.status, filters.status))
+      && (direction === "registration" || matchesExact(getTaskRegistryAuthor(task), filters.author))
+      && matchesAnyExact(getTaskRegistryAssigneeNames(task), filters.assignee)
+      && matchesExact(getApplicationInitiator(application), filters.initiator)
       && matchesExact(getTaskRegistryInitiatorSegment(task, application), filters.initiatorSegment)
-      && matchesAnyExact(getTaskRegistryPledgorSearch(collaterals), filters.pledgor)
-      && matchesExactInn(getTaskRegistryPledgorInns(collaterals), filters.pledgorInn)
+      && matches(getTaskRegistryPledgorFilterSearch(collaterals).join(" "), filters.pledgor)
       && matchesDateOnlyRange(getTaskCreatedDateTime(task), filters.createdFrom, filters.createdTo)
-      && matchesDateOnlyRange(task.dueDate, filters.dueFrom, filters.dueTo);
+      && matchesDateOnlyRange(task.dueDate, filters.dueFrom, filters.dueTo)
+      && (activeTab !== "completed" || matchesDateOnlyRange(getTaskCompletedDateTime(task), filters.completedFrom, filters.completedTo));
   });
   const baseRows = filteredRows.filter((task) => matchesTaskRegistryTab(task, activeTab, role));
   const rows = baseRows.filter((task) =>
@@ -4722,29 +5266,31 @@ function renderTasksRegistry(query = new URLSearchParams(), direction = getAvail
     && (!visual.status || task.status === visual.status)
     && (!visual.priority || task.priority === visual.priority)
   );
-  const columns = getTaskRegistryColumns(direction);
-  const sortedRows = sortRegistryRows(rows, columns, getRegistrySortEntries("tasks", direction), getTaskRegistrySortContext);
+  const allColumns = getTaskRegistryColumns(direction, activeTab);
+  const columns = getVisibleRegistryColumns(allColumns, "tasks", direction);
+  const sortedRows = sortRegistryRows(rows, allColumns, getRegistrySortEntries("tasks", direction), getTaskRegistrySortContext);
   const pageKey = `tasks:${direction}:${activeTab}:${filters.applicationNumber || "all"}`;
   const pageData = getRegistryPageData(sortedRows, pageKey);
   const taskTypeOptions = getTaskRegistryTypeOptions(direction);
   const filterGridMarkup = `
     <div class="filter-grid registry-filter-grid tasks-filter-grid">
-      ${filterSelect("tasks", "author", "Автор задачи", getTaskRegistryAuthorOptions(direction))}
+      ${filterSelect("tasks", "author", "Автор задачи", getTaskRegistryAuthorOptions(direction), { disabled: direction === "registration" })}
+      ${filterSelect("tasks", "assignee", "Исполнитель задачи", getTaskRegistryAssigneeOptions(direction))}
       ${filterInput("tasks", "number", "Номер задачи")}
+      ${filterSelect("tasks", "type", "Тип задачи", taskTypeOptions)}
+      ${filterSelect("tasks", "status", "Статус задачи", getTaskRegistryStatusOptions(direction), { disabled: activeTab === "completed", valueOverride: activeTab === "completed" ? "Завершена" : null })}
       ${filterInput("tasks", "applicationNumber", "Номер заявки")}
-      ${filterInput("tasks", "clientName", "Клиент")}
-      ${filterInput("tasks", "contractNumber", "Номер договора")}
+      ${filterInput("tasks", "clientName", "Клиент", "Наименование, ФИО или ИНН")}
+      ${filterInput("tasks", "contractNumber", "Кредитный договор")}
+      ${filterSelect("tasks", "initiator", "Инициатор заявки", getApplicationInitiatorOptions())}
+      ${filterSelect("tasks", "initiatorSegment", "Сегмент инициатора", getApplicationInitiatorSegmentOptions())}
       ${filterInput("tasks", "collateralId", "Идентификатор залога")}
       ${filterInput("tasks", "collateralName", "Наименование залога")}
       ${filterSelect("tasks", "collateralType", "Вид залога", ["", ...FT_COLLATERAL_TYPE_OPTIONS])}
-      ${filterSelect("tasks", "type", "Тип задачи", taskTypeOptions)}
-      ${filterSelect("tasks", "status", "Статус", getTaskRegistryStatusOptions(direction))}
-      ${filterSelect("tasks", "assignee", "Исполнитель", getTaskRegistryAssigneeOptions(direction))}
-      ${filterSelect("tasks", "initiatorSegment", "Сегмент инициатора", getApplicationInitiatorSegmentOptions())}
-      ${filterInput("tasks", "pledgor", "Залогодатель")}
-      ${filterInnInput("tasks", "pledgorInn", "ИНН залогодателя")}
-      ${filterDateRange("tasks", "createdFrom", "createdTo", "Дата создания")}
-      ${filterDateRange("tasks", "dueFrom", "dueTo", "Срок исполнения задачи")}
+      ${filterInput("tasks", "pledgor", "Залогодатель", "Наименование, ФИО или ИНН")}
+      ${filterDateRange("tasks", "createdFrom", "createdTo", "Дата создания задачи", false, "task-created-date-filter")}
+      ${filterDateRange("tasks", "dueFrom", "dueTo", "Срок исполнения задачи", false, "task-due-date-filter")}
+      ${filterDateRange("tasks", "completedFrom", "completedTo", "Дата завершения задачи", activeTab !== "completed", "task-completed-date-filter")}
       <button class="btn btn-secondary" data-action="reset-filters" data-scope="tasks">Сбросить</button>
     </div>
   `;
@@ -4756,7 +5302,7 @@ function renderTasksRegistry(query = new URLSearchParams(), direction = getAvail
         ${renderRegistryFilterPanel("tasks", filterGridMarkup, "task-filter-panel")}
         <section class="panel table-panel task-table-panel" data-registry-table="tasks" tabindex="-1">
           <div class="registry-results-summary">${renderRegistryResultCount("tasks", rows.length)}</div>
-          <div class="registry-table-scroll">${renderTaskRegistryTable(pageData.rows, direction)}</div>
+          <div class="registry-table-scroll">${renderTaskRegistryTable(pageData.rows, direction, activeTab, columns)}</div>
           ${renderRegistryPagination(pageKey, pageData)}
         </section>
       </div>
@@ -4979,23 +5525,18 @@ function getCollateralRegistryClientSearchText(collateral) {
   const contracts = (collateral?.contractIds || []).map(getContract).filter(Boolean);
   return [
     collateral?.clientName,
-    ...contracts.map((contract) => contract?.clientName)
+    collateral?.clientId,
+    ...contracts.flatMap((contract) => [contract?.clientName, contract?.inn])
   ].filter(Boolean).join(" ");
-}
-
-function getCollateralRegistryClientInns(collateral) {
-  const contracts = (collateral?.contractIds || []).map(getContract).filter(Boolean);
-  return uniqueItems([collateral?.clientId, ...contracts.map((contract) => contract?.inn)].filter(Boolean));
 }
 
 function getCollateralRegistryPledgorSearchText(collateral) {
   const pledgor = getMainPledgor(collateral);
-  return uniqueItems([pledgor.name, ...(collateral?.pledgors || []).map((item) => item.name)].filter(Boolean));
-}
-
-function getCollateralRegistryPledgorInns(collateral) {
-  const pledgor = getMainPledgor(collateral);
-  return uniqueItems([pledgor.idn, ...(collateral?.pledgors || []).map((item) => item.idn)].filter(Boolean));
+  return uniqueItems([
+    pledgor.name,
+    pledgor.idn,
+    ...(collateral?.pledgors || []).flatMap((item) => [item.name, item.idn])
+  ].filter(Boolean));
 }
 
 function getCollateralRegistryCreditContractText(collateral) {
@@ -5017,23 +5558,41 @@ function getCollateralRegistryLatestAppraisalDate(collateral) {
   return latest?.date || collateral?.evalDate || collateral?.appraisalDate || "-";
 }
 
+function getCollateralRegistryAddress(collateral) {
+  const fields = collateral?.addressFields || {};
+  const direct = String(fields["Адрес / место нахождения"] || collateral?.address || "").trim();
+  if (direct) return direct;
+  const values = [
+    fields["Почтовый индекс"],
+    fields["Регион"],
+    fields["Район"],
+    fields["Населенный пункт"],
+    fields["Город"],
+    fields["Улица"] || fields["Улица (в том числе проспект, переулок, квартал)"],
+    fields["Дом"] || fields["Номер дома (владения)"],
+    fields["Корпус"] || fields["Номер корпуса (строения)"],
+    fields["Квартира"] || fields["Номер квартиры (офиса, помещения, комнаты)"],
+    collateral?.region
+  ];
+  return uniqueItems(values.map((value) => String(value || "").trim()).filter(Boolean)).join(", ");
+}
+
 function getCollateralRegistryColumns() {
   return [
-    { key: "id", label: "ID", render: (item) => `<a class="link registry-object-link" href="#${escapeHtml(getCollateralCardRoute(item.id))}">${escapeHtml(item.id)}</a>` },
+    { key: "number", label: "Номер залога", render: (item) => renderRegistryRecordLink(getCollateralCardRoute(item.id), getCollateralSuzNumber(item) || item.id) },
     { key: "name", label: "Наименование залога", sortType: "text", sortValue: getCollateralRegistryName, render: (item) => escapeHtml(getCollateralRegistryName(item)) },
     { key: "type", label: "Вид залога", sortType: "text", sortValue: getCollateralTypeLabel, render: (item) => escapeHtml(getCollateralTypeLabel(item)) },
     { key: "identifier", label: "Идентификатор залога", render: (item) => escapeHtml(getCollateralObjectIdentifier(item)) },
-    { key: "createdAt", label: "Дата создания", sortType: "date", sortValue: (item) => item.createdAt || "", render: (item) => escapeHtml(formatRegistryDateTime(item.createdAt)) },
+    { key: "createdAt", label: "Дата создания залога", sortType: "date", sortValue: (item) => item.createdAt || "", render: (item) => escapeHtml(formatRegistryDateTime(item.createdAt)) },
     { key: "pledgor", label: "Залогодатель", sortType: "text", sortValue: (item) => getCollateralRegistryPledgorSearchText(item).join(", "), render: (item) => escapeHtml(getCollateralRegistryPledgorSearchText(item).join(", ") || "-") },
     { key: "client", label: "Клиент", sortType: "text", sortValue: (item) => item.clientName || "", render: (item) => `${escapeHtml(item.clientName || "-")}<br><small>${escapeHtml(item.clientId || "")}</small>` },
     { key: "creditContract", label: "Кредитный договор", sortType: "text", sortValue: getCollateralRegistryCreditContractText, render: (item) => renderCollateralRegistryContractsCell(item) },
     { key: "pledgeContract", label: "Договор залога", render: (item) => renderCollateralRegistryPledgeContractsCell(item) },
-    { key: "address", label: "Адрес", sortType: "text", sortValue: (item) => item.address || item.region || "", render: (item) => escapeHtml(item.address || item.region || "-") },
+    { key: "address", label: "Адрес объекта", sortType: "text", sortValue: getCollateralRegistryAddress, render: (item) => escapeHtml(getCollateralRegistryAddress(item) || "-") },
     { key: "marketValue", label: "Рыночная стоимость", sortType: "number", sortValue: (item) => item.marketValue, render: (item) => formatMoney(item.marketValue) },
     { key: "pledgeValue", label: "Залоговая стоимость", sortType: "number", sortValue: (item) => item.pledgeValue, render: (item) => formatMoney(item.pledgeValue) },
     { key: "fairValue", label: "Справедливая стоимость", sortType: "number", sortValue: (item) => getEvaluationFairValue(getLatestCollateralEvaluation(item), item), render: (item) => formatMoney(getEvaluationFairValue(getLatestCollateralEvaluation(item), item)) },
     { key: "appraisalDate", label: "Дата последней оценки", sortType: "date", sortValue: getCollateralRegistryLatestAppraisalDate, render: (item) => escapeHtml(formatRegistryDateTime(getCollateralRegistryLatestAppraisalDate(item))) },
-    { key: "quality", label: "Категория качества", sortType: "text", sortValue: getCollateralQualityClass, render: (item) => escapeHtml(getCollateralQualityClass(item)) },
     { key: "status", label: "Статус объекта", sortType: "text", sortValue: getCollateralStatusForFt, render: (item) => badge(getCollateralStatusForFt(item)) }
   ];
 }
@@ -5056,56 +5615,51 @@ function renderCollateralsRegistry(query = new URLSearchParams()) {
   const baseRows = hasSearchCriteria ? state.data.collaterals.filter((item) => {
     const latestEvaluation = getLatestCollateralEvaluation(item);
     const fairValue = getEvaluationFairValue(latestEvaluation, item);
-    return matches(getCollateralRegistryName(item), filters.name)
+    return matches(getCollateralSuzNumber(item) || item.id, filters.number)
+      && matches(getCollateralRegistryName(item), filters.name)
       && matches(getCollateralObjectIdentifier(item), filters.collateralId)
       && matchesExact(getCollateralTypeLabel(item), filters.type)
       && matches(getCollateralRegistryClientSearchText(item), filters.clientName)
-      && matchesExactInn(getCollateralRegistryClientInns(item), filters.clientInn)
-      && matchesAnyExact(getCollateralRegistryPledgorSearchText(item), filters.pledgor)
-      && matchesExactInn(getCollateralRegistryPledgorInns(item), filters.pledgorInn)
+      && matches(getCollateralRegistryPledgorSearchText(item).join(" "), filters.pledgor)
       && matches(getCollateralRegistryCreditContractText(item), filters.creditContractNumber)
       && matches(getCollateralRegistryPledgeContractText(item), filters.pledgeContractNumber)
-      && matches(item.address || item.region, filters.address)
+      && matches(getCollateralRegistryAddress(item), filters.address)
       && matchesNumericRange(item.marketValue, filters.marketFrom, filters.marketTo)
       && matchesNumericRange(item.pledgeValue, filters.pledgeFrom, filters.pledgeTo)
       && matchesNumericRange(fairValue, filters.fairFrom, filters.fairTo)
+      && matchesDateOnlyRange(getCollateralCreatedDate(item), filters.createdFrom, filters.createdTo)
       && matchesDateOnlyRange(getCollateralRegistryLatestAppraisalDate(item), filters.appraisalDateFrom, filters.appraisalDateTo)
-      && matchesExact(getCollateralQualityClass(item), filters.quality)
       && matchesSelectedValues(getCollateralStatusForFt(item), filters.status)
       && (!applicationNumber || applicationCollateralIds.has(item.id));
   }) : [];
   const rows = baseRows;
-  const columns = getCollateralRegistryColumns();
-  const sortedRows = sortRegistryRows(rows, columns, getRegistrySortEntries("collaterals"));
+  const allColumns = getCollateralRegistryColumns();
+  const columns = getVisibleRegistryColumns(allColumns, "collaterals");
+  const sortedRows = sortRegistryRows(rows, allColumns, getRegistrySortEntries("collaterals"));
   const pageKey = applicationNumber ? `collaterals:${applicationNumber}` : "collaterals";
   const pageData = getRegistryPageData(sortedRows, pageKey);
   const types = FT_COLLATERAL_TYPE_OPTIONS;
   const statusOptions = COLLATERAL_STATUS_OPTIONS;
-  const qualityOptions = ["", ...uniqueItems(state.data.collaterals.map(getCollateralQualityClass).filter(Boolean))];
   const actions = hasPermission(role, "collateralEdit")
     ? `<button class="btn btn-primary" data-action="open-new-collateral-form" data-context="registry">Добавить объект залога</button><button class="btn btn-primary" data-action="open-import-collaterals">Загрузить объекты залога</button>`
     : "";
   const filterGridMarkup = `
     <div class="filter-grid registry-filter-grid collaterals-filter-grid">
-      ${filterInput("collaterals", "name", "Наименование залога")}
+      ${filterInput("collaterals", "number", "Номер залога")}
       ${filterInput("collaterals", "collateralId", "Идентификатор залога")}
+      ${filterInput("collaterals", "name", "Наименование залога")}
       ${filterSelect("collaterals", "type", "Вид залога", ["", ...types])}
-      ${filterInput("collaterals", "clientName", "Клиент")}
-      ${filterInnInput("collaterals", "clientInn", "ИНН клиента")}
-      ${filterInput("collaterals", "pledgor", "Залогодатель")}
-      ${filterInnInput("collaterals", "pledgorInn", "ИНН залогодателя")}
-      ${filterInput("collaterals", "creditContractNumber", "Номер кредитного договора")}
-      ${filterInput("collaterals", "pledgeContractNumber", "Номер договора залога")}
-      ${filterInput("collaterals", "address", "Адрес")}
-      ${filterAmountInput("collaterals", "marketFrom", "Рыночная стоимость от")}
-      ${filterAmountInput("collaterals", "marketTo", "Рыночная стоимость до")}
-      ${filterAmountInput("collaterals", "pledgeFrom", "Залоговая стоимость от")}
-      ${filterAmountInput("collaterals", "pledgeTo", "Залоговая стоимость до")}
-      ${filterAmountInput("collaterals", "fairFrom", "Справедливая стоимость от")}
-      ${filterAmountInput("collaterals", "fairTo", "Справедливая стоимость до")}
-      ${filterDateRange("collaterals", "appraisalDateFrom", "appraisalDateTo", "Дата последней оценки")}
-      ${filterSelect("collaterals", "quality", "Категория качества", qualityOptions)}
       ${filterMultiSelect("collaterals", "status", "Статус объекта", statusOptions)}
+      ${filterInput("collaterals", "address", "Адрес объекта")}
+      ${filterDateRange("collaterals", "createdFrom", "createdTo", "Дата создания залога", false, "collateral-created-date-filter")}
+      ${filterInput("collaterals", "clientName", "Клиент", "Наименование, ФИО или ИНН")}
+      ${filterInput("collaterals", "pledgor", "Залогодатель", "Наименование, ФИО или ИНН")}
+      ${filterInput("collaterals", "creditContractNumber", "Кредитный договор")}
+      ${filterInput("collaterals", "pledgeContractNumber", "Договор залога")}
+      ${filterDateRange("collaterals", "appraisalDateFrom", "appraisalDateTo", "Дата последней оценки", false, "collateral-appraisal-date-filter")}
+      ${filterAmountRange("collaterals", "marketFrom", "marketTo", "Рыночная стоимость", "collateral-market-value-filter")}
+      ${filterAmountRange("collaterals", "pledgeFrom", "pledgeTo", "Залоговая стоимость", "collateral-pledge-value-filter")}
+      ${filterAmountRange("collaterals", "fairFrom", "fairTo", "Справедливая стоимость", "collateral-fair-value-filter")}
       <button class="btn btn-secondary" data-action="reset-filters" data-scope="collaterals">Сбросить</button>
     </div>
   `;
@@ -5119,7 +5673,7 @@ function renderCollateralsRegistry(query = new URLSearchParams()) {
           ${applicationNumber ? `<span class="registry-context-note">Заявка ${escapeHtml(applicationNumber)}</span>` : ""}
         </div>
         <div class="registry-table-scroll">
-        <table class="collaterals-table" aria-label="Реестр залогов">
+        <table class="collaterals-table" aria-label="Реестр залогов" data-registry-column-table data-registry-scope="collaterals" style="min-width:${getRegistryTableMinWidth(columns, "collaterals")}px">
           ${renderRegistryColumnWidths(columns, "collaterals")}
           <thead><tr>${columns.map((column) => renderRegistrySortHeader(column, "collaterals")).join("")}</tr></thead>
           <tbody>${pageData.rows.length ? pageData.rows.map((item) => `
@@ -5204,14 +5758,10 @@ function getApplicationCollateralNameSearchText(application) {
   return getApplicationCollaterals(application).map(getCollateralRegistryName).join(" ");
 }
 
-function getApplicationCollateralTypes(application) {
-  return uniqueItems(getApplicationCollaterals(application).map(getCollateralTypeLabel));
-}
-
 function renderApplicationTaskLinks(application) {
   const tasks = getApplicationTasks(application);
   if (!tasks.length) return `<span class="muted">0 ${pluralize(0, "задача", "задачи", "задач")}</span>`;
-  const visibleTask = tasks.find((task) => canViewTask(task, getRole()));
+  const visibleTask = tasks.find((task) => canViewTaskRecord(task, getRole()));
   const direction = visibleTask ? getTaskDirection(visibleTask) : getAvailableTaskDirections(getRole())[0];
   if (!direction) return `<span>${tasks.length} ${pluralize(tasks.length, "задача", "задачи", "задач")}</span>`;
   const route = getTaskDirectionConfig(direction).path;
@@ -5230,10 +5780,14 @@ function getApplicationCardRoute(application) {
   return `/app/applications/${encodeURIComponent(id)}`;
 }
 
+function renderRegistryRecordLink(route, label, className = "link registry-object-link") {
+  return `<a class="${escapeHtml(className)}" href="#${escapeHtml(route)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+}
+
 function renderApplicationRegistryNumberLink(application) {
   const number = application?.number || application?.id || "-";
   if (!application) return `<span class="muted">-</span>`;
-  return `<button class="link registry-object-link" data-route="${getApplicationCardRoute(application)}">${escapeHtml(number)}</button>`;
+  return renderRegistryRecordLink(getApplicationCardRoute(application), number);
 }
 
 function isDraftApplication(application) {
@@ -5241,15 +5795,16 @@ function isDraftApplication(application) {
 }
 
 function renderApplicationRegistryNumberCell(application) {
-  const link = renderApplicationRegistryNumberLink(application);
-  if (!application || !hasPermission(getRole(), "appDelete") || !isDraftApplication(application)) return link;
+  return renderApplicationRegistryNumberLink(application);
+}
+
+function renderApplicationRegistryDeleteAction(application) {
+  if (!application || !hasPermission(getRole(), "appDelete")) return "";
+  const deleteDisabled = !isDraftApplication(application);
   return `
-    <div class="application-registry-request-cell">
-      ${link}
-      <button type="button" class="icon-btn application-registry-delete-button" data-action="open-delete-application" data-application="${escapeHtml(application.id)}" aria-label="Удалить заявку ${escapeHtml(application.number || application.id)}" title="Удалить черновик заявки">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
-      </button>
-    </div>
+    <button type="button" class="icon-btn application-registry-delete-button" data-action="open-delete-application" data-application="${escapeHtml(application.id)}" aria-label="Удалить заявку ${escapeHtml(application.number || application.id)}" title="${deleteDisabled ? "Удалять можно только заявку в статусе «Черновик»" : "Удалить черновик заявки"}" ${deleteDisabled ? "disabled aria-disabled=\"true\"" : ""}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
+    </button>
   `;
 }
 
@@ -5282,7 +5837,7 @@ function confirmApplicationDelete(applicationId) {
 function renderApplicationLinkedTasksField(application) {
   const tasks = getApplicationTasks(application);
   const taskLinks = tasks.map((task) => `
-    ${canViewTask(task, getRole())
+    ${canViewTaskRecord(task, getRole())
       ? `<button class="link registry-object-link application-linked-task-link" data-route="${escapeHtml(getTaskCardRoute(task))}">${escapeHtml(task.id)}</button>`
       : `<span class="application-linked-task-link muted">${escapeHtml(task.id)}</span>`}
   `).join("");
@@ -5399,7 +5954,7 @@ function renderApplicationReturnNotice(application) {
 
 function renderApplicationLinkedTaskIdCell(task) {
   const id = task?.id || "-";
-  if (!task || !canViewTask(task, getRole())) return `<span class="muted">${escapeHtml(id)}</span>`;
+  if (!task || !canViewTaskRecord(task, getRole())) return `<span class="muted">${escapeHtml(id)}</span>`;
   return `<button class="link registry-object-link application-linked-task-link" data-route="${escapeHtml(getTaskCardRoute(id))}">${escapeHtml(legacyObjectNumberAliases[id] || id)}</button>`;
 }
 
@@ -5424,24 +5979,26 @@ function renderApplicationRegistryCollateralDrawerContent(application, collatera
   const visible = collaterals.slice(0, limit);
   const rowsMarkup = visible.map((collateral) => {
     const identifier = getCollateralObjectIdentifier(collateral);
+    const pledgeNumber = getCollateralSuzNumber(collateral) || collateral.id || "—";
     const pledgorNames = [...new Set((Array.isArray(collateral.pledgors) ? collateral.pledgors : [])
       .map((pledgor) => String(pledgor?.name || "").trim())
       .filter(Boolean))];
-    const objectMarkup = hasPermission(getRole(), "collateralView")
-      ? `<button type="button" class="link task-registry-collateral-object-link" data-route="${escapeHtml(getCollateralCardRoute(collateral.id, { application }))}">${escapeHtml(identifier)}</button>`
-      : `<strong class="task-registry-collateral-object-id">${escapeHtml(identifier)}</strong>`;
+    const pledgeNumberMarkup = hasPermission(getRole(), "collateralView")
+      ? renderRegistryRecordLink(getCollateralCardRoute(collateral.id, { application }), pledgeNumber, "link task-registry-collateral-object-link")
+      : `<strong class="task-registry-collateral-object-id">${escapeHtml(pledgeNumber)}</strong>`;
     return `
       <tr>
-        <td>${objectMarkup}</td>
-        <td>${escapeHtml(getCollateralTypeLabel(collateral))}</td>
-        <td>${escapeHtml(getCollateralCreatedDate(collateral))}</td>
+        <td>${pledgeNumberMarkup}</td>
+        <td>${escapeHtml(identifier || "—")}</td>
+        <td>${escapeHtml(getCollateralTypeLabel(collateral) || "—")}</td>
+        <td>${escapeHtml(getCollateralStatusForFt(collateral))}</td>
         <td>${escapeHtml(pledgorNames.join(", ") || "—")}</td>
       </tr>
     `;
   }).join("");
   return `
     <table class="task-registry-collateral-table">
-      <thead><tr><th>Идентификатор залога</th><th>Вид залога</th><th>Дата создания</th><th>Залогодатель</th></tr></thead>
+      <thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Вид залога</th><th>Статус объекта</th><th>Залогодатель</th></tr></thead>
       <tbody>${rowsMarkup}</tbody>
     </table>
   `;
@@ -5493,31 +6050,38 @@ function renderApplicationContractLinks(application) {
 
 function renderApplicationCountLink(application, route, count, forms) {
   if (!count) return `<span class="muted">0 ${pluralize(0, forms[0], forms[1], forms[2])}</span>`;
-  return `<button class="link registry-object-link" data-route="${route}?applicationNumber=${encodeURIComponent(application.number)}">${count} ${pluralize(count, forms[0], forms[1], forms[2])}</button>`;
+  return renderRegistryRecordLink(`${route}?applicationNumber=${encodeURIComponent(application.number)}`, `${count} ${pluralize(count, forms[0], forms[1], forms[2])}`);
 }
 
-function getApplicationRegistryColumns() {
+function getApplicationRegistryColumns(includeDeleteAction = false) {
   return [
-    { key: "application", label: "Заявка", render: (application) => renderApplicationRegistryNumberCell(application) },
-    { key: "createdAt", label: "Дата и время создания", sortType: "date", sortValue: (application) => getApplicationCreatedDate(application), render: (application) => escapeHtml(formatRegistryDateTime(getApplicationCreatedDate(application))) },
+    { key: "application", label: "Номер заявки", render: (application) => renderApplicationRegistryNumberCell(application) },
+    { key: "createdAt", label: "Дата создания заявки", sortType: "date", sortValue: (application) => getApplicationCreatedDate(application), render: (application) => escapeHtml(formatRegistryDateTime(getApplicationCreatedDate(application))) },
     { key: "type", label: "Тип заявки", sortType: "text", sortValue: getApplicationType, render: (application) => escapeHtml(getApplicationType(application)) },
     { key: "subtype", label: "Подтип заявки", sortType: "text", sortValue: getApplicationSubtype, render: (application) => escapeHtml(getApplicationSubtype(application)) },
-    { key: "purpose", label: "Цель", sortType: "text", sortValue: getApplicationPurpose, render: (application) => escapeHtml(getApplicationPurpose(application)) },
-    { key: "initiator", label: "Инициатор", sortType: "text", sortValue: getApplicationInitiator, render: (application) => escapeHtml(getApplicationInitiator(application)) },
+    { key: "purpose", label: "Цель заявки", sortType: "text", sortValue: getApplicationPurpose, render: (application) => escapeHtml(getApplicationPurpose(application)) },
+    { key: "initiator", label: "Инициатор заявки", sortType: "text", sortValue: getApplicationInitiator, render: (application) => escapeHtml(getApplicationInitiator(application)) },
     { key: "initiatorSegment", label: "Сегмент инициатора", sortType: "text", sortValue: getApplicationRegistrySegment, render: (application) => escapeHtml(getApplicationRegistrySegment(application)) },
     { key: "client", label: "Клиент", sortType: "text", sortValue: getApplicationClientName, render: (application) => escapeHtml(getApplicationClientName(application)) },
-    { key: "inn", label: "ИНН", render: (application) => escapeHtml(getApplicationInn(application)) },
+    { key: "inn", label: "ИНН клиента", render: (application) => escapeHtml(getApplicationInn(application)) },
     { key: "status", label: "Статус заявки", sortType: "text", sortValue: (application) => getApplicationRegistryStatus(application.status), render: (application) => badge(getApplicationRegistryStatus(application.status)) },
     { key: "tasks", label: "Задачи", render: (application) => renderApplicationTaskLinks(application) },
-    { key: "collateral", label: "Залог", render: (application) => renderApplicationCollateralLinks(application) }
+    { key: "collateral", label: "Залог", render: (application) => renderApplicationCollateralLinks(application) },
+    { key: "contract", label: "Кредитный договор", headerMarkup: "Кредитный<br>договор", headerClass: "application-contract-header", render: (application) => renderApplicationContractLinks(application) },
+    ...(includeDeleteAction ? [{ key: "actions", label: "Действия", headerMarkup: '<span class="visually-hidden">Действия</span>', headerClass: "application-actions-header", draggable: false, render: (application) => renderApplicationRegistryDeleteAction(application) }] : [])
   ];
+}
+
+function isApplicationVisibleInRegistry(application, role = getRole()) {
+  return role?.id !== "initiator" || getApplicationInitiator(application) === role.user;
 }
 
 function renderApplicationsRegistry() {
   const role = getRole();
   const filters = state.filters.applications;
   const rows = (state.data.applications || []).filter((application) =>
-    matches(application.number || application.id, filters.number)
+    isApplicationVisibleInRegistry(application, role)
+    && matches(application.number || application.id, filters.number)
     && matchesExact(getApplicationType(application), filters.type)
     && matchesExact(getApplicationSubtype(application), filters.subtype)
     && matchesExact(getApplicationPurpose(application), filters.purpose)
@@ -5529,29 +6093,32 @@ function renderApplicationsRegistry() {
     && matches(getApplicationContractSearchText(application), filters.contractNumber)
     && matches(getApplicationCollateralSearchText(application), filters.collateralId)
     && matches(getApplicationCollateralNameSearchText(application), filters.collateralName)
-    && matchesAnyExact(getApplicationCollateralTypes(application), filters.collateralType)
     && matchesDateOnlyRange(getApplicationCreatedDate(application), filters.createdFrom, filters.createdTo)
   );
   const pageKey = "applications";
-  const columns = getApplicationRegistryColumns();
-  const sortedRows = sortRegistryRows(rows, columns, getRegistrySortEntries("applications"));
+  const allColumns = getApplicationRegistryColumns(hasPermission(role, "appDelete"));
+  const visibleColumns = getVisibleRegistryColumns(allColumns, "applications");
+  const deleteActionColumn = allColumns.find((column) => column.key === "actions");
+  const columns = deleteActionColumn
+    ? [...visibleColumns.filter((column) => column.key !== "actions"), deleteActionColumn]
+    : visibleColumns;
+  const sortedRows = sortRegistryRows(rows, allColumns, getRegistrySortEntries("applications"));
   const pageData = getRegistryPageData(sortedRows, pageKey);
   const filterGridMarkup = `
     <div class="filter-grid registry-filter-grid applications-filter-grid">
       ${filterInput("applications", "number", "Номер заявки")}
       ${filterSelect("applications", "type", "Тип заявки", getApplicationTypeFilterOptions())}
       ${filterSelect("applications", "subtype", "Подтип заявки", getApplicationSubtypeFilterOptions())}
-      ${filterSelect("applications", "purpose", "Цель", getApplicationPurposeOptions())}
-      ${filterSelect("applications", "initiator", "Инициатор", getApplicationInitiatorOptions())}
-      ${filterSelect("applications", "initiatorSegment", "Сегмент инициатора", getApplicationInitiatorSegmentOptions())}
-      ${filterInput("applications", "clientName", "Клиент")}
-      ${filterSelect("applications", "product", "Продукты", getApplicationProductOptions())}
+      ${filterSelect("applications", "purpose", "Цель заявки", getApplicationPurposeOptions())}
       ${filterMultiSelect("applications", "status", "Статус заявки", getApplicationStatusOptions())}
-      ${filterInput("applications", "contractNumber", "Номер договора")}
+      ${filterSelect("applications", "initiator", "Инициатор заявки", getApplicationInitiatorOptions())}
+      ${filterSelect("applications", "initiatorSegment", "Сегмент инициатора", getApplicationInitiatorSegmentOptions())}
+      ${filterInput("applications", "clientName", "Клиент", "Наименование, ФИО или ИНН")}
+      ${filterSelect("applications", "product", "Продукт", getApplicationProductOptions())}
+      ${filterInput("applications", "contractNumber", "Кредитный договор")}
       ${filterInput("applications", "collateralId", "Идентификатор залога")}
       ${filterInput("applications", "collateralName", "Наименование залога")}
-      ${filterSelect("applications", "collateralType", "Вид залога", ["", ...FT_COLLATERAL_TYPE_OPTIONS])}
-      ${filterDateRange("applications", "createdFrom", "createdTo", "Дата создания")}
+      ${filterDateRange("applications", "createdFrom", "createdTo", "Дата создания заявки")}
       <button class="btn btn-secondary" data-action="reset-filters" data-scope="applications">Сбросить</button>
     </div>
   `;
@@ -5563,7 +6130,7 @@ function renderApplicationsRegistry() {
       <section class="panel table-panel" data-registry-table="applications" tabindex="-1">
         <div class="registry-results-summary">${renderRegistryResultCount("applications", rows.length)}</div>
         <div class="registry-table-scroll">
-        <table class="applications-table" aria-label="Реестр заявок">
+        <table class="applications-table${deleteActionColumn ? " has-delete-action" : ""}" aria-label="Реестр заявок" data-registry-column-table data-registry-scope="applications" style="min-width:${getRegistryTableMinWidth(columns, "applications")}px">
           ${renderRegistryColumnWidths(columns, "applications")}
           <thead><tr>${columns.map((column) => renderRegistrySortHeader(column, "applications")).join("")}</tr></thead>
           <tbody>${pageData.rows.length ? pageData.rows.map((application) => `
@@ -5982,12 +6549,12 @@ function matchesInsuranceKpi(row, kpi) {
   return true;
 }
 
-function filterInput(scope, name, label) {
+function filterInput(scope, name, label, placeholder = "") {
   const value = state.filters[scope]?.[name] || "";
   return `
     <label class="filter-field">
       <span class="filter-label">${escapeHtml(label)}</span>
-      <input value="${escapeHtml(value)}" data-filter-scope="${scope}" data-filter-name="${name}" />
+      <input value="${escapeHtml(value)}" data-filter-scope="${scope}" data-filter-name="${name}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""} />
     </label>
   `;
 }
@@ -6012,29 +6579,45 @@ function filterAmountInput(scope, name, label) {
   `;
 }
 
-function filterDateRange(scope, fromName, toName, label) {
+function filterAmountRange(scope, fromName, toName, label, className = "") {
   const fromValue = state.filters[scope]?.[fromName] || "";
   const toValue = state.filters[scope]?.[toName] || "";
-  const fromDate = getDateOnly(fromValue);
-  const toDate = getDateOnly(toValue);
   return `
-    <label class="filter-field filter-date-range">
+    <label class="filter-field filter-amount-range${className ? ` ${className}` : ""}">
       <span class="filter-label">${escapeHtml(label)}</span>
       <span class="date-range-inputs">
-        <input type="date" value="${escapeHtml(fromDate)}" data-filter-scope="${scope}" data-filter-name="${fromName}" aria-label="${escapeHtml(`${label}: дата начала`)}" />
-        <input type="date" value="${escapeHtml(toDate)}" data-filter-scope="${scope}" data-filter-name="${toName}" aria-label="${escapeHtml(`${label}: дата окончания`)}" />
+        <input type="number" inputmode="decimal" step="0.01" value="${escapeHtml(fromValue)}" data-filter-scope="${escapeHtml(scope)}" data-filter-name="${escapeHtml(fromName)}" aria-label="${escapeHtml(`${label}: от`)}" />
+        <input type="number" inputmode="decimal" step="0.01" value="${escapeHtml(toValue)}" data-filter-scope="${escapeHtml(scope)}" data-filter-name="${escapeHtml(toName)}" aria-label="${escapeHtml(`${label}: до`)}" />
       </span>
     </label>
   `;
 }
 
-function filterSelect(scope, name, label, options) {
-  const value = state.filters[scope]?.[name] || "";
+function filterDateRange(scope, fromName, toName, label, disabled = false, className = "") {
+  const fromValue = state.filters[scope]?.[fromName] || "";
+  const toValue = state.filters[scope]?.[toName] || "";
+  const fromDate = getDateOnly(fromValue);
+  const toDate = getDateOnly(toValue);
+  return `
+    <label class="filter-field filter-date-range${className ? ` ${className}` : ""}">
+      <span class="filter-label">${escapeHtml(label)}</span>
+      <span class="date-range-inputs">
+        <input type="date" value="${escapeHtml(disabled ? "" : fromDate)}" data-filter-scope="${scope}" data-filter-name="${fromName}" aria-label="${escapeHtml(`${label}: дата начала`)}" ${disabled ? "disabled" : ""} />
+        <input type="date" value="${escapeHtml(disabled ? "" : toDate)}" data-filter-scope="${scope}" data-filter-name="${toName}" aria-label="${escapeHtml(`${label}: дата окончания`)}" ${disabled ? "disabled" : ""} />
+      </span>
+    </label>
+  `;
+}
+
+function filterSelect(scope, name, label, options, { disabled = false, valueOverride = null } = {}) {
+  const value = disabled ? String(valueOverride ?? "") : (state.filters[scope]?.[name] || "");
+  const normalizedOptions = ["", ...options.filter((item) => String(item) !== "")];
+  if (value && !normalizedOptions.includes(value)) normalizedOptions.push(value);
   return `
     <label class="filter-field">
       <span class="filter-label">${escapeHtml(label)}</span>
-      <select data-filter-scope="${scope}" data-filter-name="${name}">
-        ${options.map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item || "Все")}</option>`).join("")}
+      <select data-filter-scope="${scope}" data-filter-name="${name}" ${disabled ? "disabled" : ""}>
+        ${normalizedOptions.map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
       </select>
     </label>
   `;
@@ -6044,7 +6627,7 @@ function filterMultiSelect(scope, name, label, options) {
   const selected = Array.isArray(state.filters[scope]?.[name]) ? state.filters[scope][name] : [];
   const key = `${scope}:${name}`;
   const expanded = Boolean(state.registryMultiSelectExpanded?.[key]);
-  const summary = selected.length === options.length ? "Все значения" : selected.length ? `Выбрано: ${selected.length}` : "Ничего не выбрано";
+  const summary = selected.length ? `Выбрано: ${selected.length}` : "";
   return `
     <div class="filter-field">
       <span class="filter-label">${escapeHtml(label)}</span>
@@ -6095,7 +6678,7 @@ function matchesAny(values, filter) {
 
 function matchesSelectedValues(values, selected) {
   if (!Array.isArray(selected)) return true;
-  if (selected.length === 0) return false;
+  if (selected.length === 0) return true;
   const candidates = Array.isArray(values) ? values : [values];
   return candidates.some((value) => selected.includes(value));
 }
@@ -7013,6 +7596,41 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
 function getLatestCollateralEvaluation(collateral) {
   const evaluations = getSortedEvaluations(collateral || {});
   return evaluations[evaluations.length - 1] || {};
+}
+
+function getCollateralLatestCompletedTaskFairValue(collateral) {
+  const task = (state.data.tasks || [])
+    .filter((item) => isTaskClosed(item))
+    .filter((item) => /оцен|переоцен/i.test(String(item.type || "")))
+    .filter((item) => getTaskCollateralIds(item).includes(collateral.id))
+    .filter((item) => !(item.excludedCollateralIds || []).includes(collateral.id))
+    .sort((left, right) => getCollateralEvaluationCompletionDate(right).localeCompare(getCollateralEvaluationCompletionDate(left)))[0];
+  if (!task) return getEvaluationFairValue(getLatestCollateralEvaluation(collateral), collateral);
+
+  if (isListRevaluationTaskType(task.type)) {
+    const defaults = getDefaultListRevaluationSettings();
+    const savedSettings = task.listRevaluation || {};
+    const settings = {
+      ...defaults,
+      ...savedSettings,
+      typeDiscounts: { ...defaults.typeDiscounts, ...(savedSettings.typeDiscounts || {}) },
+      rowOverrides: { ...defaults.rowOverrides, ...(savedSettings.rowOverrides || {}) },
+      excludedCollateralIds: savedSettings.excludedCollateralIds || defaults.excludedCollateralIds
+    };
+    const row = getListRevaluationRows(task, [collateral], settings)[0];
+    if (!row?.selected) return getEvaluationFairValue(getLatestCollateralEvaluation(collateral), collateral);
+    return getMvp1FairValue(collateral, row.newMarket, row.discount);
+  }
+
+  const matrix = getMarketAnalogMatrix(task, collateral);
+  return getMvp1SingleRevaluationCalculation(collateral, matrix, task).fairValue;
+}
+
+function getCollateralEvaluationCompletionDate(task) {
+  const completionEvent = [...(task?.history || [])].reverse().find((event) =>
+    event.status === "Завершена" || /завершени[ея]|завершен[ао]?|выполнен[ао]?/i.test(String(event.action || ""))
+  );
+  return completionEvent?.date || task?.completedAt || task?.closedAt || task?.dueDate || task?.createdAt || "";
 }
 
 function renderTaskCollateralGroupSummary(collaterals = []) {
@@ -14457,6 +15075,7 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
   const status = getCollateralStatusForFt(collateral);
   const profileIdentifier = getCollateralObjectIdentifier(collateral);
   const suzNumber = getCollateralSuzNumber(collateral);
+  const fairValue = getCollateralLatestCompletedTaskFairValue(collateral);
   const tabs = [
     ["overview", "Основная информация по объекту"],
     ["documents", "Документы"],
@@ -14495,6 +15114,7 @@ function renderCollateralCard(collateralId, query = new URLSearchParams()) {
       <div class="collateral-header-values">
         <span><strong>Рыночная стоимость</strong>${formatMoney(collateral.marketValue)}</span>
         <span><strong>Залоговая стоимость</strong>${formatMoney(collateral.pledgeValue)}</span>
+        <span class="collateral-header-fair-value"><strong>Справедливая стоимость</strong>${formatMoney(fairValue)}</span>
       </div>
     </section>
     <div class="tabs wrap">${tabs.map(([id, label]) => `<button class="${state.collateralTab === id ? "active" : ""}" data-action="collateral-tab" data-tab="${id}">${escapeHtml(label)}</button>`).join("")}</div>
@@ -14625,6 +15245,7 @@ function renderCollateralOverview(collateral) {
   const fieldDraft = {
     typeLabel,
     subtype: getCollateralSubtype(collateral),
+    clientType: getCollateralClientType(collateral),
     typeFields: { ...existingTypeFields },
     sharedFields,
     basisDocument,
@@ -14672,7 +15293,7 @@ function renderCollateralOverview(collateral) {
           ${Object.keys(typeFields).length
             ? renderCollateralDisplayFieldGrid(typeFields, "collateral-overview-type-fields collateral-characteristics-type-fields", [], "type", fieldDraft)
             : ""}
-          ${renderCollateralDisplayFieldGrid(sharedFields, "collateral-overview-common-fields collateral-characteristics-common-fields", [], "main", fieldDraft, { "Дополнительная информация": "text" })}
+          ${renderCollateralDisplayFieldGrid(sharedFields, "collateral-overview-common-fields collateral-characteristics-common-fields", [], "main", fieldDraft)}
           <div class="collateral-overview-basis-section">
             <h3>Документ-основание</h3>
             ${renderCollateralDisplayFieldGrid(basisFields, "collateral-overview-basis-fields", [], "basisDocument", fieldDraft)}
@@ -14725,6 +15346,7 @@ function renderCollateralAddressView(collateral, fields) {
   const fieldDraft = {
     typeLabel: getCollateralTypeLabel(collateral),
     subtype: getCollateralSubtype(collateral),
+    clientType: getCollateralClientType(collateral),
     typeFields: getCollateralTypeSpecificFields(collateral),
     sharedFields: {},
     addressFields: address
@@ -14885,8 +15507,8 @@ function getCollateralTypeSpecificFields(collateral, { cardView = false } = {}) 
   if (!STAGE1_COLLATERAL_TYPE_SET.has(typeLabel)) return {};
   if (FT_COLLATERAL_TYPES_WITHOUT_FIELDS.has(typeLabel)) return {};
   const labels = getCollateralTypeDisplayFieldLabels(typeLabel)
-    .filter((label) => label !== "Дополнительная информация");
-  const normalizedCollateral = { ...collateral, subtype: getCollateralSubtype(collateral) };
+    .filter((label) => !["Дополнительная информация", "Наименование"].includes(label));
+  const normalizedCollateral = { ...collateral, clientType: getCollateralClientType(collateral), subtype: getCollateralSubtype(collateral) };
   const values = labels.reduce((acc, label) => {
     const isApplicable = cardView
       ? isCollateralV6CardTypeFieldApplicable(typeLabel, label, normalizedCollateral)
@@ -14905,47 +15527,38 @@ function isCollateralV6TypeFieldApplicable(typeLabel, label, source = {}) {
     if ([
       "Размер доли в праве общей долевой собственности, числитель",
       "Размер доли в праве общей долевой собственности, знаменатель",
-      "Площадь в неструктурированном виде"
+      "Площадь в неструктурированном виде",
+      "Признак части объекта недвижимости",
+      "Кадастровый номер"
     ].includes(label)) return true;
-    if (["Кадастровый номер", "Условный номер"].includes(label)) return true;
-    if (["Назначение объекта", "Функциональная группа"].includes(label)) return /здани|помещени|квартир|апартамент|комнат|жилой дом|таунхаус|незаверш/i.test(subtype);
-    if (["Площадь застройки, кв. м", "Длина сооружения, м"].includes(label)) return /здани|помещени|квартир|апартамент|комнат|жилой дом|таунхаус|машино-мест|незаверш|земельн/i.test(subtype);
+    if (["Назначение объекта", "Функциональная группа"].includes(label)) return /^(здания|помещения|объект незавершенного строительства)$/i.test(subtype);
+    if (["Площадь застройки, кв. м", "Длина сооружения, м"].includes(label)) return /^(здания|помещения|машино-место|объект незавершенного строительства|земельный участок)$/i.test(subtype);
     if (["Категория земель", "Вид разрешенного использования участка"].includes(label)) return /земельн/i.test(subtype);
-    if (label === "Дата окончания срока аренды") return /аренд/i.test(String(fields["Право залогодателя"] || ""));
-    if (label === "Идентификационный номер объекта недвижимости в стране регистрации") return !isBlankFieldValue(value);
-    if (label === "Признак части объекта недвижимости") return isAffirmativeValue(value);
-    if (label === "Вид сооружения") return /сооружен/i.test(subtype) || !isBlankFieldValue(value);
-    if (label === "Кадастровый номер в пределах, которого находится объект") return isAffirmativeValue(fields["Признак части объекта недвижимости"]) || !isBlankFieldValue(value);
+    if (label === "Дата окончания срока аренды") return /^право аренды(?:$|\s*\()/i.test(String(fields["Право залогодателя"] || fields["Право собственности"] || "").trim());
+    if (label === "Идентификационный номер объекта недвижимости в стране регистрации") {
+      const country = String(source.countryCode || fields["Код страны по ОКСМ"] || fields["Страна регистрации"] || "");
+      return !isBlankFieldValue(value) || Boolean(country && country !== "643" && !/росси/i.test(country));
+    }
+    if (label === "Вид сооружения") return /^сооружения$/i.test(subtype);
   }
-  if (["Транспортные средства, прицепы (полуприцепы)", "Транспортные средства (самоходная техника)"].includes(typeLabel) && label === "Тип автомобиля") {
-    if (/прицеп|полуприцеп/i.test(subtype)) return false;
-    if (typeLabel === "Транспортные средства (самоходная техника)") return /категори[ия]\s*[cс]|категори[ия]\s*[dд]|категории\s*c,?\s*d/i.test(subtype) || !isBlankFieldValue(value);
+  if (typeLabel === "Транспортные средства, прицепы (полуприцепы)" && label === "Тип автомобиля") {
+    return /категории\s*в/i.test(subtype)
+      || (!/мото|прицеп|полуприцеп|железнодорож/i.test(subtype) && !isBlankFieldValue(value));
   }
+  if (typeLabel === "Транспортные средства (самоходная техника)" && label === "Тип автомобиля") {
+    return /категори[яи]\s*[cс]|категори[яи]\s*[dд]/i.test(String(fields["Категория транспорта"] || ""))
+      || !isBlankFieldValue(value);
+  }
+  if (typeLabel === "Оборудование" && ["Дата ввода в эксплуатацию", "Первоначальная стоимость", "Остаточная стоимость"].includes(label)) {
+    return ["ЮЛ", "Юридическое лицо"].includes(String(source.clientType || fields["Тип клиента"] || ""));
+  }
+  if (["Воздушные суда", "Плавучие сооружения"].includes(typeLabel)
+      && label.startsWith("Размер доли в праве общей долевой собственности,")) return true;
   return true;
 }
 
 function isCollateralV6CardTypeFieldApplicable(typeLabel, label, source = {}) {
-  const fields = source?.fields || source?.typeFields || {};
-  const subtype = String(source?.subtype || fields["Подвид залога"] || fields["Подвид"] || fields["Подтип"] || "");
-  if (typeLabel === "Объекты недвижимости") {
-    const alwaysVisible = [
-      "Размер доли в праве общей долевой собственности, числитель",
-      "Размер доли в праве общей долевой собственности, знаменатель",
-      "Площадь в неструктурированном виде",
-      "Признак части объекта недвижимости"
-    ];
-    if (alwaysVisible.includes(label)) return true;
-    if (label === "Дата окончания срока аренды") {
-      return /аренд/i.test(String(fields["Право залогодателя"] || fields["Право собственности"] || ""));
-    }
-    if (label === "Кадастровый номер в пределах, которого находится объект") {
-      const parentNumber = fields[label] || fields["Кадастровый номер объекта, в состав которого входит часть"];
-      return isAffirmativeValue(fields["Признак части объекта недвижимости"])
-        || /част[ьи].*объект/i.test(subtype)
-        || !isBlankFieldValue(parentNumber);
-    }
-  }
-  return isCollateralV6TypeFieldApplicable(typeLabel, label, { ...source, subtype });
+  return isCollateralV6TypeFieldApplicable(typeLabel, label, source);
 }
 
 function getCollateralBasisDocument(collateral) {
@@ -14961,7 +15574,7 @@ function getCollateralBasisDocument(collateral) {
 }
 
 function getCollateralTypeDisplayFieldLabels(typeLabel) {
-  if (STAGE1_COLLATERAL_TYPE_SET.has(typeLabel)) return [...(FT_COLLATERAL_V6_TYPE_FIELDS[typeLabel] || [])];
+  if (STAGE1_COLLATERAL_TYPE_SET.has(typeLabel)) return [...(FT_COLLATERAL_V8_TYPE_FIELDS[typeLabel] || [])];
   const labels = COLLATERAL_TYPE_FIELDS[typeLabel] || [];
   return uniqueItems(labels.filter((label) => !COLLATERAL_SHARED_MAIN_FIELDS.includes(label)));
 }
@@ -14973,6 +15586,7 @@ function getCollateralTypeSpecificValue(collateral, label) {
   if (label === "Кадастровый номер" && (collateral.profileIdentifierType === label || /^\d{2}:\d{2}:\d{6,7}:\d+$/i.test(String(collateral.profileIdentifier || "")))) return collateral.profileIdentifier || "";
   const aliases = {
     "Тип единицы": "Подвид залога",
+    "Вид товаров в обороте": "Вид товара в обороте",
     "Вид товара в обороте": "Группа товаров",
     "Вид движимой вещи": "Вид имущества",
     "Регион выдачи": "Регион выдачи документа",
@@ -15001,7 +15615,8 @@ function getCollateralTypeSpecificValue(collateral, label) {
   if (aliases[label] && !isBlankFieldValue(fields[aliases[label]])) return fields[aliases[label]];
   if (["Название", "Наименование"].includes(label)) return fields[label] || collateral.name || collateral.description || getCollateralName(collateral);
   if (label === "Тип единицы") return fields["Тип единицы"] || fields["Подвид залога"] || getCollateralSubtype(collateral);
-  if (label === "Вид товара в обороте") return fields["Вид товара в обороте"] || fields["Подвид залога"] || fields["Группа товаров"] || "Иное";
+  if (label === "Вид товаров в обороте" || label === "Вид товара в обороте") return fields[label] || fields["Вид товара в обороте"] || fields["Подвид залога"] || fields["Группа товаров"] || "Иное";
+  if (label === "Тип (наименование)") return fields[label] || collateral.name || collateral.description || "";
   if (label === "Вид движимой вещи") return fields["Вид движимой вещи"] || fields["Подвид залога"] || fields["Вид имущества"] || "Иное";
   if (label === "Подвид") return getCollateralSubtype(collateral);
   if (label === "Год выпуска" || label === "Год постройки") return fields["Год выпуска"] || fields["Год ввода"] || "2022";
@@ -15055,7 +15670,29 @@ function getCollateralEditableOptions(collateral, group, label) {
   if (group === "address") return COLLATERAL_ADDRESS_FIELD_OPTIONS[label] || [];
   if (group === "type") {
     if (label === "Подвид залога") return FT_COLLATERAL_SUBTYPE_OPTIONS[getCollateralTypeLabel(collateral)] || [];
+    if ((getCollateralTypeLabel(collateral) === "Воздушные суда" && label === "Вид воздушного судна")
+        || (getCollateralTypeLabel(collateral) === "Плавучие сооружения" && label === "Группа")
+        || (getCollateralTypeLabel(collateral) === "Железнодорожный подвижной состав" && label === "Тип единицы")
+        || (getCollateralTypeLabel(collateral) === "Товары в обороте" && label === "Вид товаров в обороте")) return [];
     const typeOptions = COLLATERAL_TYPE_FIELD_OPTIONS[getCollateralTypeLabel(collateral)] || {};
+    if (label === "Назначение объекта" && getCollateralTypeLabel(collateral) === "Объекты недвижимости") {
+      const subtype = getCollateralSubtype(collateral);
+      if (/помещени/i.test(subtype)) return ["Нежилое помещение", "Жилое помещение", "Иное"];
+      return typeOptions[label] || [];
+    }
+    if (label === "Подкатегория") {
+      const category = String(collateral?.fields?.["Категория транспорта"] || "");
+      const subtypeOptions = {
+        L: ["Категория L1", "Категория L2", "Категория L3", "Категория L4", "Категория L5", "Категория L6", "Категория L7"],
+        M1: ["Категория M1G"], M2: ["Категория M2G"], M3: ["Категория M3G"],
+        N: ["Категория N1", "Категория N1G", "Категория N2", "Категория N2G", "Категория N3", "Категория N3G"],
+        O: ["Категория O1", "Категория O2", "Категория O3", "Категория O4"],
+        A: ["Категория A I"], B: ["Категория В1", "Категория ВЕ"],
+        C: ["Категория С1", "Категория СЕ", "Категория С1Е"], D: ["Категория D1", "Категория DE", "Категория D1E"]
+      };
+      const categoryKey = category.match(/\b(M[123]|[LMNODABC])\b/i)?.[1]?.toUpperCase();
+      return categoryKey ? [...(subtypeOptions[categoryKey] || []), ""] : [""];
+    }
     return typeOptions[label] || [];
   }
   return [];
@@ -15200,6 +15837,10 @@ function getCollateralTypeFieldFallback(collateral, label) {
   if (label === "Вид товара в обороте") {
     return fields["Вид товара в обороте"] || fields["Подвид залога"] || fields["Группа товаров"] || "Иное";
   }
+  if (label === "Вид товаров в обороте") {
+    return fields["Вид товаров в обороте"] || fields["Вид товара в обороте"] || fields["Подвид залога"] || fields["Группа товаров"] || "Иное";
+  }
+  if (label === "Тип (наименование)") return fields[label] || collateral?.name || collateral?.description || "Самолет";
   if (label === "Вид движимой вещи") {
     return fields["Вид движимой вещи"] || fields["Подвид залога"] || fields["Вид имущества"] || "Иное";
   }
@@ -15435,44 +16076,9 @@ function getCollateralCategory(collateral) {
   return typeLabel;
 }
 
-function getCollateralInspectionProvidedFields(collateral) {
-  const current = collateral?.ftMainInfo || {};
-  const legacy = collateral?.fields || {};
-  const rawInspection = current["Осмотр произведен"]
-    ?? legacy["Осмотр произведен"]
-    ?? current["Осмотр (проведен/не проведен)"]
-    ?? legacy["Осмотр (проведен/не проведен)"];
-  const normalizedInspection = String(rawInspection ?? "").trim().toLocaleLowerCase("ru-RU");
-  const inspectionDone = rawInspection === true || ["да", "true", "1", "проведен", "проведено"].includes(normalizedInspection);
-  const inspectionValue = normalizedInspection ? (inspectionDone ? "Да" : "Нет") : "Нет";
-  const contact = current["Контактное лицо для осмотра"]
-    ?? legacy["Контактное лицо для осмотра"];
-  return {
-    "Осмотр произведен": inspectionValue,
-    "Контактное лицо для осмотра": String(contact || "").trim() || "Не указано"
-  };
-}
-
-function renderCollateralInspectionProvidedPanel(collateral) {
-  const fields = getCollateralInspectionProvidedFields(collateral);
-  return `
-    <section class="panel inspection-card collateral-inspection-provided-panel">
-      <div class="panel-title"><h2>Осмотр проведен</h2></div>
-      ${renderCollateralDisplayFieldGrid(
-        fields,
-        "collateral-control-info-fields collateral-inspection-provided-fields",
-        [],
-        "main",
-        { typeLabel: getCollateralTypeLabel(collateral), typeFields: {}, sharedFields: {}, addressFields: {} }
-      )}
-    </section>
-  `;
-}
-
 function renderCollateralControlEvents(collateral) {
   return `
     <section class="collateral-control-view collateral-tab-view">
-      ${renderCollateralInspectionProvidedPanel(collateral)}
       ${renderLastInspectionPanel(collateral)}
       ${renderLatestValuationPanel(collateral, "9 полей")}
       ${renderCollateralUnifiedControlSchedule(collateral)}
@@ -15915,8 +16521,69 @@ function normalizeCollateralContractProduct(value) {
   return "";
 }
 
+function getCollateralPledgeContractEntries(collateral) {
+  const records = Array.isArray(collateral?.pledgeContracts)
+    ? collateral.pledgeContracts
+    : collateral?.encumbrances || [];
+  const mainInfo = collateral?.ftMainInfo || {};
+  const fields = collateral?.fields || {};
+  const entries = records.map((item) => ({
+    ...item,
+    number: String(item?.pledgeContractNumber || item?.number || "").trim(),
+    date: String(item?.pledgeContractDate || item?.date || "").trim(),
+    linkedContract: item?.linkedContract || item?.contract || item?.pledgeContractMainContractId || ""
+  }));
+  const legacy = {
+    number: String(collateral?.pledgeContractNumber || mainInfo["Номер договора залога"] || fields["Номер договора залога"] || "").trim(),
+    date: String(collateral?.pledgeContractDate || mainInfo["Дата договора залога"] || fields["Дата договора залога"] || "").trim(),
+    linkedContract: collateral?.pledgeContractMainContractId || collateral?.contractNumber || collateral?.contractId || "",
+    amount: collateral?.pledgeContractAmount,
+    currency: collateral?.pledgeContractCurrency,
+    product: collateral?.pledgeProduct
+  };
+  if (legacy.number || legacy.date) entries.push(legacy);
+  const unique = new Map();
+  entries.forEach((item) => {
+    if (!item.number && !item.date) return;
+    const key = `${item.number.toLocaleLowerCase("ru-RU")}\u0000${item.date}`;
+    const current = unique.get(key);
+    if (!current) {
+      unique.set(key, item);
+      return;
+    }
+    ["linkedContract", "amount", "allocated", "currency", "product"].forEach((field) => {
+      if (!current[field] && item[field]) current[field] = item[field];
+    });
+  });
+  return [...unique.values()];
+}
+
+function getCollateralApplicationPledgeContractAssociations(collateral) {
+  if (!collateral?.id) return [];
+  return (state.data.applications || []).flatMap((application) =>
+    getApplicationDealRows(application).flatMap((deal) => {
+      const contractLinks = normalizeApplicationPledgeContractLinks(deal.pledgeContractLinks)
+        .filter((link) => link.collateralIds.includes(collateral.id));
+      if (!contractLinks.length) return [];
+      const linkedContract = getApplicationDealContract(deal) || {
+        id: deal.contractId || `application:${application.id || application.number}:${deal.id}`,
+        number: deal.contractNumber || "",
+        startDate: deal.contractDate || "",
+        product: deal.product || "",
+        limit: deal.limit || "",
+        currency: deal.currency || ""
+      };
+      return contractLinks.map((link) => ({ application, deal, link, contract: linkedContract }));
+    })
+  );
+}
+
 function getCollateralContractTableRows(collateral) {
-  const relatedContracts = getCollateralRelatedContracts(collateral);
+  const applicationAssociations = getCollateralApplicationPledgeContractAssociations(collateral);
+  const relatedContracts = [...new Map([
+    ...getCollateralRelatedContracts(collateral),
+    ...applicationAssociations.map((association) => association.contract)
+  ].filter(Boolean).map((contract) => [String(contract.id || contract.number || "").toLocaleLowerCase("ru-RU"), contract])).values()];
   const pledgeRecordsByNumber = new Map();
   const addPledgeRecord = (record) => {
     const number = String(record.number || "").trim();
@@ -15949,27 +16616,14 @@ function getCollateralContractTableRows(collateral) {
       if (!currentIsSet && nextIsSet) existing[field] = nextValue;
     });
   };
-  (Array.isArray(collateral?.pledgeContracts) ? collateral.pledgeContracts : collateral?.encumbrances || []).forEach((item) => addPledgeRecord({
-    number: item.pledgeContractNumber || item.number,
-    date: item.pledgeContractDate || item.date,
+  getCollateralPledgeContractEntries(collateral).forEach((item) => addPledgeRecord({
+    number: item.number,
+    date: item.date,
     amount: item.amount !== null && item.amount !== undefined && String(item.amount).trim() !== "" ? item.amount : item.allocated,
     currency: item.currency,
     product: item.product,
-    linkedContract: item.linkedContract || item.contract || item.pledgeContractMainContractId
+    linkedContract: item.linkedContract
   }));
-  const mainInfo = collateral?.ftMainInfo || {};
-  const legacyFields = collateral?.fields || {};
-  const profilePledgeNumber = collateral?.pledgeContractNumber
-    || mainInfo["Номер договора залога"]
-    || legacyFields["Номер договора залога"];
-  addPledgeRecord({
-    number: profilePledgeNumber,
-    date: collateral?.pledgeContractDate || mainInfo["Дата договора залога"] || legacyFields["Дата договора залога"],
-    amount: collateral?.pledgeContractAmount,
-    currency: collateral?.pledgeContractCurrency,
-    product: collateral?.pledgeProduct,
-    linkedContract: collateral?.pledgeContractMainContractId || collateral?.contractNumber || collateral?.contractId
-  });
   const pledgeRecords = [...pledgeRecordsByNumber.values()];
   const resolveLinkedContract = (item) => {
     const hasExplicitLink = item.linkedContract !== null && item.linkedContract !== undefined && String(item.linkedContract).trim() !== "";
@@ -15981,7 +16635,18 @@ function getCollateralContractTableRows(collateral) {
     return relatedContracts.length === 1 ? relatedContracts[0] : null;
   };
   const contractKey = (contract) => String(contract?.id || contract?.number || "").trim().toLocaleLowerCase("ru-RU");
-  const linkedPledges = pledgeRecords.map((item) => ({ item, contract: resolveLinkedContract(item) }));
+  const linkedPledges = pledgeRecords.flatMap((item) => {
+    const relatedApplicationDeals = applicationAssociations.filter((association) =>
+      String(association.link.number || "").trim().toLocaleLowerCase("ru-RU") === String(item.number || "").trim().toLocaleLowerCase("ru-RU")
+      && String(association.link.date || "").trim() === String(item.date || "").trim()
+    );
+    if (!relatedApplicationDeals.length) return [{ item, contract: resolveLinkedContract(item) }];
+    const uniqueContracts = new Map(relatedApplicationDeals.map((association) => [
+      String(association.contract.id || association.contract.number || "").toLocaleLowerCase("ru-RU"),
+      association.contract
+    ]));
+    return [...uniqueContracts.values()].map((contract) => ({ item, contract }));
+  });
   const rows = [];
   const renderedPledges = new Set();
   const addRow = (contract, item = null) => {
@@ -16574,7 +17239,10 @@ function addRealtyValuationAttributes(collateral, sourceRows, add) {
 }
 
 function renderCollateralHistory(collateral) {
-  return `<section class="panel table-panel"><h2>История изменений</h2><table><thead><tr><th>Дата</th><th>Пользователь</th><th>Поле</th><th>Было</th><th>Стало</th><th>Основание</th><th>Источник</th></tr></thead><tbody>${(collateral.history || []).map((item) => `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(item.user)}</td><td>${escapeHtml(item.field)}</td><td>${escapeHtml(item.oldValue)}</td><td>${escapeHtml(item.newValue)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.source)}</td></tr>`).join("")}</tbody></table></section>`;
+  return `<section class="panel table-panel"><h2>История изменений</h2><table><thead><tr><th>Дата</th><th>Пользователь / источник</th><th>Поле</th><th>Было</th><th>Стало</th><th>Основание</th></tr></thead><tbody>${(collateral.history || []).map((item) => {
+    const actor = [...new Set([item.user, item.source].map((value) => String(value || "").trim()).filter(Boolean))].join(" / ") || "-";
+    return `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(actor)}</td><td>${escapeHtml(item.field)}</td><td>${escapeHtml(item.oldValue)}</td><td>${escapeHtml(item.newValue)}</td><td>${escapeHtml(item.reason)}</td></tr>`;
+  }).join("")}</tbody></table></section>`;
 }
 
 function getNewTaskDraftContext(activeCollateral = null) {
@@ -16701,6 +17369,7 @@ function createDraftApplicationDeal(overrides = {}) {
     limit: overrides.limit || "",
     currency: overrides.currency || "RUB",
     collateralIds: uniqueItems(overrides.collateralIds || []),
+    pledgeContractLinks: normalizeApplicationPledgeContractLinks(overrides.pledgeContractLinks),
     comment: overrides.comment || ""
   };
 }
@@ -16733,6 +17402,72 @@ function getDraftApplicationDeals() {
     })];
   }
   return state.newTask.applicationDeals;
+}
+
+function getApplicationPledgeContractOptions(collaterals = []) {
+  const options = [];
+  collaterals.forEach((collateral) => {
+    if (!collateral?.id) return;
+    getCollateralPledgeContractEntries(collateral).forEach((contract) => {
+      const number = String(contract.number || "").trim();
+      const date = String(contract.date || "").trim();
+      if (!number && !date) return;
+      options.push({ number, date, collateralIds: [collateral.id] });
+    });
+  });
+  return options.map((option) => {
+    const collateralLabels = option.collateralIds.map((id) => {
+      const collateral = collaterals.find((item) => item.id === id);
+      return [getCollateralObjectIdentifier(collateral) || collateral?.id || id, getCollateralTypeLabel(collateral)].filter(Boolean).join(" · ");
+    });
+    return {
+      ...option,
+      key: getApplicationPledgeContractLinkKey(option),
+      label: [
+        `Договор залога ${option.number ? `№ ${option.number}` : "без номера"}${option.date ? ` от ${formatDocumentDateCell(option.date)}` : ""}`,
+        collateralLabels.join(", ")
+      ].filter(Boolean).join(" — ")
+    };
+  });
+}
+
+function getApplicationPledgeContractLinksForSave(value, options = []) {
+  const selected = normalizeApplicationPledgeContractLinks(value);
+  return selected.flatMap((link) => {
+    const linkNumber = String(link.number || "").trim().toLocaleLowerCase("ru-RU");
+    const linkDate = String(link.date || "").trim();
+    const selectedIds = new Set(link.collateralIds);
+    return options.filter((item) =>
+      String(item.number || "").trim().toLocaleLowerCase("ru-RU") === linkNumber
+      && String(item.date || "").trim() === linkDate
+      && item.collateralIds.some((id) => selectedIds.has(id))
+    ).flatMap((option) => {
+      const collateralIds = option.collateralIds.filter((id) => selectedIds.has(id));
+      return collateralIds.length ? [{ ...option, collateralIds }] : [];
+    });
+  });
+}
+
+function getApplicationPledgeContractSelectedKeys(value, options = []) {
+  const links = normalizeApplicationPledgeContractLinks(value);
+  return new Set(options.filter((option) => links.some((link) =>
+    String(link.number || "").trim().toLocaleLowerCase("ru-RU") === String(option.number || "").trim().toLocaleLowerCase("ru-RU")
+    && String(link.date || "").trim() === String(option.date || "").trim()
+    && option.collateralIds.some((id) => link.collateralIds.includes(id))
+  )).map((option) => option.key));
+}
+
+function normalizeApplicationDealsForSave(rows, clientName, clientInn, pledgeContractOptions) {
+  return rows
+    .map((row, index) => normalizeApplicationDealRow({
+      ...row,
+      clientName,
+      inn: clientInn,
+      limit: parseNumericInput(row.limit),
+      pledgeContractLinks: getApplicationPledgeContractLinksForSave(row.pledgeContractLinks, pledgeContractOptions),
+      collateralIds: []
+    }, index))
+    .filter((row) => row.product || row.contractNumber || row.limit);
 }
 
 function syncApplicationDealLegacyFields() {
@@ -16818,8 +17553,13 @@ function ensureCollateralContractLink(collateral, dealRow) {
 
 function findApplicationDealIndexForImportRow(row) {
   const rows = getDraftApplicationDeals();
-  const contractNumber = String(row.contract || row.contractNumber || "").trim();
-  if (!contractNumber) return rows.length === 1 ? 0 : -1;
+  const reference = String(getImportTemplateValue(row, "Номер кредитного договора / продукт заявки") || "").trim();
+  const contractNumber = APPLICATION_DEAL_PRODUCT_TYPES.includes(reference) ? "" : reference;
+  const product = APPLICATION_DEAL_PRODUCT_TYPES.includes(reference) ? reference : "";
+  if (!contractNumber) {
+    const productMatch = product ? rows.findIndex((deal) => deal.product === product && !deal.contractNumber) : -1;
+    return productMatch >= 0 ? productMatch : rows.length === 1 ? 0 : -1;
+  }
   const normalizedContractNumber = contractNumber.toLowerCase();
   return rows.findIndex((deal) => {
     const contract = getApplicationDealContract(deal);
@@ -16834,20 +17574,32 @@ function hasApplicationDealBusinessData(row) {
 function ensureApplicationDealFromImportRow(row) {
   const rows = getDraftApplicationDeals();
   const existingIndex = findApplicationDealIndexForImportRow(row);
-  if (existingIndex >= 0) return existingIndex;
-  const contractNumber = String(row.contract || row.contractNumber || "").trim();
-  if (!contractNumber && rows.length === 1) return 0;
+  const reference = String(getImportTemplateValue(row, "Номер кредитного договора / продукт заявки") || "").trim();
+  const productOnly = APPLICATION_DEAL_PRODUCT_TYPES.includes(reference);
+  const contractNumber = productOnly ? "" : reference;
   const contract = getContractByNumber(contractNumber);
   const draft = createDraftApplicationDeal({
-    clientName: state.newTask.dealClientName || contract?.clientName || row.owner || "",
-    inn: state.newTask.dealClientInn || contract?.inn || row.ownerInn || "",
+    clientName: state.newTask.dealClientName || contract?.clientName || "",
+    inn: state.newTask.dealClientInn || contract?.inn || "",
     contractId: contract?.id || "",
     contractNumber,
-    contractDate: row.contractDate || row.contractStartDate || row.startDate || contract?.startDate || "",
-    product: normalizeApplicationDealProduct(row.product || row.dealProduct, contract?.product),
+    contractDate: getImportTemplateValue(row, "Дата кредитного договора") !== "-"
+      ? normalizeNewCollateralDate(getImportTemplateValue(row, "Дата кредитного договора"))
+      : contract?.startDate || "",
+    product: normalizeApplicationDealProduct(productOnly ? reference : row.product || row.dealProduct, contract?.product),
     limit: row.limit || row.amount || contract?.limit || "",
     currency: row.currency || contract?.currency || "RUB"
   });
+  if (existingIndex >= 0) {
+    if (!hasApplicationDealBusinessData(rows[existingIndex]) && hasApplicationDealBusinessData(draft)) {
+      rows[existingIndex] = draft;
+    } else if (rows[existingIndex]) {
+      Object.entries(draft).forEach(([field, value]) => {
+        if (isBlankFieldValue(rows[existingIndex][field]) && !isBlankFieldValue(value)) rows[existingIndex][field] = value;
+      });
+    }
+    return existingIndex;
+  }
   if (rows.length === 1 && !hasApplicationDealBusinessData(rows[0])) {
     rows[0] = draft;
     return 0;
@@ -16862,6 +17614,16 @@ function linkImportedCollateralsToApplicationDeals(importedPairs = []) {
     if (!collateral?.id) return;
     const index = ensureApplicationDealFromImportRow(row);
     if (index < 0) return;
+    const pledgeNumber = String(getImportTemplateValue(row, "Номер договора залога") || "").trim();
+    const pledgeDateValue = getImportTemplateValue(row, "Дата договора залога");
+    const pledgeDate = pledgeDateValue === "-" ? "" : normalizeNewCollateralDate(pledgeDateValue);
+    if (pledgeNumber || pledgeDate) {
+      const deal = getDraftApplicationDeals()[index];
+      deal.pledgeContractLinks = normalizeApplicationPledgeContractLinks([
+        ...(deal.pledgeContractLinks || []),
+        { number: pledgeNumber, date: pledgeDate, collateralIds: [collateral.id] }
+      ]);
+    }
     linked += 1;
   });
   return linked;
@@ -16890,6 +17652,14 @@ function updateApplicationDealField(target) {
   const field = target.dataset.applicationDealField;
   const row = getDraftApplicationDeals()[index];
   if (!row || !field) return;
+  if (field === "pledgeContractLinks") {
+    const options = getApplicationPledgeContractOptions((state.newTask.selectedCollateralIds || []).map(getCollateral).filter(Boolean));
+    const optionByKey = new Map(options.map((option) => [option.key, option]));
+    const selectedKeys = [...(target.closest(".task-multi-select")?.querySelectorAll("[data-application-deal-pledge-contract]:checked") || [])]
+      .map((input) => input.value);
+    row.pledgeContractLinks = normalizeApplicationPledgeContractLinks(selectedKeys.map((key) => optionByKey.get(key)).filter(Boolean));
+    return;
+  }
   row[field] = target.value;
   if (field === "contractNumber") fillApplicationDealFromContract(row);
   if (field === "product") row.product = normalizeApplicationDealProduct(row.product);
@@ -16948,7 +17718,7 @@ function renderApplicationCollateralActions(collaterals = [], allowEdit = true) 
     <div class="inline-actions application-collateral-actions">
       <button class="btn btn-secondary" data-action="open-collateral-registry-picker" data-context="application">Выбрать объект залога</button>
       ${allowEdit ? `<button class="btn btn-secondary" data-action="edit-application-collateral" ${canEdit ? `data-collateral="${escapeHtml(selectedId)}"` : "disabled"}>Редактировать объект залога</button>` : ""}
-      <button class="btn btn-secondary" data-action="open-task-import-collaterals">Загрузить объекты из таблицы</button>
+      <button class="btn btn-secondary" data-action="open-task-import-collaterals" data-context="applicationCreate">Загрузить объекты из таблицы</button>
     </div>
   `;
 }
@@ -16965,6 +17735,31 @@ function renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCo
   });
 }
 
+function renderApplicationDealPledgeContractPicker(row, index, collaterals) {
+  const options = getApplicationPledgeContractOptions(collaterals);
+  const selectedKeys = getApplicationPledgeContractSelectedKeys(row.pledgeContractLinks, options);
+  const selectedOptions = options.filter((option) => selectedKeys.has(option.key));
+  const summary = selectedOptions.length
+    ? selectedOptions.map((option) => `№ ${option.number || "без номера"}${option.date ? ` от ${formatDocumentDateCell(option.date)}` : ""}`).join(", ")
+    : options.length ? "Выбрать договоры залога" : "Договоры залога не указаны";
+  const optionList = options.length
+    ? options.map((option) => `
+        <label>
+          <input type="checkbox" value="${escapeHtml(option.key)}" data-application-deal-pledge-contract data-application-deal-index="${index}" data-application-deal-field="pledgeContractLinks" ${selectedKeys.has(option.key) ? "checked" : ""}>
+          <span>${escapeHtml(option.label)}</span>
+        </label>
+      `).join("")
+    : `<span class="application-deal-pledge-empty">Добавьте договор залога в карточке выбранного объекта.</span>`;
+  return `
+    <div class="application-deal-pledge-picker">
+      <details class="task-multi-select">
+        <summary>${escapeHtml(summary)}</summary>
+        <div class="task-multi-select-options">${optionList}</div>
+      </details>
+    </div>
+  `;
+}
+
 function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions, productOptions) {
   return `
     <section class="application-deals-editor">
@@ -16979,7 +17774,7 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
       </div>
       <div class="application-deals-table-wrap">
         <table class="application-deals-table">
-          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th></th></tr></thead>
+          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договор залога</th><th></th></tr></thead>
           <tbody>${rows.map((row, index) => `
             <tr>
               <td><select data-application-deal-index="${index}" data-application-deal-field="product">${renderApplicationDealProductOptions(row.product)}</select></td>
@@ -16987,6 +17782,7 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
               <td><input type="date" data-application-deal-index="${index}" data-application-deal-field="contractDate" value="${escapeHtml(getDocumentDateInputValue(row.contractDate))}"></td>
               <td><input data-application-deal-index="${index}" data-application-deal-field="limit" value="${escapeHtml(row.limit ? Number(row.limit).toLocaleString("ru-RU") : "")}" inputmode="decimal"></td>
               <td><select data-application-deal-index="${index}" data-application-deal-field="currency">${renderCurrencyOptions(row.currency || "RUB")}</select></td>
+              <td>${renderApplicationDealPledgeContractPicker(row, index, selectedCollaterals)}</td>
               <td><button class="icon-btn" title="Удалить строку" data-action="remove-application-deal" data-index="${index}">x</button></td>
             </tr>
           `).join("")}</tbody>
@@ -17259,11 +18055,11 @@ function renderApplicationCreate(query, options = {}) {
         <label>Суть обращения / комментарий<textarea id="newTaskComment" data-new-task-field="applicationComment"${parameterReadonlyAttr}>${escapeHtml(state.newTask.applicationComment || "Новая заявка для рассмотрения залоговой службой.")}</textarea></label>
         ${renderApplicationPreInspectionBlock()}
         ${renderApplicationContactsBlock(collaterals)}
+        ${renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCollateral, isCard ? application : null)}
         ${renderApplicationDealsTable(dealRows, collaterals, contractOptions, productOptions)}
         ${isCard ? renderApplicationLinkedTasksTable(application) : ""}
       </div>
     </section>
-    ${renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCollateral, isCard ? application : null)}
     ${renderDocumentWidget({
       context: "applicationDraft",
       ownerId: draftTaskId,
@@ -18100,6 +18896,7 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
   const clientName = fromApplication ? (state.newTask?.dealClientName || state.newTask?.participantName || "") : "";
   const clientInn = fromApplication ? (state.newTask?.dealClientInn || state.newTask?.participantInn || "") : "";
   const subjectType = clientInn.length === 12 ? "ФЛ" : clientInn.length === 10 ? "ЮЛ" : "";
+  const clientType = collateral ? getCollateralClientType(collateral) : (clientInn.length === 10 ? "ЮЛ" : clientInn.length === 12 ? "ФЛ" : "");
   const typeLabel = collateral ? getCollateralTypeLabel(collateral) : "";
   const existingMain = collateral?.ftMainInfo || {};
   const existingLegacy = collateral?.fields || {};
@@ -18154,9 +18951,10 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
     collateralId: collateral.id
   }) : "";
   if (collateral && typeLabel === "Объекты недвижимости") {
-    for (const field of ["Кадастровый номер", "Условный номер"]) {
-      const value = String(existingLegacy[field] || "").trim();
-      if (value) typeFields[field] = value;
+    const cadastralNumber = String(existingLegacy["Кадастровый номер"] || "").trim();
+    if (cadastralNumber) typeFields["Кадастровый номер"] = cadastralNumber;
+    if (String(existingLegacy["Условный номер"] || "").trim()) {
+      typeFields["Условный номер"] = String(existingLegacy["Условный номер"]).trim();
     }
   }
   const addressAliases = {
@@ -18185,6 +18983,9 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
     collateralId: collateral?.id || "",
     typeLabel,
     subtype: collateral ? getCollateralSubtype(collateral) : "",
+    clientType,
+    clientName: collateral?.clientName || clientName,
+    clientId: collateral?.clientId || clientInn,
     name: collateral ? getCollateralName(collateral) : "",
     profileIdentifierType,
     typeFields,
@@ -18200,7 +19001,7 @@ function createNewCollateralDraft(context = "registry", collateral = null) {
       "Осмотр произведен": inspectionDone ? "Да" : "Нет",
       "Контактное лицо для осмотра": existingMain["Контактное лицо для осмотра"] || existingLegacy["Контактное лицо для осмотра"] || ""
     },
-    pledgeContracts,
+    pledgeContracts: pledgeContracts.length ? pledgeContracts : [{ number: "", date: "" }],
     addressFields,
     pledgors: existingPledgors.length
       ? existingPledgors
@@ -18233,7 +19034,7 @@ function getNewCollateralSubtypeField(typeLabel) {
 
 function getNewCollateralFieldGroups(typeLabel, draft = {}) {
   const subtypeField = typeLabel ? getNewCollateralSubtypeField(typeLabel) : "";
-  const typeFields = typeLabel ? [...(FT_COLLATERAL_V6_MODAL_TYPE_FIELDS[typeLabel] || [])] : [];
+  const typeFields = typeLabel ? [...(FT_COLLATERAL_V8_TYPE_FIELDS[typeLabel] || [])] : [];
   const subtypeAliases = new Set([subtypeField, "Подвид залога", "Подвид", "Подтип"]);
   const identityFields = new Set(["Наименование"]);
   const basisFields = new Set(["Вид документа-основания", "Дата документа-основания", "Серия документа-основания", "Номер документа-основания", "Статус ЭПТС"]);
@@ -18241,9 +19042,7 @@ function getNewCollateralFieldGroups(typeLabel, draft = {}) {
     identity: ["Вид залога", subtypeField || "Подвид залога", "Наименование", "Вид профильного идентификатора", "Профильный идентификатор объекта"],
     typeSpecific: typeFields.filter((label) => {
       if (subtypeAliases.has(label) || identityFields.has(label) || basisFields.has(label) || NEW_COLLATERAL_SHARED_FIELDS.includes(label)) return false;
-      return draft.characteristicsCardView
-        ? isCollateralV6CardTypeFieldApplicable(typeLabel, label, draft)
-        : isNewCollateralModalTypeFieldApplicable(typeLabel, label, draft);
+      return isCollateralV6CardTypeFieldApplicable(typeLabel, label, draft);
     }),
     shared: [...NEW_COLLATERAL_SHARED_FIELDS],
     address: isCollateralAddressApplicable(typeLabel) ? COLLATERAL_ADDRESS_FIELDS : [],
@@ -18254,31 +19053,32 @@ function getNewCollateralFieldGroups(typeLabel, draft = {}) {
 function getNewCollateralCharacteristicTypeFields(draft, groups = getNewCollateralFieldGroups(draft?.typeLabel, draft)) {
   if (draft?.typeLabel === "Объекты недвижимости") return groups.typeSpecific;
   const selectedProfileSource = getNewCollateralProfileSource(draft, draft?.profileIdentifierType);
-  return groups.typeSpecific.filter((label) => !(selectedProfileSource?.group === "type" && selectedProfileSource.field === label));
+  if (draft?.characteristicsCardView) return groups.typeSpecific;
+  return groups.typeSpecific.filter((label) => FT_COLLATERAL_PROFILE_FIELDS_VISIBLE_IN_CHARACTERISTICS.has(`${draft?.typeLabel}|${label}`)
+    || !(selectedProfileSource?.group === "type" && selectedProfileSource.field === label));
 }
 
 function isNewCollateralModalTypeFieldApplicable(typeLabel, label, draft = {}) {
-  return isCollateralV6CardTypeFieldApplicable(typeLabel, label, draft);
+  return isCollateralV6TypeFieldApplicable(typeLabel, label, draft);
 }
 
 function getNewCollateralProfileIdentifierOptions(typeLabel) {
   const naturalOptions = {
     "Объекты недвижимости": [
-      { label: "Кадастровый номер", group: "type", field: "Кадастровый номер" },
-      { label: "Номер карточки залога", group: "system", field: "" }
+      { label: "Кадастровый номер", group: "type", field: "Кадастровый номер" }
     ],
     "Транспортные средства, прицепы (полуприцепы)": [
       { label: "VIN", group: "type", field: "Идентификационный номер транспортного средства (VIN)" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Транспортные средства (самоходная техника)": [
-      { label: "Идентификационный номер самоходной машины", group: "type", field: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)" },
+      { label: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", group: "type", field: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Оборудование": [
       { label: "Заводской номер", group: "type", field: "Заводской номер" },
-      { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
       { label: "Серийный номер", group: "type", field: "Серийный номер" },
+      { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Воздушные суда": [
@@ -18295,8 +19095,8 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Железнодорожный подвижной состав": [
-      { label: "Номер вагона", group: "type", field: "Номер вагона" },
       { label: "Заводской номер", group: "type", field: "Заводской номер" },
+      { label: "Номер вагона", group: "type", field: "Номер вагона" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Имущественные права (требования)": [
@@ -18310,8 +19110,8 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
       { label: "Номер карточки залога", group: "system", field: "" }
     ],
     "Прочие движимые вещи (объекты)": [
-      { label: "Идентификационный признак (значение)", group: "type", field: "Идентификационный признак (значение)" },
       { label: "Инвентарный номер", group: "type", field: "Инвентарный номер" },
+      { label: "Идентификационный признак (значение)", group: "type", field: "Идентификационный признак (значение)" },
       { label: "Номер карточки залога", group: "system", field: "" }
     ]
   }[typeLabel] || [];
@@ -18320,7 +19120,8 @@ function getNewCollateralProfileIdentifierOptions(typeLabel) {
 
 function getNewCollateralProfileSource(draft, identifierType = draft?.profileIdentifierType) {
   return getNewCollateralProfileIdentifierOptions(draft?.typeLabel)
-    .find((option) => option.label === identifierType) || null;
+    .find((option) => option.label === identifierType)
+    || (identifierType === "Номер карточки залога" ? { label: identifierType, group: "system", field: "" } : null);
 }
 
 function getNewCollateralProfileRawSourceValue(draft, option) {
@@ -18340,7 +19141,8 @@ function getNewCollateralProfileSourceValue(draft, option) {
 function getNewCollateralProfileIdentifierType(draft) {
   const options = getNewCollateralProfileIdentifierOptions(draft?.typeLabel);
   if (options.some((option) => option.label === draft?.profileIdentifierType)) return draft.profileIdentifierType;
-  if (!draft?.collateralId && !draft?.profileIdentifier) return "";
+  if (draft?.profileIdentifierType === "Номер карточки залога") return draft.profileIdentifierType;
+  if (!draft?.collateralId && !draft?.profileIdentifier) return options.length === 1 ? options[0].label : "";
   const saved = String(draft?.profileIdentifier || "").trim();
   const naturalOptions = options.filter((item) => item.group !== "system");
   for (const option of naturalOptions) {
@@ -18357,7 +19159,7 @@ function getNewCollateralProfileIdentifierType(draft) {
 function getNewCollateralProfileIdentifier(draft) {
   const identifierType = getNewCollateralProfileIdentifierType(draft);
   const option = getNewCollateralProfileSource(draft, identifierType);
-  if (option?.group === "system") return draft?.suzNumber || "";
+  if (option?.group === "system") return draft?.collateralId ? (draft?.profileIdentifier || draft?.suzNumber || "") : "";
   return getNewCollateralProfileSourceValue(draft, option);
 }
 
@@ -18376,20 +19178,20 @@ function getNewCollateralProfileFieldLabels(typeLabel) {
 
 function getNewCollateralBasisDocumentTypes(typeLabel) {
   const byType = {
-    "Объекты недвижимости": ["Выписка ЕГРН", "Правоустанавливающий документ, указанный в ЕГРН", "Акт приема-передачи", "Документ по обременению"],
-    "Транспортные средства, прицепы (полуприцепы)": ["ПТС", "ЭПТС", "СТС", "Договор приобретения", "Иной правоустанавливающий документ", "Акт приема-передачи"],
-    "Транспортные средства (самоходная техника)": ["ПСМ", "ЭПСМ", "Свидетельство о регистрации самоходной машины", "Договор приобретения", "Иной правоустанавливающий документ", "Акт приема-передачи"],
-    "Оборудование": ["Договор поставки", "Договор купли-продажи", "Контракт", "Иной правоустанавливающий документ", "Акт приема-передачи", "Накладная", "ОС-1", "Инвойс", "Таможенный документ", "Выписка по счету учета имущества", "Справка о балансовой стоимости"],
-    "Воздушные суда": ["Свидетельство о регистрации воздушного судна", "Выписка из реестра воздушных судов", "Документ-основание права собственности", "Акт приема-передачи", "Сертификат летной годности", "Формуляр", "Документ места базирования"],
-    "Плавучие сооружения": ["Свидетельство о праве собственности", "Судовой билет", "Выписка из профильного реестра", "Документ-основание права собственности", "Акт приема-передачи"],
-    "Железнодорожный подвижной состав": ["Договор из цепочки перехода права", "Акт приема-передачи", "Технический паспорт вагона", "Справка / выгрузка из ЛК РЖД", "Иная справка профильного учета"],
-    "Животные": ["Договор купли-продажи", "Контракт", "Спецификация", "Акт приема-передачи", "Товарная накладная", "Инвойс", "Реестр поголовья", "Выписка из книги записи залогов", "Учетная ведомость"],
-    "Имущественные права (требования)": ["Договор, из которого возникает право требования", "Реестр требований / дебиторской задолженности", "Документ об объеме права", "Документ, подтверждающий действительность права"],
-    "Товары в обороте": ["Складская справка", "Реестр остатков", "Договор поставки", "Документ приобретения", "УПД", "Накладная", "Платежный документ"],
-    "Прочие движимые вещи (однородные группы)": ["Перечень имущества", "Договор приобретения", "Акт приема-передачи", "Накладная", "Учетный документ", "Реестр объектов"],
-    "Прочие движимые вещи (объекты)": ["Документ приобретения", "Иной правоустанавливающий документ", "Акт приема-передачи", "Накладная", "Идентификационный документ объекта"]
+    "Объекты недвижимости": ["Выписка ЕГРН со сведениями о документе-основании права", "Правоустанавливающий документ, указанный в ЕГРН", "Акт приема-передачи и документы по обременениям"],
+    "Транспортные средства, прицепы (полуприцепы)": ["ПТС", "ЭПТС", "СТС", "Договор приобретения или иной правоустанавливающий документ", "Акт приема-передачи"],
+    "Транспортные средства (самоходная техника)": ["ПСМ/ЭПСМ", "Свидетельство о регистрации самоходной машины", "Договор приобретения или иной правоустанавливающий документ", "Акт приема-передачи"],
+    "Оборудование": ["Договор поставки/купли-продажи, контракт или иной правоустанавливающий документ", "Акт приема-передачи/накладная/ОС-1", "Инвойс и таможенные документы при наличии"],
+    "Воздушные суда": ["Свидетельство о регистрации воздушного судна", "Выписка из реестра воздушных судов", "Документ-основание права собственности", "Акт приема-передачи"],
+    "Плавучие сооружения": ["Свидетельство о праве собственности/судовой билет", "Выписка из порта регистрации, ГИМС или иного профильного реестра", "Документ-основание права собственности", "Акт приема-передачи"],
+    "Железнодорожный подвижной состав": ["Цепочка договоров от последнего зарегистрированного собственника с актами приема-передачи", "Технический паспорт вагона", "Справка/выгрузка из ЛК РЖД или иная справка профильного учета"],
+    "Животные": ["Договоры купли-продажи/контракты со спецификациями", "Акты приема-передачи", "Товарные накладные/инвойсы и реестр поголовья"],
+    "Имущественные права (требования)": ["Договор, из которого возникает право требования", "Реестр требований/дебиторской задолженности", "Документы, подтверждающие объем и действительность права"],
+    "Товары в обороте": ["Складская справка/реестр остатков", "Документы приобретения товаров: договоры поставки, УПД/накладные, платежные документы при необходимости"],
+    "Прочие движимые вещи (однородные группы)": ["Перечень имущества", "Документы приобретения", "Акты приема-передачи/накладные", "Учетные документы"],
+    "Прочие движимые вещи (объекты)": ["Документ приобретения или иной правоустанавливающий документ", "Акт приема-передачи/накладная", "Идентификационные документы по объекту при наличии"]
   };
-  return uniqueItems([...(byType[typeLabel] || []), "Иной документ-основание"]);
+  return byType[typeLabel] || [];
 }
 
 function isNewCollateralResidentialDraft(draft) {
@@ -18410,6 +19212,13 @@ function refreshNewCollateralProfileIdentifier(draft) {
 function getNewCollateralValidationFieldError(draft, group, field, index) {
   const error = draft?.validationError;
   return error && error.group === group && error.field === field && error.index === index ? error.message : "";
+}
+
+function isNewCollateralRequiredTypeField(typeLabel, field, draft = {}) {
+  if (typeLabel === "Оборудование") {
+    return ["Заводской номер", "Серийный номер", "Марка", "Модель", "Инвентарный номер", "Год выпуска", "Группа"].includes(field);
+  }
+  return false;
 }
 
 function normalizeNewCollateralDate(value) {
@@ -18443,12 +19252,12 @@ function getNewCollateralDraftValidationError(draft) {
   if (!name) return fail("identity", "Наименование", "Заполните наименование объекта.");
   if (name.length > 50) return fail("identity", "Наименование", "Не более 50 символов.");
 
+  const additionalInfo = String(draft.sharedFields?.["Дополнительная информация"] || "").trim();
+  if (!additionalInfo) return fail("main", "Дополнительная информация", "Заполните дополнительную информацию.");
+
   const identifierType = getNewCollateralProfileIdentifierType(draft);
   const identifierOption = getNewCollateralProfileSource(draft, identifierType);
   if (!identifierOption) return fail("identity", "Вид профильного идентификатора", "Выберите вид профильного идентификатора.");
-  if (identifierOption.group !== "system" && !getNewCollateralProfileIdentifier(draft)) {
-    return fail("identity", "Профильный идентификатор объекта", "Введите значение выбранного идентификатора.");
-  }
   if (identifierOption.includesDate && !String(draft.typeFields?.["Дата заключения договора"] || "").trim()) {
     return fail("type", "Дата заключения договора", "Укажите дату договора: она входит в профильный идентификатор.");
   }
@@ -18456,14 +19265,27 @@ function getNewCollateralDraftValidationError(draft) {
     return fail("identity", "Профильный идентификатор объекта", "Не более 50 символов.");
   }
 
+  const profileSource = getNewCollateralProfileSource(draft, identifierType);
+  const profileValue = getNewCollateralProfileIdentifier(draft);
+  if (profileSource?.group !== "system" && !profileValue) {
+    return fail("identity", "Профильный идентификатор объекта", "Укажите выбранный профильный идентификатор или выберите номер карточки залога.");
+  }
+  if (typeLabel === "Объекты недвижимости" && !profileValue) {
+    return fail("identity", "Кадастровый номер", "Укажите кадастровый номер; для недвижимости он используется как профильный идентификатор.");
+  }
+  if (profileValue && profileSource?.field === "Кадастровый номер"
+      && !/^\d{2}:\d{2}:\d{6,7}:\d+$/.test(profileValue)) {
+    return fail("identity", "Профильный идентификатор объекта", "Введите кадастровый номер в формате 00:00:0000000:0000.");
+  }
+  if (profileValue && /\bVIN\b/i.test(profileSource?.label || "")
+      && !/^[A-HJ-NPR-Z0-9]{17}$/.test(profileValue.toUpperCase())) {
+    return fail("identity", "Профильный идентификатор объекта", "VIN должен содержать 17 заглавных латинских букв или цифр; I, O и Q не допускаются.");
+  }
+
   const shared = draft.sharedFields || {};
   const measuredValue = String(shared["Значение, в указанных ед.изм."] || "").trim();
   if (measuredValue && !/^\d{1,6},\d{3}$/.test(measuredValue)) {
     return fail("main", "Значение, в указанных ед.изм.", "Введите до 6 цифр, запятую и 3 цифры после запятой.");
-  }
-  if (!isAffirmativeValue(shared["Осмотр произведен"])
-      && !String(shared["Контактное лицо для осмотра"] || "").trim()) {
-    return { ...fail("main", "Осмотр произведен", "Отметьте, что осмотр произведен, или укажите контактное лицо."), rule: "inspection-either" };
   }
   for (const field of ["Идентификатор в АБС"]) {
     if (String(shared[field] || "").trim().length > 50) {
@@ -18472,6 +19294,17 @@ function getNewCollateralDraftValidationError(draft) {
   }
   if (String(shared["Дополнительная информация"] || "").length > 255) {
     return fail("main", "Дополнительная информация", "Не более 255 символов.");
+  }
+  if (!Array.isArray(draft.pledgeContracts) || draft.pledgeContracts.length < 1) {
+    return fail("pledgeContract", "number", "Добавьте хотя бы одну строку договора залога.", 0);
+  }
+
+  if (typeLabel === "Оборудование") {
+    for (const field of ["Заводской номер", "Серийный номер", "Марка", "Модель", "Инвентарный номер", "Год выпуска", "Группа"]) {
+      if (!String(draft.typeFields?.[field] || "").trim()) {
+        return fail("type", field, "Заполните обязательное поле для оборудования.");
+      }
+    }
   }
   for (const [field, value] of Object.entries(draft.typeFields || {})) {
     const maxLength = getNewCollateralFieldMaxLength("type", field, draft);
@@ -18489,6 +19322,38 @@ function getNewCollateralDraftValidationError(draft) {
     const date = new Date(Date.UTC(year, month - 1, day));
     if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
       return fail("type", field, "Укажите существующую календарную дату.");
+    }
+  }
+  for (const field of ["Год выпуска", "Год постройки"]) {
+    const value = String(draft.typeFields?.[field] || "").trim();
+    if (value && !/^\d{4}$/.test(value)) return fail("type", field, "Укажите год четырьмя цифрами.");
+  }
+  const measuredFields = new Set([
+    "Кадастровая стоимость", "Площадь застройки, кв. м", "Длина сооружения, м",
+    "Мощность двигателя, л.с.", "Объем двигателя, куб. см", "Мощность двигателя, кВт",
+    "Пробег", "Первоначальная стоимость", "Остаточная стоимость",
+    "Размер доли в праве общей долевой собственности, числитель",
+    "Размер доли в праве общей долевой собственности, знаменатель"
+  ]);
+  for (const [field, value] of Object.entries(draft.typeFields || {})) {
+    if (!measuredFields.has(field) || !String(value || "").trim()) continue;
+    if (!/^\d+(?:[,.]\d+)?$/.test(String(value).trim())) return fail("type", field, "Введите числовое значение без пробелов.");
+    if (field.includes("размера доли") || field.endsWith("числитель") || field.endsWith("знаменатель")) {
+      if (!/^\d{1,5}$/.test(String(value).trim()) || Number(value) <= 0) return fail("type", field, "Введите положительное целое число не более чем из 5 цифр.");
+    }
+  }
+  for (const [field, value] of Object.entries(draft.typeFields || {})) {
+    if (String(value || "").trim().length > 255 && ["Адрес по ЕГРН", "Идентификационный номер объекта недвижимости в стране регистрации"].includes(field)) {
+      return fail("type", field, "Не более 255 символов.");
+    }
+    if (field === "Кадастровый номер" && value && !/^\d{2}:\d{2}:\d{6,7}:\d+$/.test(String(value).trim())) {
+      return fail("type", field, "Введите кадастровый номер в формате 00:00:0000000:0000.");
+    }
+    if (field === "Кадастровый номер в пределах, которого находится объект" && value && !/^\d{2}:\d{2}:\d{6,7}:\d+$/.test(String(value).trim())) {
+      return fail("type", field, "Введите кадастровый номер в формате 00:00:0000000:0000.");
+    }
+    if (field === "VIN" || field === "Идентификационный номер транспортного средства (VIN)") {
+      if (value && !/^[A-HJ-NPR-Z0-9]{17}$/.test(String(value).trim().toUpperCase())) return fail("type", field, "VIN должен содержать 17 заглавных латинских букв или цифр; I, O и Q не допускаются.");
     }
   }
   const basisDate = String(draft.basisDocument?.date || "").trim();
@@ -18519,6 +19384,9 @@ function getNewCollateralDraftValidationError(draft) {
     if (!inn) return fail("pledgor", "idn", "Заполните ИНН.", index);
     if (!row.subjectType) return fail("pledgor", "subjectType", "Выберите тип субъекта.", index);
     if (!row.role) return fail("pledgor", "role", "Выберите роль субъекта.", index);
+    if (row.share && !/^\d{1,2}\/\d{1,2}$/.test(String(row.share).trim())) {
+      return fail("pledgor", "share", "Доля должна содержать числитель и знаменатель в формате 1/2.", index);
+    }
     const expectedSubjectType = inn.length === 12 ? "ФЛ" : inn.length === 10 ? "ЮЛ" : "";
     if (expectedSubjectType && row.subjectType !== expectedSubjectType && row.subjectType !== "Кредитная организация") {
       return fail("pledgor", "subjectType", `Для ИНН из ${inn.length} цифр укажите тип субъекта «${expectedSubjectType}».`, index);
@@ -18622,8 +19490,9 @@ function renderNewCollateralField(label, group, value, draft, options = [], { re
     ? getNewCollateralProfileSource(draft, getNewCollateralProfileIdentifierType(draft))
     : null;
   const required = (group === "identity" && ["Наименование", "Вид профильного идентификатора"].includes(label))
-    || (group === "identity" && label === getNewCollateralSubtypeField(draft.typeLabel))
     || (group === "identity" && label === "Профильный идентификатор объекта" && profileSource?.group !== "system")
+    || (group === "identity" && label === getNewCollateralSubtypeField(draft.typeLabel))
+    || (group === "type" && isNewCollateralRequiredTypeField(draft.typeLabel, label, draft))
     || (group === "type" && label === "Дата заключения договора" && Boolean(getNewCollateralProfileSource(draft, getNewCollateralProfileIdentifierType(draft))?.includesDate))
     || (group === "address" && label === "Адрес / место нахождения");
   return renderCollateralFieldShell(label, control, { readOnly, isWide, required, error, fieldClass });
@@ -18729,16 +19598,17 @@ function renderNewCollateralModal() {
   const subtypeField = getNewCollateralSubtypeField(draft.typeLabel);
   const subtypeOptions = subtypeField ? getCollateralEditableOptions({ type: getCollateralTypeCodeFromLabel(draft.typeLabel), fields: draft.typeFields }, "type", subtypeField) : [];
   const characteristicCommonFields = groups.shared.filter((label) => COLLATERAL_CHARACTERISTIC_COMMON_FIELDS.includes(label));
-  const inspectionFields = groups.shared.filter((label) => ["Осмотр произведен", "Контактное лицо для осмотра"].includes(label));
   const documentCollateral = draft.typeLabel ? {
     id: "NEW-COLLATERAL-DRAFT",
     type: getCollateralTypeCodeFromLabel(draft.typeLabel),
-    clientType: draft.pledgors?.[0]?.subjectType || "",
+    clientType: draft.clientType || "",
     fields: draft.typeFields,
     pledgors: draft.pledgors
   } : null;
-  const identifierOptions = getNewCollateralProfileIdentifierOptions(draft.typeLabel)
-    .map((option) => option.label);
+  const identifierOptions = getNewCollateralProfileIdentifierOptions(draft.typeLabel).map((option) => option.label);
+  if (draft.profileIdentifierType === "Номер карточки залога" && !identifierOptions.includes(draft.profileIdentifierType)) {
+    identifierOptions.push(draft.profileIdentifierType);
+  }
   const hint = isRegistryContext
     ? "Заполните известные сведения. После сохранения объект появится в реестре без привязки к заявке."
     : isEditing
@@ -18773,7 +19643,7 @@ function renderNewCollateralModal() {
                   return renderNewCollateralField(label, "type", draft.typeFields[label] || "", draft, [], { readOnly: derived, derived });
                 }).join("")}</div>`
               : `<p class="new-collateral-empty-note">Выберите вид залога, чтобы показать соответствующие поля.</p>`}
-            <div class="new-collateral-fields collateral-characteristics-common-fields">${characteristicCommonFields.map((label, index) => renderNewCollateralField(label, "main", draft.sharedFields[label] ?? "", draft, [], { fieldClass: ["new-collateral-main-field-unit", "new-collateral-main-field-unit-parameters", "new-collateral-main-field-additional-info"][index], inputTypeOverride: label === "Дополнительная информация" ? "text" : "" })).join("")}</div>
+            <div class="new-collateral-fields collateral-characteristics-common-fields">${characteristicCommonFields.map((label, index) => renderNewCollateralField(label, "main", draft.sharedFields[label] ?? "", draft, [], { fieldClass: ["new-collateral-main-field-unit", "new-collateral-main-field-unit-parameters", "new-collateral-main-field-additional-info"][index] })).join("")}</div>
           </div>
         </details>
         <details class="new-collateral-section new-collateral-disclosure new-collateral-basis-details" data-new-collateral-basis-details ${draft.basisDocumentExpanded ? "open" : ""}>
@@ -18792,22 +19662,17 @@ function renderNewCollateralModal() {
               : `<p class="new-collateral-empty-note">Выберите вид залога, чтобы показать подходящие документы-основания.</p>`}
           </div>
         </details>
-        <fieldset class="new-collateral-section new-collateral-inspection-section">
-          <legend>4. Проведенный осмотр *</legend>
-          <p class="hint">Отметьте проведение осмотра или укажите контактное лицо.</p>
-            <div class="new-collateral-fields new-collateral-inspection-fields">${inspectionFields.map((label) => renderNewCollateralField(label, "main", draft.sharedFields[label] ?? "", draft, [], { fieldClass: label === "Осмотр произведен" ? "new-collateral-main-field-inspection" : "new-collateral-main-field-inspection-contact" })).join("")}</div>
-        </fieldset>
         <fieldset class="new-collateral-section">
-          <legend>5. Адрес местонахождения</legend>
+          <legend>4. Адрес местонахождения</legend>
           ${renderNewCollateralAddress(draft, groups)}
         </fieldset>
         <fieldset class="new-collateral-section">
-          <legend>6. Залогодатели</legend>
+          <legend>5. Залогодатели</legend>
           <p class="new-collateral-optional-note">Укажите сведения о залогодателе.</p>
           ${renderNewCollateralPledgors(draft)}
         </fieldset>
         <fieldset class="new-collateral-section">
-          <legend>7. Договоры залога</legend>
+          <legend>6. Договоры залога</legend>
           <div class="new-collateral-pledge-contracts-wrap">
             <div class="new-collateral-table-scroll">
               <table class="new-collateral-pledge-contracts-table">
@@ -18844,6 +19709,13 @@ function updateNewCollateralDraftField(fieldEl) {
   if (!group || !label) return;
   clearNewCollateralDraftValidationError(draft, fieldEl, group, label);
   let value = fieldEl.type === "checkbox" ? (fieldEl.checked ? "Да" : "Нет") : fieldEl.value;
+  if (group === "identity" && label === "Профильный идентификатор объекта") {
+    const source = getNewCollateralProfileSource(draft, getNewCollateralProfileIdentifierType(draft));
+    if (source?.label === "VIN") {
+      value = value.toLocaleUpperCase("en-US");
+      fieldEl.value = value;
+    }
+  }
   if (group === "main" && label === "Значение, в указанных ед.изм.") {
     value = normalizeCollateralMeasuredInput(value);
     fieldEl.value = value;
@@ -18895,27 +19767,6 @@ function updateNewCollateralDraftField(fieldEl) {
 function clearNewCollateralDraftValidationError(draft, fieldEl, group, field, index) {
   const error = draft.validationError;
   if (!error || error.group !== group) return;
-  if (error.rule === "inspection-either" && group === "main"
-      && ["Осмотр произведен", "Контактное лицо для осмотра"].includes(field)) {
-    const inspectionDone = field === "Осмотр произведен"
-      ? Boolean(fieldEl.checked)
-      : isAffirmativeValue(draft.sharedFields["Осмотр произведен"]);
-    const contact = String(field === "Контактное лицо для осмотра"
-      ? fieldEl.value
-      : draft.sharedFields["Контактное лицо для осмотра"] || "").trim();
-    if (!inspectionDone && !contact) return;
-    draft.validationError = null;
-    const inspectionField = field === "Осмотр произведен"
-      ? fieldEl
-      : typeof document !== "undefined"
-        ? document.querySelector('[data-new-collateral-field="Осмотр произведен"][data-new-collateral-group="main"]')
-        : null;
-    inspectionField?.removeAttribute("aria-invalid");
-    const inspectionContainer = inspectionField?.closest(".new-collateral-field, .new-collateral-private-home, td");
-    inspectionContainer?.classList.remove("has-error");
-    inspectionContainer?.querySelector(".new-collateral-validation-error")?.remove();
-    return;
-  }
   const matchesField = group === "address"
     || (error.field === field && (error.index === undefined || error.index === index));
   if (!matchesField) return;
@@ -18986,6 +19837,7 @@ function renderImportCollateralsModal() {
   const modal = state.modal || {};
   const rows = getImportPreviewRows();
   const isTaskContext = state.modal.context === "taskCreate";
+  const isApplicationContext = state.modal.context === "applicationCreate";
   const subtypeField = modal.collateralType ? getNewCollateralSubtypeField(modal.collateralType) : "";
   const subtypeOptions = subtypeField
     ? getCollateralEditableOptions({ type: getCollateralTypeCodeFromLabel(modal.collateralType) }, "type", subtypeField)
@@ -18996,7 +19848,7 @@ function renderImportCollateralsModal() {
     <div class="modal-backdrop">
       <section class="modal wide">
         <div class="modal-head"><h2>Загрузка объектов залога из таблицы</h2><button class="btn btn-secondary" data-action="close-modal">Закрыть</button></div>
-        <p class="hint">${isTaskContext ? "Корректные строки будут добавлены в пул объектов создаваемой задачи." : "Имитация загрузки Excel: строки проверены, часть объектов готова к созданию или обновлению."}</p>
+        <p class="hint">${isApplicationContext ? "Корректные строки будут добавлены в заявку и распределены по договорам из файла." : isTaskContext ? "Корректные строки будут добавлены в пул объектов создаваемой задачи." : "Корректные новые объекты будут созданы; существующие карточки в реестре не изменяются."}</p>
         <div class="form-grid">
           <label>Вид залога *<select data-import-collateral-type><option value="">Выберите вид залога</option>${FT_COLLATERAL_TYPE_OPTIONS.map((type) => `<option value="${escapeHtml(type)}" ${modal.collateralType === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}</select></label>
           <label>Подвид залога *<select data-import-collateral-subtype ${!modal.collateralType ? "disabled" : ""}><option value="">Выберите подвид</option>${subtypeOptions.map((subtype) => `<option value="${escapeHtml(subtype)}" ${modal.collateralSubtype === subtype ? "selected" : ""}>${escapeHtml(subtype)}</option>`).join("")}</select></label>
@@ -19004,10 +19856,15 @@ function renderImportCollateralsModal() {
         <label class="import-file-drop">Excel-файл<input type="file" accept=".xlsx,.xls" data-import-file ${!modal.collateralType || !modal.collateralSubtype ? "disabled" : ""}></label>
         ${rows.length ? `<table class="import-preview-table">
             <thead><tr><th>Строка</th>${header}<th>Результат проверки</th></tr></thead>
-            <tbody>${rows.map((row) => `<tr><td>${row.row}</td>${columns.map((column) => `<td>${escapeHtml(getImportTemplateValue(row, column))}</td>`).join("")}<td>${badge(row.status, row.status === "Ошибка" ? "danger" : row.status === "Создать" ? "ok" : "warn")}</td></tr>`).join("")}</tbody>
+            <tbody>${rows.map((row) => {
+              const canConfirmUpdate = (isTaskContext || isApplicationContext)
+                && ["Найдено в системе", "Обновить после подтверждения"].includes(row.status);
+              const resultTone = row.status === "Ошибка" ? "danger" : row.status === "Создать" ? "ok" : "warn";
+              return `<tr><td>${row.row}</td>${columns.map((column) => `<td>${escapeHtml(getImportTemplateValue(row, column))}</td>`).join("")}<td class="import-preview-result-cell">${badge(row.status, resultTone)}<small>${escapeHtml(row.message || "")}</small>${(row.warnings || []).map((warning) => `<small class="import-preview-warning">${escapeHtml(warning)}</small>`).join("")}${canConfirmUpdate ? `<label class="import-update-confirm"><input type="checkbox" data-import-update-confirm="${escapeHtml(row.row)}" ${row.updateConfirmed ? "checked" : ""}> Подтвердить обновление существующей карточки</label>` : ""}</td></tr>`;
+            }).join("")}</tbody>
           </table>`
         : `<div class="empty-state import-empty-state"><h2>${modal.fileLoaded ? "Совпадающие строки не найдены" : "Файл не загружен"}</h2><p>${modal.fileLoaded ? "В загруженной таблице нет строк выбранного вида и подвида залога." : "Сначала выберите вид и подвид залога, затем выберите Excel-файл."}</p></div>`}
-        <div class="modal-actions"><button class="btn btn-primary" data-action="confirm-import" ${rows.length ? "" : "disabled"}>Загрузить корректные строки</button></div>
+        <div class="modal-actions"><button class="btn btn-primary" data-action="confirm-import" ${rows.some((row) => row.status === "Создать" || row.updateConfirmed) ? "" : "disabled"}>Загрузить корректные строки</button></div>
       </section>
     </div>
   `;
@@ -19460,6 +20317,13 @@ function createTask(payload) {
 }
 
 document.addEventListener("click", (event) => {
+  if (state.registryColumnSettingsOpen && !event.target.closest("[data-registry-column-settings]")) {
+    const key = state.registryColumnSettingsOpen;
+    state.registryColumnSettingsOpen = "";
+    const menu = document.getElementById(`registry-columns-${key.split(":").slice(1).join("-")}`);
+    menu?.setAttribute("hidden", "");
+    document.querySelectorAll(".registry-column-settings-toggle[aria-expanded='true']").forEach((button) => button.setAttribute("aria-expanded", "false"));
+  }
   if (!event.target.closest("[data-registry-multi-details]")) {
     document.querySelectorAll("[data-registry-multi-details][open]").forEach((details) => {
       const key = `${details.dataset.scope || ""}:${details.dataset.filterName || ""}`;
@@ -19483,6 +20347,16 @@ document.addEventListener("click", (event) => {
   if (!actionEl) return;
   const action = actionEl.dataset.action;
   if (action === "change-role") return;
+  if (action === "toggle-registry-column-settings") {
+    const key = getRegistryColumnPreferenceKey(actionEl.dataset.scope || "", actionEl.dataset.partition || "");
+    state.registryColumnSettingsOpen = state.registryColumnSettingsOpen === key ? "" : key;
+  }
+  if (action === "reset-registry-column-settings") {
+    const scope = actionEl.dataset.scope || "";
+    const partition = actionEl.dataset.partition || "";
+    saveRegistryColumnPreferences(scope, partition, { order: getRegistryColumnsForSettings(scope, partition).map((column) => column.key), hidden: [] });
+    state.registryColumnSettingsOpen = getRegistryColumnPreferenceKey(scope, partition);
+  }
   if (action === "open-delete-application") openApplicationDeleteConfirmation(actionEl.dataset.application || "");
   if (action === "confirm-delete-application") confirmApplicationDelete(actionEl.dataset.application || "");
   if (action === "toggle-registry-filters") {
@@ -19671,8 +20545,8 @@ document.addEventListener("click", (event) => {
     document.querySelectorAll(`[data-monitoring-field][data-collateral="${actionEl.dataset.collateral}"]`).forEach(updateCollateralMonitoringField);
     addToast("Настройки мониторинга сохранены", actionEl.dataset.collateral, "ok");
   }
-  if (action === "open-import-collaterals") state.modal = { type: "import", context: "registry", collateralType: "", collateralSubtype: "", fileLoaded: false };
-  if (action === "open-task-import-collaterals") state.modal = { type: "import", context: "taskCreate", collateralType: "", collateralSubtype: "", fileLoaded: false };
+  if (action === "open-import-collaterals") state.modal = { type: "import", context: "registry", collateralType: "", collateralSubtype: "", fileLoaded: false, updateConfirmedRows: [] };
+  if (action === "open-task-import-collaterals") state.modal = { type: "import", context: actionEl.dataset.context || "taskCreate", collateralType: "", collateralSubtype: "", fileLoaded: false, updateConfirmedRows: [] };
   if (action === "confirm-import") submitImportCollaterals();
   if (action === "run-integration-sync") addToast("Интеграция запущена", actionEl.dataset.integration || "Источник", "ok");
   if (action === "bulk-revaluation-action") handleListRevaluationAction(actionEl);
@@ -19683,6 +20557,60 @@ document.addEventListener("click", (event) => {
   if (action === "create-task-submit") submitNewTask();
   render();
 });
+
+document.addEventListener("dragstart", (event) => {
+  const header = event.target.closest?.("th[data-registry-column-key]");
+  const table = header?.closest("[data-registry-column-table]");
+  if (!header || !table) return;
+  state.registryColumnDrag = {
+    key: header.dataset.registryColumnKey,
+    scope: table.dataset.registryScope || "",
+    partition: table.dataset.registryPartition || ""
+  };
+  const scroll = table.closest(".registry-table-scroll");
+  state.pendingRegistryColumnScroll = scroll ? {
+    scope: state.registryColumnDrag.scope,
+    partition: state.registryColumnDrag.partition,
+    scrollLeft: scroll.scrollLeft
+  } : null;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", header.dataset.registryColumnKey);
+  }
+}, true);
+
+document.addEventListener("dragover", (event) => {
+  const header = event.target.closest?.("th[data-registry-column-key]");
+  if (!header || !state.registryColumnDrag) return;
+  const table = header.closest("[data-registry-column-table]");
+  if (!table || table.dataset.registryScope !== state.registryColumnDrag.scope
+    || (table.dataset.registryPartition || "") !== state.registryColumnDrag.partition) return;
+  event.preventDefault();
+  table.querySelectorAll("th.registry-column-drop-target").forEach((item) => item.classList.remove("registry-column-drop-target"));
+  header.classList.add("registry-column-drop-target");
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+}, true);
+
+document.addEventListener("drop", (event) => {
+  const header = event.target.closest?.("th[data-registry-column-key]");
+  const table = header?.closest("[data-registry-column-table]");
+  const dragged = state.registryColumnDrag;
+  if (!header || !table || !dragged || table.dataset.registryScope !== dragged.scope
+    || (table.dataset.registryPartition || "") !== dragged.partition) return;
+  event.preventDefault();
+  const sourceKey = event.dataTransfer?.getData("text/plain") || dragged.key;
+  const columns = getRegistryColumnsForSettings(dragged.scope, dragged.partition);
+  const changed = reorderRegistryColumns(columns, dragged.scope, dragged.partition, sourceKey, header.dataset.registryColumnKey);
+  table.querySelectorAll("th.registry-column-drop-target").forEach((item) => item.classList.remove("registry-column-drop-target"));
+  state.registryColumnDrag = null;
+  if (changed) render();
+}, true);
+
+document.addEventListener("dragend", () => {
+  document.querySelectorAll("th.registry-column-drop-target").forEach((item) => item.classList.remove("registry-column-drop-target"));
+  state.registryColumnDrag = null;
+  state.pendingRegistryColumnScroll = null;
+}, true);
 
 document.addEventListener("scroll", (event) => {
   const taskContent = event.target?.closest?.("[data-task-collateral-drawer-content]");
@@ -19780,6 +20708,7 @@ document.addEventListener("input", (event) => {
   if (filter) {
     if (filter.matches("[data-registry-multi-filter]")) return;
     updateRegistryFilter(filter);
+    if (isMenuRegistryFilter(filter)) return;
     if (isTextRegistryFilter(filter)) scheduleRegistryFilterRender(filter);
     else render();
     return;
@@ -19839,13 +20768,28 @@ document.addEventListener("toggle", (event) => {
 }, true);
 
 document.addEventListener("change", (event) => {
+  if (event.target.matches("[data-import-update-confirm]") && state.modal?.type === "import") {
+    const rowId = String(event.target.dataset.importUpdateConfirm || "");
+    const confirmedRows = new Set(state.modal.updateConfirmedRows || []);
+    if (event.target.checked) confirmedRows.add(rowId);
+    else confirmedRows.delete(rowId);
+    state.modal.updateConfirmedRows = [...confirmedRows];
+    render();
+    return;
+  }
+  const registryColumnVisibility = event.target.closest?.("[data-registry-column-visibility]");
+  if (registryColumnVisibility) {
+    updateRegistryColumnVisibility(registryColumnVisibility);
+    render();
+    return;
+  }
   if (event.target.matches("[data-import-collateral-type]")) {
-    state.modal = { ...state.modal, collateralType: event.target.value, collateralSubtype: "", fileLoaded: false };
+    state.modal = { ...state.modal, collateralType: event.target.value, collateralSubtype: "", fileLoaded: false, updateConfirmedRows: [] };
     render();
     return;
   }
   if (event.target.matches("[data-import-collateral-subtype]")) {
-    state.modal = { ...state.modal, collateralSubtype: event.target.value, fileLoaded: false };
+    state.modal = { ...state.modal, collateralSubtype: event.target.value, fileLoaded: false, updateConfirmedRows: [] };
     render();
     return;
   }
@@ -19888,7 +20832,8 @@ document.addEventListener("change", (event) => {
   const newCollateralField = event.target.closest("[data-new-collateral-field]");
   if (newCollateralField) {
     updateNewCollateralDraftField(newCollateralField);
-    if (newCollateralField.dataset.newCollateralGroup === "identity" && newCollateralField.dataset.newCollateralField === "Подвид залога") {
+    if ((newCollateralField.dataset.newCollateralGroup === "identity" && newCollateralField.dataset.newCollateralField === "Подвид залога")
+        || (newCollateralField.dataset.newCollateralGroup === "type" && ["Категория транспорта", "Право залогодателя", "Признак части объекта недвижимости", "Размер доли в праве общей долевой собственности, числитель", "Размер доли в праве общей долевой собственности, знаменатель"].includes(newCollateralField.dataset.newCollateralField))) {
       render();
     }
     return;
@@ -20012,6 +20957,7 @@ document.addEventListener("change", (event) => {
   const taskMultiSelect = event.target.closest(".task-multi-select input[type='checkbox']");
   if (taskMultiSelect) {
     updateTaskMultiSelectSummary(taskMultiSelect.closest(".task-multi-select"));
+    if (taskMultiSelect.matches("[data-application-deal-pledge-contract]")) updateApplicationDealField(taskMultiSelect);
     return;
   }
   const applicationDealField = event.target.closest("[data-application-deal-field]");
@@ -20089,7 +21035,7 @@ document.addEventListener("change", (event) => {
       addToast("Не выбран вид залога", "Перед загрузкой укажите вид и подвид залога.", "warn");
       return;
     }
-    state.modal = { ...(state.modal || {}), fileLoaded: Boolean(event.target.files?.length || event.target.value) };
+    state.modal = { ...(state.modal || {}), fileLoaded: Boolean(event.target.files?.length || event.target.value), updateConfirmedRows: [] };
     addToast("Файл загружен", "Выполнена предварительная проверка строк Excel.", "ok");
     render();
     return;
@@ -20707,92 +21653,150 @@ function submitImportCollaterals() {
   const selectedType = state.modal?.collateralType || "";
   const selectedSubtype = state.modal?.collateralSubtype || "";
   const selectedTypeCode = getCollateralTypeCodeFromLabel(selectedType);
-  const importedPairs = getImportPreviewRows()
-    .filter((row) => row.status !== "Ошибка" && row.collateralId)
-    .map((row) => {
-      const importedRow = { ...row, type: selectedTypeCode, subtype: selectedSubtype };
-      return { row: importedRow, collateral: ensureImportedCollateral(importedRow) };
-    })
-    .filter((item) => item.collateral);
+  const importedPairs = [];
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  getImportPreviewRows().forEach((row) => {
+    if (row.status === "Ошибка") {
+      skipped += 1;
+      return;
+    }
+    const importedRow = { ...row, type: selectedTypeCode, subtype: selectedSubtype };
+    if (row.status === "Создать") {
+      const collateral = ensureImportedCollateral(importedRow);
+      if (!collateral) {
+        skipped += 1;
+        return;
+      }
+      created += 1;
+      importedPairs.push({ row: importedRow, collateral });
+      return;
+    }
+    if (row.status === "Обновить после подтверждения" && row.updateConfirmed) {
+      const collateral = ensureImportedCollateral(importedRow, { updateExisting: true });
+      if (!collateral) {
+        skipped += 1;
+        return;
+      }
+      updated += 1;
+      importedPairs.push({ row: importedRow, collateral });
+      return;
+    }
+    skipped += 1;
+  });
   const imported = importedPairs.map((item) => item.collateral);
 
-  if (context === "taskCreate") {
+  if (context === "taskCreate" || context === "applicationCreate") {
     const ids = imported.map((item) => item.id);
     state.newTask.selectedCollateralIds = [...new Set([...(state.newTask.selectedCollateralIds || []), ...ids])];
     const linked = linkImportedCollateralsToApplicationDeals(importedPairs);
     hydrateNewTaskContextFromSelectedCollaterals();
     const activeId = state.taskActiveCollateral["new-task-draft"];
     if (!state.newTask.selectedCollateralIds.includes(activeId)) state.taskActiveCollateral["new-task-draft"] = ids[0] || state.newTask.selectedCollateralIds[0] || "";
+    if (created || updated) persistTaskState();
     state.modal = null;
     addToast(
       "Таблица обработана",
-      imported.length ? `Добавлено объектов: ${imported.length}, договорных строк обновлено: ${linked}` : "Корректные строки не найдены",
-      imported.length ? "ok" : "warn"
+      `Создано: ${created}; обновлено: ${updated}; пропущено: ${skipped}; договорных строк обработано: ${linked}`,
+      created || updated ? "ok" : "warn"
     );
     return;
   }
 
+  if (created || updated) persistTaskState();
   state.modal = null;
   addToast(
     "Таблица обработана",
-    context === "taskCreate"
-      ? `Добавлено объектов: ${imported.length}`
-      : `Корректные строки загружены в реестр: ${imported.length}`,
-    imported.length ? "ok" : "warn"
+    `Создано: ${created}; обновлено: ${updated}; пропущено: ${skipped}`,
+    created || updated ? "ok" : "warn"
   );
 }
 
-function ensureImportedCollateral(row) {
-  const profileIdentifier = row.profileIdentifier || row.identifierValue || row.collateralId || "";
-  const existing = getCollateral(row.collateralId)
-    || (profileIdentifier ? state.data.collaterals.find((item) => normalizeProfileIdentifier(getCollateralObjectIdentifier(item)) === normalizeProfileIdentifier(profileIdentifier)) : null);
+function ensureImportedCollateral(row, { updateExisting = false } = {}) {
+  const existing = getImportExistingCollateral(row);
   if (existing) {
-    const imported = createImportedCollateral({ ...row, collateralId: existing.id });
-    existing.name = imported.name || existing.name;
-    existing.absId = imported.absId || existing.absId || "";
-    existing.profileIdentifierType = imported.profileIdentifierType || existing.profileIdentifierType || "";
-    existing.basisDocument = { ...(existing.basisDocument || {}), ...Object.fromEntries(Object.entries(imported.basisDocument || {}).filter(([, value]) => !isBlankFieldValue(value))) };
-    existing.ftMainInfo = { ...(existing.ftMainInfo || {}), ...Object.fromEntries(Object.entries(imported.ftMainInfo || {}).filter(([, value]) => !isBlankFieldValue(value))) };
-    existing.fields = { ...(existing.fields || {}), ...(imported.fields || {}) };
-    existing.addressFields = { ...(existing.addressFields || {}), ...Object.fromEntries(Object.entries(imported.addressFields || {}).filter(([, value]) => !isBlankFieldValue(value))) };
-    if (imported.address) existing.address = imported.address;
-    if (imported.pledgors?.length) existing.pledgors = imported.pledgors;
+    if (!updateExisting) return null;
+    const imported = createImportedCollateral(row, { id: existing.id });
+    const mergeNonblank = (current = {}, next = {}) => ({
+      ...current,
+      ...Object.fromEntries(Object.entries(next).filter(([, value]) => !isBlankFieldValue(value)))
+    });
+    if (!isBlankFieldValue(imported.name)) existing.name = imported.name;
+    if (!isBlankFieldValue(imported.description)) existing.description = imported.description;
+    if (!isBlankFieldValue(imported.absId)) existing.absId = existing.absId || imported.absId;
+    existing.basisDocument = mergeNonblank(existing.basisDocument, imported.basisDocument);
+    existing.ftMainInfo = mergeNonblank(existing.ftMainInfo, imported.ftMainInfo);
+    existing.fields = mergeNonblank(existing.fields, imported.fields);
+    existing.addressFields = mergeNonblank(existing.addressFields, imported.addressFields);
+    if (!isBlankFieldValue(imported.address)) existing.address = imported.address;
+    if (imported.pledgors?.length) {
+      const pledgors = [...(existing.pledgors || [])];
+      imported.pledgors.forEach((incoming) => {
+        const index = pledgors.findIndex((item) => item.role === incoming.role && item.idn === incoming.idn);
+        if (index < 0) pledgors.push(incoming);
+        else pledgors[index] = { ...pledgors[index], ...mergeNonblank(pledgors[index], incoming) };
+      });
+      existing.pledgors = pledgors;
+    }
+    existing.pledgeContracts = mergeImportedPledgeContracts(existing.pledgeContracts, imported.pledgeContracts);
+    existing.contractIds = uniqueItems([...(existing.contractIds || []), ...(imported.contractIds || [])]);
     const importedStatus = row.objectStatus || row.fields?.["Статус объекта"];
     if (COLLATERAL_STATUS_OPTIONS.includes(importedStatus)) existing.status = importedStatus;
     existing.source = "Excel";
-    existing.updatedAt = "2026-06-18 00:45";
+    existing.updatedAt = formatTaskHistoryDate(new Date());
     existing.history = existing.history || [];
     existing.history.unshift({
-      date: "2026-06-18 00:45",
+      date: existing.updatedAt,
       user: getRole().user,
       field: "Карточка залога",
       oldValue: "Текущие данные",
-      newValue: row.message,
+      newValue: "Обновлены заполненные данными файла поля",
       reason: "Загрузка из Excel",
       source: "Excel"
     });
     return existing;
   }
 
+  if (updateExisting) return null;
   const collateral = createImportedCollateral(row);
   state.data.collaterals.push(collateral);
   return collateral;
 }
 
-function createImportedCollateral(row) {
-  const contractNumber = row.dealContract || row.contract || "";
-  const contract = getContractByNumber(contractNumber);
-  const id = row.collateralId || getNextCollateralId();
-  const createdAt = formatTaskHistoryDate(new Date());
-  const suzNumber = getNextMonthlyCollateralNumber(state.data.collaterals, createdAt);
-  const typeLabel = row.collateralTypeLabel || getCollateralTypeLabel({ type: row.type || "Оборудование" });
-  const type = getCollateralTypeCodeFromLabel(typeLabel);
+function mergeImportedPledgeContracts(existing = [], incoming = []) {
+  const result = (Array.isArray(existing) ? existing : []).map((item) => ({ ...item }));
+  (Array.isArray(incoming) ? incoming : []).forEach((item) => {
+    const number = String(item.number || "").trim();
+    const date = String(item.date || "").trim();
+    if (!number && !date) return;
+    const match = result.find((candidate) => String(candidate.number || "").trim().toLowerCase() === number.toLowerCase()
+      && String(candidate.date || "").trim() === date);
+    if (match) {
+      Object.entries(item).forEach(([key, value]) => {
+        if (isBlankFieldValue(match[key]) && !isBlankFieldValue(value)) match[key] = value;
+      });
+    } else result.push({ ...item, number, date });
+  });
+  return result;
+}
+
+function createImportedCollateral(row, { id: providedId = "" } = {}) {
   const importValue = (column) => {
     const value = getImportTemplateValue(row, column);
     return value === "-" ? "" : value;
   };
-  const owner = importValue("Залогодатель") || contract?.clientName || "";
-  const ownerInn = importValue("ИНН залогодателя") || contract?.inn || "";
+  const dealReference = importValue("Номер кредитного договора / продукт заявки");
+  const productOnly = APPLICATION_DEAL_PRODUCT_TYPES.some((product) => product.toLocaleLowerCase("ru-RU") === String(dealReference).toLocaleLowerCase("ru-RU"));
+  const contractNumber = productOnly ? "" : dealReference;
+  const contract = getContractByNumber(contractNumber);
+  const id = providedId || getNextCollateralId();
+  const createdAt = formatTaskHistoryDate(new Date());
+  const suzNumber = getNextMonthlyCollateralNumber(state.data.collaterals, createdAt);
+  const typeLabel = row.collateralTypeLabel || getCollateralTypeLabel({ type: row.type || "Оборудование" });
+  const type = getCollateralTypeCodeFromLabel(typeLabel);
+  const owner = importValue("Залогодатель");
+  const ownerInn = importValue("ИНН залогодателя");
   const ownerType = importValue("Тип субъекта залогодателя");
   const ownerName = importValue("Собственник");
   const ownerIdn = importValue("ИНН собственника");
@@ -20828,18 +21832,16 @@ function createImportedCollateral(row) {
   }
   const address = importValue("Адрес / местонахождение");
   const requestedProfileIdentifierType = importValue("Вид профильного идентификатора");
-  const importedProfileIdentifier = requestedProfileIdentifierType === "Номер карточки залога"
+  const requestedProfileSource = getNewCollateralProfileIdentifierOptions(typeLabel).find((option) => option.label === requestedProfileIdentifierType);
+  const importedProfileIdentifier = requestedProfileSource?.group === "system"
     ? ""
     : importValue("Профильный идентификатор объекта");
   const profileIdentifierType = importedProfileIdentifier ? requestedProfileIdentifierType : "Номер карточки залога";
-  const naturalProfileIdentifier = importedProfileIdentifier;
-  const profileIdentifier = naturalProfileIdentifier || suzNumber;
+  const profileIdentifier = importedProfileIdentifier || suzNumber;
   const basisDocument = {
     type: importValue("Документ-основание"),
     date: normalizeNewCollateralDate(importValue("Дата документа-основания")),
-    number: importValue("Номер документа-основания"),
-    series: importValue("Серия документа-основания"),
-    status: importValue("Статус ЭПТС")
+    number: importValue("Номер документа-основания")
   };
   const unit = importValue("Единица измерения") || getCollateralUnitDefault({ type });
   const additionalInfo = importValue("Дополнительная информация");
@@ -20847,37 +21849,35 @@ function createImportedCollateral(row) {
     || importValue("Параметры единицы измерения");
   const pledgeContractNumber = importValue("Номер договора залога");
   const pledgeContractDate = normalizeNewCollateralDate(importValue("Дата договора залога"));
-  const inspectionValue = importValue("Осмотр произведен") || importValue("Осмотр (проведен/не проведен)");
-  const inspection = /^(да|true|1|проведен|проведено)$/i.test(String(inspectionValue || "").trim()) ? "Да" : "Нет";
-  const inspectionContact = importValue("Контактное лицо для осмотра");
   const importColumnByTypeField = {
-    "Площадь в неструктурированном виде": "Площадь, кв. м",
+    "Площадь застройки, кв. м": "S",
     "Мощность двигателя, л.с.": "Мощность, л.с.",
     "Объем двигателя, куб. см": "Объем двигателя, куб.м.",
     "Пробег": "Пробег/наработка",
     "Договор имущественных прав": "Договор имущественных прав"
   };
   const fields = {};
-  for (const field of FT_COLLATERAL_V6_TYPE_FIELDS[typeLabel] || []) {
+  for (const field of FT_COLLATERAL_V8_TYPE_FIELDS[typeLabel] || []) {
     if (field === "Дополнительная информация") continue;
     let value = importValue(importColumnByTypeField[field] || field);
     if (!value && field === "Договор имущественных прав") value = importValue("Вид договора");
-    if (!value && getNewCollateralProfileFieldLabels(typeLabel).includes(field)) {
-      value = naturalProfileIdentifier;
-    }
+    if (!value && requestedProfileSource?.group === "type" && requestedProfileSource.field === field) value = importedProfileIdentifier;
     if (value) fields[field] = /Дата/i.test(field) ? normalizeNewCollateralDate(value) : value;
+  }
+  if (requestedProfileSource?.includesDate && importedProfileIdentifier) {
+    const combined = importedProfileIdentifier.match(/^(.*?)\s+от\s+(\d{2}\.\d{2}\.\d{4})$/i);
+    if (combined) {
+      fields["Номер договора"] = combined[1].trim();
+      fields["Дата заключения договора"] = normalizeNewCollateralDate(combined[2]);
+    }
   }
   const statusValue = importValue("Статус объекта");
   const status = COLLATERAL_STATUS_OPTIONS.includes(statusValue) ? statusValue : "Новый";
   const addressFields = address ? { "Адрес / место нахождения": address } : {};
-  const marketValue = type === "Автотранспорт" ? 720000000 : 1250000000;
-  const pledgeValue = Math.round(marketValue * 0.8);
   const mainFields = {
     "Единица измерения": unit,
     "Значение, в указанных ед.изм.": measuredValue || row.unitValue || row.fields?.["Значение, в указанных ед.изм."] || row.unitParameters || row.fields?.["Параметры единицы измерения"] || "",
-    "Дополнительная информация": additionalInfo,
-    "Осмотр произведен": inspection,
-    "Контактное лицо для осмотра": inspectionContact
+    "Дополнительная информация": additionalInfo
   };
   if (fields["Вид договора"] && !fields["Договор имущественных прав"]) {
     fields["Договор имущественных прав"] = fields["Вид договора"];
@@ -20893,10 +21893,12 @@ function createImportedCollateral(row) {
     fields["Подтип"] = importedSubtype;
   }
   fields["Источник создания"] = "Excel";
-  const ownerNameForHeader = owner || contract?.clientName || "";
-  const ownerInnForHeader = ownerInn || contract?.inn || "";
-  const dealContractNumber = importValue("Номер кредитного договора / продукт заявки");
+  const dealContractNumber = productOnly ? "" : dealReference;
   const matchedContract = getContractByNumber(dealContractNumber) || contract;
+  const product = productOnly ? dealReference : matchedContract?.product || "";
+  const contextualImport = ["applicationCreate", "taskCreate"].includes(state.modal?.context);
+  const clientNameForHeader = matchedContract?.clientName || (contextualImport ? state.newTask?.dealClientName : "") || "";
+  const clientInnForHeader = matchedContract?.inn || (contextualImport ? state.newTask?.dealClientInn : "") || "";
   const reportStatus = importValue("Статус объекта");
   return {
     id,
@@ -20905,12 +21907,12 @@ function createImportedCollateral(row) {
     subtype: importedSubtype,
     name: importValue("Наименование") || `${typeLabel}: объект из таблицы`,
     profileIdentifier,
-    profileIdentifierType: profileIdentifierType || "Номер карточки залога",
+    profileIdentifierType,
     basisDocument,
     absId: importValue("Идентификатор в АБС"),
-    clientType: normalizeSubjectType(ownerType, ownerInnForHeader),
-    clientName: ownerNameForHeader,
-    clientId: ownerInnForHeader,
+    clientType: normalizeSubjectType("", clientInnForHeader),
+    clientName: clientNameForHeader,
+    clientId: clientInnForHeader,
     gsz: matchedContract?.gsz || "",
     groupIdentificationCode: "",
     region: address.split(",")[0] || "Город не указан",
@@ -20919,6 +21921,7 @@ function createImportedCollateral(row) {
     description: additionalInfo || `${typeLabel}: объект загружен из таблицы`,
     contractIds: matchedContract ? [matchedContract.id] : [],
     contractNumber: dealContractNumber,
+    product,
     pledgeContractNumber,
     pledgeContractDate,
     pledgeContracts: pledgeContractNumber || pledgeContractDate
@@ -20928,27 +21931,14 @@ function createImportedCollateral(row) {
     source: "Excel",
     responsible: getRole().user,
     initiator: getRole().user,
-    marketValue,
-    pledgeValue,
-    allocatedValue: pledgeValue,
-    appraisalStatus: "Требуется оценка",
-    appraisalDue: "2026-07-18",
-    insuranceStatus: "Требуется проверка",
-    insuranceDue: "2026-07-18",
-    riskState: "Требует проверки",
-    riskScore: 35,
-    crossPledge: false,
     fields,
     ftMainInfo: mainFields,
-    monitoring: { required: "ДА", periodicity: "Ежеквартально", lastInspection: "-", nextInspection: "2026-07-18", condition: "Не проверялся", schedule: [] },
-    insurance: { company: "Не выбрана", policy: "Не указан", from: "-", to: "-", amount: 0, premiumStatus: "Не проверено", source: "Excel" },
+    sourceImportData: !isBlankFieldValue(importValue("S")) ? { S: importValue("S") } : {},
     evaluations: [],
     encumbrances: [],
     pledgors,
-    risks: [{ title: "Требуется первичная проверка данных Excel", level: "Средний", source: "Excel" }],
     documents: [],
     history: [{ date: createdAt, user: getRole().user, field: "Карточка залога", oldValue: "-", newValue: "Создана из Excel", reason: row.message, source: "Excel" }],
-    externalData: { "Источник": "Excel", "Дата проверки": "2026-06-18", "Статус проверки": "Ожидает обогащения" },
     createdAt,
     updatedAt: createdAt
   };
@@ -21026,12 +22016,13 @@ function createDraftCollateralFromForm() {
   const timestamp = formatTaskHistoryDate(new Date());
   const suzNumber = getCollateralSuzNumber(editingCollateral)
     || getNextMonthlyCollateralNumber(state.data.collaterals, timestamp);
-  const profileIdentifierType = getNewCollateralProfileIdentifierType(draft);
+  const profileIdentifierType = naturalIdentifier ? getNewCollateralProfileIdentifierType(draft) : "Номер карточки залога";
   const profileIdentifier = naturalIdentifier || suzNumber;
   const source = editingCollateral?.source || (state.modal?.context === "registry" ? "Реестр залогов" : "Форма заявки");
   const savedTypeFieldDraft = { ...draft.typeFields };
   const typeFields = Object.fromEntries(getCollateralTypeDisplayFieldLabels(typeLabel)
     .filter((label) => label !== "Дополнительная информация")
+    .filter((label) => isCollateralV6TypeFieldApplicable(typeLabel, label, draft))
     .filter((label) => label !== subtypeField && !isBlankFieldValue(savedTypeFieldDraft[label]))
     .map((label) => [label, /Дата/i.test(label) ? normalizeNewCollateralDate(savedTypeFieldDraft[label]) : savedTypeFieldDraft[label]]));
   if (subtypeField) typeFields[subtypeField] = draft.subtype.trim();
@@ -21172,9 +22163,9 @@ function createDraftCollateralFromForm() {
     pledgeContracts,
     pledgeContractNumber: primaryPledgeContract.number,
     pledgeContractDate: primaryPledgeContract.date,
-    clientType: primaryPledgor.subjectType || (primaryPledgor.idn?.length === 12 ? "ФЛ" : primaryPledgor.idn?.length === 10 ? "ЮЛ" : ""),
-    clientName: primaryPledgor.name || "",
-    clientId: primaryPledgor.idn || "",
+    clientType: draft?.clientType || getCollateralClientType(editingCollateral) || "",
+    clientName: draft?.clientName || editingCollateral?.clientName || "",
+    clientId: draft?.clientId || editingCollateral?.clientId || "",
     gsz: "",
     region: addressFields["Регион"] || addressFields["Город"] || "",
     address,
@@ -21451,15 +22442,8 @@ function submitNewApplication() {
   const applicationPurpose = normalizeApplicationPurpose(applicationType, applicationSubtype, document.getElementById("newTaskApplicationPurpose")?.value || state.newTask.applicationPurpose);
   const comment = document.getElementById("newTaskComment")?.value.trim() || "";
   const selected = state.newTask.selectedCollateralIds.filter((id) => getCollateral(id));
-  const deals = getDraftApplicationDeals()
-    .map((row, index) => normalizeApplicationDealRow({
-      ...row,
-      clientName,
-      inn: clientInn,
-      limit: parseNumericInput(row.limit),
-      collateralIds: []
-    }, index))
-    .filter((row) => row.product || row.contractNumber || row.limit);
+  const pledgeContractOptions = getApplicationPledgeContractOptions(selected.map(getCollateral).filter(Boolean));
+  const deals = normalizeApplicationDealsForSave(getDraftApplicationDeals(), clientName, clientInn, pledgeContractOptions);
   if (!applicationNumber) {
     addToast("Укажите номер заявки", "Номер заявки нужен для группировки залогов, договоров и задач.", "warn");
     return;
@@ -21535,15 +22519,8 @@ function saveApplicationCard(applicationId) {
   const applicationPurpose = getApplicationPurpose(application);
   const comment = application.comment || state.newTask.applicationComment || "Новая заявка для рассмотрения залоговой службой.";
   const selected = uniqueItems((state.newTask.selectedCollateralIds || []).filter((id) => getCollateral(id)));
-  const deals = getDraftApplicationDeals()
-    .map((row, index) => normalizeApplicationDealRow({
-      ...row,
-      clientName,
-      inn: clientInn,
-      limit: parseNumericInput(row.limit),
-      collateralIds: []
-    }, index))
-    .filter((row) => row.product || row.contractNumber || row.limit);
+  const pledgeContractOptions = getApplicationPledgeContractOptions(selected.map(getCollateral).filter(Boolean));
+  const deals = normalizeApplicationDealsForSave(getDraftApplicationDeals(), clientName, clientInn, pledgeContractOptions);
   if (showApplicationValidationToast(getApplicationParameterValidation({ applicationNumber: application.number || application.id, applicationType, applicationSubtype, applicationPurpose, initiator, initiatorSegment, clientName, clientInn, status, comment }, selected))) return;
   const contracts = uniqueItems(deals.map((row) => row.contractId).filter(Boolean)).map(getContract).filter(Boolean);
   const products = uniqueItems(deals.map((row) => row.product));
