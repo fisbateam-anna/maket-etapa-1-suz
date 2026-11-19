@@ -4804,7 +4804,7 @@ function addScreenshotTaskScenario(spec, taskIndex) {
 
 screenshotTaskScenarios.forEach(addScreenshotTaskScenario);
 
-function add150VehicleInspectionShowcase() {
+function addGroupedPhysicalInspectionShowcase() {
   const applicationId = "app-16112026-001";
   const taskId = "tsk-16112026-001";
   if (initialData.applications.some((item) => item.id === applicationId) || initialData.tasks.some((item) => item.id === taskId)) {
@@ -4815,11 +4815,9 @@ function add150VehicleInspectionShowcase() {
   const additionalPledgor = { name: "ООО ТрансАвтоСибирь", idn: "540 976 5431", role: "Залогодатель", share: "100%", subjectType: "ЮЛ" };
   const collateralIds = [];
   const collateralTypeSpecs = [
-    { start: 1, count: 80, type: "Автотранспорт", primaryOnly: 65, secondaryOnly: 12 },
-    { start: 81, count: 40, type: "Оборудование", primaryOnly: 25, secondaryOnly: 12 },
-    { start: 121, count: 30, type: "Объекты недвижимости", primaryOnly: 15, secondaryOnly: 12 }
+    { start: 1, count: 150, type: "Объекты недвижимости", primaryOnly: 150, secondaryOnly: 0 }
   ];
-  const sharedInspectionAddress = "Новосибирская область, г. Новосибирск, ул. Петухова, автоплощадка СибТрансСервис, участок 1";
+  const sharedInspectionAddress = "Новосибирская область, г. Новосибирск, ул. Петухова, 10, складской комплекс";
   const collaterals = Array.from({ length: 150 }, (_, index) => {
     const sequence = index + 1;
     const id = `COL-DEMO-150-${String(sequence).padStart(3, "0")}`;
@@ -4846,11 +4844,9 @@ function add150VehicleInspectionShowcase() {
       : equipment
         ? `Промышленное оборудование, инв. № ${equipmentSerial}`
         : `Складской корпус № ${sequence - 120}, ${2020 + (sequence % 4)} г. постройки`;
-    const negativeCheck = [7, 42, 70, 76].includes(sequence)
-      ? { "Запрет регистрационных действий": "Выявлен запрет регистрационных действий; требуется проверка возможности снятия ограничения." }
-      : [123, 139].includes(sequence)
-        ? { Аресты: "Арест выявлен по данным ЕГРН; требуется проверить основание ограничения." }
-        : null;
+    const negativeCheck = [7, 42, 70, 76, 123, 139].includes(sequence)
+      ? { Аресты: "Арест выявлен по данным ЕГРН; требуется проверить основание ограничения." }
+      : null;
     const externalData = vehicle
       ? {
           "Аресты": "Аресты не выявлены",
@@ -4930,7 +4926,7 @@ function add150VehicleInspectionShowcase() {
       evaluations: [{ date: "2026-10-16", appraiser: "Сибирь-Оценка", market: marketValue, pledge: pledgeValue, method: "Сравнительный", status: "Действует" }],
       monitoring: { lastInspection: "", inspector: "", condition: "Ожидает осмотра", nextInspection: "2026-11-25", periodicity: "По задаче", completed: false, schedule: [] },
       insurance: { company: "Ингосстрах", policy: `${vehicle ? "AUTO" : equipment ? "EQUIP" : "PROP"}-26-150-${String(sequence).padStart(3, "0")}`, from: "2026-10-16", to: "2027-10-16", amount: pledgeValue, premiumStatus: "Оплачена", source: "АБС" },
-      encumbrances: [{ number: `ZL-26/150-${String(sequence).padStart(3, "0")}`, date: "2026-10-16", type: vehicle ? "Залог ТС" : equipment ? "Залог оборудования" : "Ипотека", amount: pledgeValue, contract: "ZL-26/150", allocated: pledgeValue, status: "Зарегистрировано" }],
+      encumbrances: [{ number: "ZL-26/150-001", date: "2026-10-16", type: "Ипотека", amount: pledgeValue, contract: "CR-26/150", allocated: pledgeValue, status: "Зарегистрировано" }],
       documents: vehicle
         ? [{ name: `ПТС ${plate}.pdf`, type: "Право", required: true, status: "Получен", date: "2026-10-16" }, { name: `СТС ${plate}.pdf`, type: "Право", required: true, status: "Получен", date: "2026-10-16" }]
         : equipment
@@ -4944,7 +4940,89 @@ function add150VehicleInspectionShowcase() {
   if (collidingIds.length) throw new Error(`The 150-collateral showcase IDs already exist: ${collidingIds.join(", ")}`);
   initialData.collaterals.push(...collaterals);
 
-  const comment = "Провести физический осмотр 150 объектов залога на площадке в Новосибирске: сверить VIN автомобилей, инвентарные номера оборудования и кадастровые номера зданий, подтвердить наличие, комплектность и состояние имущества. Для совместно заложенных объектов проверить документы обоих залогодателей.";
+  const agroPledgor = { name: "ООО АлтайАгроСнаб", idn: "222 510 9875", role: "Залогодатель", share: "100%", subjectType: "ЮЛ" };
+  const jointPledgor = { name: "ООО СибирьПартнер", idn: "540 712 3453", role: "Залогодатель", share: "50%", subjectType: "ЮЛ" };
+  const tomskPledgor = { name: "ООО ТомскСклад", idn: "701 745 8930", role: "Залогодатель", share: "100%", subjectType: "ЮЛ" };
+  const additionalGroups = [
+    {
+      taskId: "tsk-16112026-002", pledgors: [additionalPledgor], type: "Автотранспорт", subtype: "Залог автотранспортного средства категории В", count: 5,
+      region: "Новосибирская область", city: "Бердск", street: "ул. Промышленная", house: "3", pledgeContractNumber: "ZL-26/150-002"
+    },
+    {
+      taskId: "tsk-16112026-003", pledgors: [agroPledgor], type: "Оборудование", subtype: "Машины и оборудование", count: 4,
+      region: "Алтайский край", city: "Барнаул", street: "просп. Космонавтов", house: "14", pledgeContractNumber: "ZL-26/150-003"
+    },
+    {
+      taskId: "tsk-16112026-004", pledgors: [primaryPledgor, jointPledgor], type: "Оборудование", subtype: "Машины и оборудование", count: 3,
+      region: "Кемеровская область", city: "Кемерово", street: "ул. Тухачевского", house: "58", pledgeContractNumber: "ZL-26/150-004"
+    },
+    {
+      taskId: "tsk-16112026-005", pledgors: [tomskPledgor], type: "Товары в обороте", subtype: "Товары в обороте", count: 6,
+      region: "Томская область", city: "Томск", street: "ул. Береговая", house: "7", pledgeContractNumber: "ZL-26/150-005"
+    }
+  ];
+  const additionalCollateralIds = [];
+  additionalGroups.forEach((group, groupIndex) => {
+    group.collaterals = Array.from({ length: group.count }, (_, index) => {
+      const sequence = index + 1;
+      const id = "COL-APP-16112026-" + String(groupIndex + 2).padStart(2, "0") + "-" + String(sequence).padStart(3, "0");
+      const pledgors = group.pledgors.map((pledgor) => ({
+        ...pledgor,
+        share: group.pledgors.length > 1 ? "50%" : "100%"
+      }));
+      const vehicle = group.type === "Автотранспорт";
+      const equipment = group.type === "Оборудование";
+      const vin = vehicle ? "X962ALC49RN" + String(260000 + groupIndex * 100 + sequence).padStart(6, "0") : "";
+      const inventoryNumber = "DEMO-26-" + String(groupIndex + 2).padStart(2, "0") + "-" + String(sequence).padStart(3, "0");
+      const profileIdentifier = vehicle ? vin : inventoryNumber;
+      const marketValue = vehicle ? 2850000 + sequence * 140000 : equipment ? 1950000 + sequence * 225000 : 4500000 + sequence * 650000;
+      const pledgeValue = Math.round(marketValue * 0.76);
+      const address = group.region + ", г. " + group.city + ", " + group.street + ", " + group.house;
+      const typeFields = vehicle
+        ? { "Подвид залога": group.subtype, "VIN": vin, "Идентификационный номер транспортного средства (VIN)": vin, "Марка/модель": "ГАЗель NEXT 3,5 т", "Год выпуска": "2022", "Госномер": "О " + String(100 + sequence).padStart(3, "0") + " КМ 154" }
+        : equipment
+          ? { "Подвид залога": group.subtype, "Серийный номер": inventoryNumber, "Инвентарный номер": inventoryNumber, "Производитель": "Сибирский промышленный комплекс", "Год выпуска": "2021", "Техническое состояние": "Рабочее" }
+          : { "Подвид залога": group.subtype, "Инвентарный номер": inventoryNumber, "Наименование товара": "Пиломатериалы хвойных пород", "Количество": String(100 + sequence * 20) + " куб. м", "Место хранения": address };
+      return {
+        id,
+        suzNumber: "ZLG-2026-APP-" + String(groupIndex + 2).padStart(2, "0") + "-" + String(sequence).padStart(3, "0"),
+        createdAt: "2026-10-20",
+        type: group.type,
+        name: vehicle
+          ? "ГАЗель NEXT, 2022 г., гос. номер О " + String(100 + sequence).padStart(3, "0") + " КМ 154"
+          : equipment
+            ? "Производственное оборудование, инв. № " + inventoryNumber
+            : "Пиломатериалы, партия " + String(sequence).padStart(3, "0"),
+        description: typeFields["Подвид залога"],
+        profileIdentifierType: vehicle ? "VIN" : "Инвентарный номер",
+        profileIdentifier,
+        clientName: pledgors[0].name,
+        clientId: pledgors[0].idn,
+        clientType: "ЮЛ",
+        region: group.region,
+        address,
+        addressFields: { "Субъект РФ": group.region, "Город": group.city, "Улица": group.street, "Дом": group.house },
+        contractNumber: group.pledgeContractNumber,
+        contractDate: "2026-10-16",
+        marketValue,
+        pledgeValue,
+        allocatedValue: pledgeValue,
+        status: "В залоге",
+        source: "Ручной ввод",
+        fields: typeFields,
+        pledgors,
+        evaluations: [{ date: "2026-10-16", appraiser: "Сибирь-Оценка", market: marketValue, pledge: pledgeValue, method: "Сравнительный", status: "Действует" }],
+        encumbrances: [{ number: group.pledgeContractNumber, date: "2026-10-16", type: "Договор залога — " + group.type, amount: pledgeValue, contract: "CR-26/150", allocated: pledgeValue, status: "Зарегистрировано" }],
+        documents: [{ name: "Документы по объекту " + profileIdentifier + ".pdf", type: "Право", required: true, status: "Получен", date: "2026-10-16" }],
+        history: []
+      };
+    });
+    group.collateralIds = group.collaterals.map((item) => item.id);
+    additionalCollateralIds.push(...group.collateralIds);
+    initialData.collaterals.push(...group.collaterals);
+  });
+
+  const comment = "Провести физический осмотр объектов залога по группам, сформированным по полному составу залогодателей, виду залога и городу. Для совместно заложенных объектов проверить документы обоих залогодателей.";
   const application = {
     id: applicationId,
     number: applicationId,
@@ -4966,16 +5044,30 @@ function add150VehicleInspectionShowcase() {
     comment,
     contractId: "",
     contractIds: [],
-    deals: [{ clientName: primaryPledgor.name, inn: primaryPledgor.idn, contractId: "", contractNumber: "CR-26/150", contractDate: "2026-10-16", product: "Кредит", limit: 1850000000, currency: "RUB", collateralIds: [...collateralIds] }],
-    collateralIds: [...collateralIds],
-    taskIds: [taskId]
+    deals: [{
+      clientName: primaryPledgor.name,
+      inn: primaryPledgor.idn,
+      contractId: "",
+      contractNumber: "CR-26/150",
+      contractDate: "2026-10-16",
+      product: "Кредит",
+      limit: 1850000000,
+      currency: "RUB",
+      collateralIds: [...collateralIds, ...additionalCollateralIds],
+      pledgeContractLinks: [
+        { number: "ZL-26/150-001", date: "2026-10-16", collateralIds: [...collateralIds] },
+        ...additionalGroups.map((group) => ({ number: group.pledgeContractNumber, date: "2026-10-16", collateralIds: [...group.collateralIds] }))
+      ]
+    }],
+    collateralIds: [...collateralIds, ...additionalCollateralIds],
+    taskIds: [taskId, ...additionalGroups.map((group) => group.taskId)]
   };
   initialData.applications.push(application);
 
   initialData.tasks.push({
     id: taskId,
     type: "Первичный осмотр",
-    title: "Провести физический осмотр 150 объектов залога в Новосибирске",
+    title: "Провести физический осмотр 150 объектов недвижимости в Новосибирске",
     collateralId: collateralIds[0],
     collateralIds: [...collateralIds],
     applicationId,
@@ -5002,13 +5094,52 @@ function add150VehicleInspectionShowcase() {
     inspectionVisitDate: "2026-11-24",
     inspectionVisitTime: "10:00",
     route: ["Заявка", "Исполнитель", "Руководитель"],
-    result: "Осмотреть автотранспорт, оборудование и складские корпуса на площадке в Новосибирске. Сверить идентификаторы с документами, подтвердить наличие и состояние; по объектам с двумя залогодателями проверить документы обоих участников.",
+    result: "Осмотреть 150 объектов недвижимости в Новосибирске. Сверить кадастровые номера с документами, подтвердить наличие и состояние объектов.",
     documents: [{ name: "Перечень объектов залога на 16.11.2026.xlsx", target: "task", date: "2026-11-16", author: application.initiator }],
     history: [{ date: "2026-11-16 09:20", user: application.initiator, action: "Создание задачи", status: "Назначена", oldValue: "-", newValue: "Назначена", comment: `Первая задача создана автоматически из заявки ${application.number}.` }]
   });
+
+  additionalGroups.forEach((group, index) => {
+    const pledgorNames = group.pledgors.map((pledgor) => pledgor.name).join(" и ");
+    const groupComment = "Провести физический осмотр " + group.count + " объектов вида «" + group.type + "» в г. " + group.city + ". Залогодатель: " + pledgorNames + ".";
+    initialData.tasks.push({
+      id: group.taskId,
+      type: "Первичный осмотр",
+      title: groupComment,
+      collateralId: group.collateralIds[0],
+      collateralIds: [...group.collateralIds],
+      applicationId,
+      applicationNumber: applicationId,
+      parentTaskId: "",
+      contractId: "",
+      contractNumber: "CR-26/150",
+      client: group.pledgors[0].name,
+      clientInn: group.pledgors[0].idn,
+      initiatorSegment: application.initiatorSegment,
+      author: application.initiator,
+      assignee: "Мария Петрова",
+      status: "Назначена",
+      dueDate: "2026-11-25",
+      createdAt: "2026-11-16 09:" + String(25 + index * 5).padStart(2, "0"),
+      sla: "Норма",
+      priority: "Средний",
+      source: "Заявка",
+      applicationSource: application.source,
+      createdFromApplicationAutomatically: true,
+      assignmentComment: groupComment,
+      inspectionFormat: "Физический осмотр",
+      inspectionVisitMethod: "Сотрудник банка (регионы)",
+      inspectionVisitDate: "2026-11-24",
+      inspectionVisitTime: "10:00",
+      route: ["Заявка", "Исполнитель", "Руководитель"],
+      result: groupComment,
+      documents: [{ name: "Перечень объектов залога группы " + String(index + 2) + ".xlsx", target: "task", date: "2026-11-16", author: application.initiator }],
+      history: [{ date: "2026-11-16 09:" + String(25 + index * 5).padStart(2, "0"), user: application.initiator, action: "Создание задачи", status: "Назначена", oldValue: "-", newValue: "Назначена", comment: "Задача создана автоматически из заявки " + application.number + " для отдельной группы залогов." }]
+    });
+  });
 }
 
-add150VehicleInspectionShowcase();
+addGroupedPhysicalInspectionShowcase();
 
 export function resolveCollateralSubtype(collateral) {
   collateral ||= {};

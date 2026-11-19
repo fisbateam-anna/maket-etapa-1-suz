@@ -120,7 +120,7 @@ test("application deal table appends the pledge selector and preserves multi-sel
   const tableSource = extractBetween(appSource, "function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions, productOptions)", "\nfunction getApplicationPreInspection");
   const option = { number: "ZL-26/10", date: "2026-10-01", collateralIds: ["COL-1"], key: '["zl-26/10","2026-10-01",["COL-1"]]', label: "ZL-26/10 от 2026-10-01" };
   const sandbox = {
-    APPLICATION_DEAL_COLUMNS: ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки"],
+    APPLICATION_DEAL_COLUMNS: ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта"],
     getApplicationPledgeContractOptions: () => [option],
     normalizeApplicationPledgeContractLinks: (links) => links || [],
     getApplicationPledgeContractLinkKey: (link) => JSON.stringify([link.number.toLowerCase(), link.date, link.collateralIds]),
@@ -137,7 +137,9 @@ test("application deal table appends the pledge selector and preserves multi-sel
   assert.match(picker, /data-application-deal-field="pledgeContractLinks"[^>]*checked/);
   assert.match(picker, /<summary>ZL-26\/10 от 2026-10-01<\/summary>/);
   const table = sandbox.renderTable([selectedRow], [{ id: "COL-1" }], "", "");
-  assert.ok(table.indexOf("Валюта сделки") < table.indexOf("Договор залога"));
+  const header = table.match(/<thead><tr>(.*?)<\/tr>/s)?.[1] || "";
+  const headers = Array.from(header.matchAll(/<th>(.*?)<\/th>/g), (match) => match[1]);
+  assert.deepEqual(headers, ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта", "Договоры залога", ""]);
   assert.match(table, /data-application-deal-field="pledgeContractLinks"/);
   assert.match(table, /data-action="remove-application-deal"/);
 });
@@ -191,10 +193,12 @@ test("collateral contract table resolves pledge links from the saved application
   assert.ok(otherCollateralRows.every((row) => row.creditContractNumber !== "CR-26/7"));
 });
 
-test("application object block precedes deals, contact stripe is local, and task deal table stays unchanged", () => {
+test("application object block precedes deals, contact stripe is local, and task table uses the shared deal labels", () => {
   const applicationRender = extractBetween(appSource, "function renderApplicationCreate(query, options = {})", "\nfunction renderTaskCreate(query)");
-  const taskDeals = extractBetween(appSource, "function renderTaskApplicationDealsTable(rows, taskCollaterals = [])", "\nfunction renderTaskApplicationContractsReadOnlyTable");
+  const taskDeals = extractBetween(appSource, "function renderTaskApplicationContractsReadOnlyTable(rows = [])", "\nfunction renderTaskClientContractInfo");
   assert.ok(applicationRender.indexOf("renderApplicationCollateralObjectsInfo(draftTask") < applicationRender.indexOf("renderApplicationDealsTable(dealRows"));
   assert.match(stylesSource, /\.task-create-layout \.application-contacts-panel::before\s*\{\s*display:\s*none;/);
-  assert.doesNotMatch(taskDeals, /Договор залога/);
+  assert.match(appSource, /const APPLICATION_DEAL_COLUMNS = \["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма\/лимит", "Валюта"\]/);
+  assert.match(taskDeals, /APPLICATION_DEAL_COLUMNS\.map/);
+  assert.match(taskDeals, /<th>Договоры залога<\/th>/);
 });

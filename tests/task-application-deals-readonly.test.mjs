@@ -10,30 +10,36 @@ test("task application-deal table mirrors application columns and stays readonly
   const start = app.indexOf("function renderTaskApplicationContractsReadOnlyTable(rows = [])");
   const end = app.indexOf("\nfunction renderTaskClientContractInfo", start);
   assert.ok(start >= 0 && end > start);
+  const numericHelpers = [
+    app.slice(app.indexOf("function parseNumericInput(value)"), app.indexOf("\nfunction updateMarketAdjustment")),
+    app.slice(app.indexOf("function formatFullMoney(value)"), app.indexOf("\nfunction getContractDebtRub")),
+    app.slice(app.indexOf("function formatDealLimit(value)"), app.indexOf("\nfunction badge(text"))
+  ].join("\n");
   const context = {
-    APPLICATION_DEAL_COLUMNS: ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки"],
+    APPLICATION_DEAL_COLUMNS: ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта"],
     normalizeApplicationPledgeContractLinks: (value = []) => value || [],
     normalizeApplicationDealProduct: (value) => value || "",
     formatDocumentDateCell: (value) => value || "-",
-    formatDealLimit: (value) => value ? Number(value).toLocaleString("ru-RU") : "-",
     escapeHtml: (value) => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
   };
-  vm.runInNewContext(`${app.slice(start, end)}\nglobalThis.render = renderTaskApplicationContractsReadOnlyTable;`, context);
-  const html = context.render([{
-    product: "Кредит",
-    contractNumber: "CR-26/140",
-    contractDate: "12.10.2026",
-    limit: 12500000,
-    currency: "RUB",
-    pledgeContractLinks: [{ number: "ZL-26/44", date: "08.10.2026", collateralIds: ["COL-1"] }]
-  }]);
+  vm.runInNewContext(`${numericHelpers}\n${app.slice(start, end)}\nglobalThis.render = renderTaskApplicationContractsReadOnlyTable;`, context);
+  const html = context.render([
+    {
+      product: "Кредит",
+      contractNumber: "CR-26/140",
+      contractDate: "12.10.2026",
+      limit: 12500000,
+      currency: "RUB",
+      pledgeContractLinks: [{ number: "ZL-26/44", date: "08.10.2026", collateralIds: ["COL-1"] }]
+    },
+    { product: "Кредит", contractNumber: "CR-26/141", limit: 1850000000, currency: "RUB" }
+  ]);
 
-  assert.equal((html.match(/<th>/g) || []).length, 6);
-  for (const column of ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки", "Договор залога"]) {
-    assert.ok(html.includes(`<th>${column}</th>`), `Missing column ${column}`);
-  }
+  const headers = Array.from(html.matchAll(/<th>(.*?)<\/th>/g), (match) => match[1]);
+  assert.deepEqual(headers, ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта", "Договоры залога"]);
   assert.match(html, /<td>CR-26\/140<\/td>\s*<td>12\.10\.2026<\/td>/, "contract number and date should use separate columns");
-  assert.match(html, /<td>12\s?500\s?000<\/td>\s*<td>RUB<\/td>/, "amount and currency should use separate columns");
+  assert.match(html, /<td>12\s?500\s?000,00<\/td>\s*<td>RUB<\/td>/, "amount and currency should use separate columns with two decimal places");
+  assert.match(html, /<td>1\s?850\s?000\s?000,00<\/td>\s*<td>RUB<\/td>/, "integer limits should display two decimal places");
   assert.match(html, /ZL-26\/44 от 08\.10\.2026/, "pledge contract number and date should be displayed together");
   assert.match(html, /class="task-deals-inline"/);
   assert.doesNotMatch(html, /<input|<select|<button/);

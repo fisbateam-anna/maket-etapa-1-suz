@@ -1,4 +1,4 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-arm-v4-20261116-r28";
+import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=inspection-groups-20261120-r1";
 import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
 
@@ -15,7 +15,7 @@ const ROLE_STATE_STORAGE_KEY = "pledgeModuleR.mvp1.roleId";
 const REGISTRY_COLUMN_SETTINGS_STORAGE_KEY = "pledgeModuleR.registryColumnSettings.v1";
 const MVP1_TASK_TYPES = new Set(["Первичный осмотр", "Повторный осмотр", TASK_TYPE_DEFECT_INSPECTION, "Единичная переоценка", "Списочная переоценка", "Плановый мониторинг", "Внеплановый мониторинг", TASK_TYPE_REGISTRATION]);
 const MVP1_INTEGRATION_IDS = new Set(["email", "avito", "auto-ru", "spectrum-auto", "infosphere", "abs"]);
-const APPLICATION_DEAL_COLUMNS = ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки"];
+const APPLICATION_DEAL_COLUMNS = ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта"];
 const APPLICATION_DEAL_PRODUCT_TYPES = ["Кредит", "Лизинг", "Банковская гарантия"];
 const DEFAULT_APPLICATION_DEAL_PRODUCT_TYPE = "Кредит";
 const COLLATERAL_GROUP_ATTRIBUTE = "Признак группы залога";
@@ -2405,7 +2405,7 @@ function formatDealLimit(value) {
   const source = String(value ?? "").trim();
   if (!source) return "-";
   const amount = parseNumericInput(source);
-  return Number.isFinite(amount) ? amount.toLocaleString("ru-RU") : source;
+  return Number.isFinite(amount) ? formatFullMoney(amount) : source;
 }
 
 function badge(text, tone = "") {
@@ -7569,7 +7569,7 @@ function renderTaskApplicationContractsReadOnlyTable(rows = []) {
       <h3 class="shared-component-title">Договоры и обеспечения</h3>
       <div class="application-deals-table-wrap task-deals-inline-table-wrap">
         <table class="application-deals-table task-deals-inline-table">
-          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договор залога</th></tr></thead>
+          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договоры залога</th></tr></thead>
           <tbody>${filledRows.length ? filledRows.map((row) => {
             const pledgeContracts = normalizeApplicationPledgeContractLinks(row.pledgeContractLinks)
               .map((link) => [link.number, link.date ? `от ${formatDocumentDateCell(link.date)}` : ""].filter(Boolean).join(" "))
@@ -11575,15 +11575,10 @@ function getTaskRouteActionButtons(task) {
 
 function renderTaskHistory(task) {
   const rows = getTaskHistoryEvents(task);
-  const latest = rows[0];
   return `
     <section class="panel table-panel task-history-panel">
       <div class="panel-title">
-        <div>
-          <h2>История действий по задаче</h2>
-          <p class="hint">${escapeHtml(formatLatestTaskHistoryEvent(latest))}</p>
-        </div>
-        <span class="status-stack">${badge(`Записей: ${rows.length}`, "info")}</span>
+        <h2>История действий по задаче</h2>
       </div>
       ${rows.length ? `
         <div class="table-wrap compact-table task-history-table-wrap">
@@ -16647,7 +16642,7 @@ function formatCollateralContractAmount(value) {
   if (value === null || value === undefined || String(value).trim() === "") return "-";
   const normalized = String(value).trim().replace(/\s/g, "").replace(",", ".");
   const amount = Number(normalized);
-  return Number.isFinite(amount) ? amount.toLocaleString("ru-RU") : String(value);
+  return Number.isFinite(amount) ? formatFullMoney(amount) : String(value);
 }
 
 function normalizeCollateralContractProduct(value) {
@@ -17929,7 +17924,7 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
       </div>
       <div class="application-deals-table-wrap">
         <table class="application-deals-table">
-          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договор залога</th><th></th></tr></thead>
+          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договоры залога</th><th></th></tr></thead>
           <tbody>${rows.map((row, index) => `
             <tr>
               <td><select data-application-deal-index="${index}" data-application-deal-field="product">${renderApplicationDealProductOptions(row.product)}</select></td>

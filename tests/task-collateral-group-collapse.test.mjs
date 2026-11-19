@@ -36,7 +36,7 @@ function buildRenderSandbox() {
   return { api: context.api, state };
 }
 
-test("150-collateral inspection showcase has linked application, task and joint pledgors", () => {
+test("the 150-collateral inspection task contains one complete pledgor/type/city group", () => {
   const task = initialData.tasks.find((item) => item.id === taskId);
   const application = initialData.applications.find((item) => item.id === applicationId);
   assert.ok(task);
@@ -48,41 +48,48 @@ test("150-collateral inspection showcase has linked application, task and joint 
   assert.equal(task.collateralIds.length, 150);
   assert.equal(new Set(task.collateralIds).size, 150);
   assert.equal(new Set(initialData.collaterals.map((item) => item.id)).size, initialData.collaterals.length, "fixture IDs must not collide with other seeded collateral IDs");
-  assert.deepEqual(new Set(task.collateralIds), new Set(application.collateralIds));
+  assert.ok(task.collateralIds.every((id) => application.collateralIds.includes(id)));
 
   const collaterals = task.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
   assert.ok(collaterals.every(Boolean));
-  assert.deepEqual(
-    Object.fromEntries(["Автотранспорт", "Оборудование", "Объекты недвижимости"].map((type) => [type, collaterals.filter((item) => item.type === type).length])),
-    { "Автотранспорт": 80, "Оборудование": 40, "Объекты недвижимости": 30 }
-  );
+  assert.ok(collaterals.every((item) => item.type === "Объекты недвижимости"));
+  assert.ok(collaterals.every((item) => item.pledgors.length === 1 && item.pledgors[0].name === "ООО СибТрансСервис"));
   assert.ok(collaterals.every((item) => item.addressFields?.["Город"] === "Новосибирск"));
   assert.equal(new Set(collaterals.map((item) => item.address)).size, 1, "all objects must be at one inspection site");
   assert.ok(collaterals.every((item) => item.addressFields?.["Дом"] === "10"));
-  const vehicles = collaterals.filter((item) => item.type === "Автотранспорт");
-  const equipment = collaterals.filter((item) => item.type === "Оборудование");
-  const realEstate = collaterals.filter((item) => item.type === "Объекты недвижимости");
-  assert.ok(vehicles.every((item) => item.fields?.["Подвид залога"] === "Залог автотранспортного средства категории В"));
-  assert.ok(vehicles.every((item) => item.fields?.["Марка/модель"] === "ГАЗель NEXT 3,5 т"));
-  assert.ok(equipment.every((item) => item.fields?.["Подвид залога"] === "Машины и оборудование" && item.fields?.["Серийный номер"]));
-  assert.ok(realEstate.every((item) => item.fields?.["Подвид залога"] === "Здания" && item.fields?.["Кадастровый номер"]));
-  const vins = vehicles.map((item) => item.profileIdentifier);
-  const vinYearCodes = { "2020": "L", "2021": "M", "2022": "N", "2023": "P", "2024": "R" };
-  assert.ok(vehicles.every((item) => item.profileIdentifierType === "VIN" && item.profileIdentifier?.length === 17));
-  assert.ok(vehicles.every((item) => item.profileIdentifier[9] === vinYearCodes[item.fields["Год выпуска"]]), "VIN year code must match the recorded model year");
-  assert.equal(new Set(vins).size, 80, "every vehicle must have a unique VIN");
-  const sharedCollateral = collaterals.filter((item) => item.pledgors.length === 2);
-  assert.equal(sharedCollateral.length, 9);
-  assert.ok(sharedCollateral.every((item) => item.pledgors.every((pledgor) => pledgor.share === "1/2")));
-
-  const typesByPledgor = new Map();
-  collaterals.forEach((item) => item.pledgors.forEach((pledgor) => {
-    typesByPledgor.set(pledgor.name, new Set([...(typesByPledgor.get(pledgor.name) || []), item.type]));
-  }));
-  assert.equal(typesByPledgor.size, 2);
-  assert.ok([...typesByPledgor.values()].every((types) => types.size === 3));
-  const pledgors = [...new Map(collaterals.flatMap((item) => item.pledgors).map((item) => [item.name, item])).values()];
+  assert.ok(collaterals.every((item) => item.fields?.["Подвид залога"] === "Здания" && item.fields?.["Кадастровый номер"]));
+  const applicationCollaterals = application.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
+  const pledgors = [...new Map(applicationCollaterals.flatMap((item) => item.pledgors).map((item) => [item.name, item])).values()];
+  assert.equal(pledgors.length, 5);
   assert.ok(pledgors.every((pledgor) => hasValidLegalEntityInn(pledgor.idn)), "each legal entity pledgor must have a valid 10-digit INN");
+});
+
+test("the parent application is split into five automatically created pledgor/type/city groups", () => {
+  const application = initialData.applications.find((item) => item.id === applicationId);
+  const tasks = application.taskIds.map((id) => initialData.tasks.find((task) => task.id === id));
+  assert.equal(tasks.length, 5);
+  assert.ok(tasks.every((task) => task && task.applicationId === application.id && task.createdFromApplicationAutomatically));
+  const signatures = tasks.map((task) => {
+    const collaterals = task.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
+    const owners = [...new Set(collaterals.map((item) => item.pledgors.map((pledgor) => pledgor.name).sort().join(" + ")))];
+    const types = [...new Set(collaterals.map((item) => item.type))];
+    const cities = [...new Set(collaterals.map((item) => item.addressFields?.["Город"]))];
+    assert.equal(owners.length, 1);
+    assert.equal(types.length, 1);
+    assert.equal(cities.length, 1);
+    return [owners[0], types[0], cities[0]].join(" | ");
+  });
+  assert.equal(new Set(signatures).size, 5, "each task must represent a distinct complete group");
+  const collaterals = application.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
+  assert.ok(new Set(collaterals.map((item) => item.type)).size > 1);
+  assert.ok(new Set(collaterals.map((item) => item.addressFields?.["Город"])).size > 1);
+  const jointCollateral = collaterals.find((item) => item.pledgors.length === 2);
+  assert.ok(jointCollateral);
+  assert.ok(jointCollateral.pledgors.every((pledgor) => pledgor.share === "50%"));
+  const links = application.deals[0].pledgeContractLinks;
+  assert.equal(links.length, 5);
+  assert.ok(links.every((link) => link.number && link.date && link.collateralIds.length));
+  assert.deepEqual(new Set(links.flatMap((link) => link.collateralIds)), new Set(application.collateralIds));
 });
 
 test("pledge groups use the complete pledgor set and count each collateral once", () => {
@@ -92,10 +99,10 @@ test("pledge groups use the complete pledgor set and count each collateral once"
   const groups = api.buildTaskCollateralGroups([...collaterals, collaterals[0]]);
 
   assert.equal(groups.reduce((sum, group) => sum + group.count, 0), 150);
-  assert.equal(groups.length, 3);
-  assert.ok(groups.some((group) => group.pledgors.length === 1));
-  assert.ok(groups.some((group) => group.pledgors.length === 2));
-  assert.ok(groups.every((group) => group.types.length === 3));
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].pledgors.length, 1);
+  assert.equal(groups[0].types.length, 1);
+  assert.equal(groups[0].types[0].type, "Объекты недвижимости");
   assert.ok(groups.every((group) => group.types.reduce((sum, typeGroup) => sum + typeGroup.count, 0) === group.count));
   assert.ok(groups.every((group) => group.types.every((typeGroup) => typeGroup.items.length === typeGroup.count)));
   assert.equal(groups.reduce((sum, group) => sum + group.pledgeValue, 0), collaterals.reduce((sum, item) => sum + item.pledgeValue, 0));
@@ -138,12 +145,12 @@ test("both group levels are visible by default; object rows expand independently
 
   api.toggleTaskCollateralGroup(task.id, groups[0].key);
   const parentCollapsed = api.renderTaskCollateralGroupedRows(task, groups, null, options);
-  assert.equal((parentCollapsed.match(/task-collateral-type-row/g) || []).length, 6);
+  assert.equal((parentCollapsed.match(/task-collateral-type-row/g) || []).length, 0);
   assert.match(parentCollapsed, /task-collateral-pledgor-row[\s\S]*?aria-expanded="false"/);
 
   api.toggleTaskCollateralGroup(task.id, groups[0].key);
   const parentExpanded = api.renderTaskCollateralGroupedRows(task, groups, null, options);
-  assert.equal((parentExpanded.match(/task-collateral-type-row/g) || []).length, 9);
+  assert.equal((parentExpanded.match(/task-collateral-type-row/g) || []).length, 1);
   assert.match(parentExpanded, /task-collateral-pledgor-row[\s\S]*?aria-expanded="true"/);
 
   api.toggleTaskCollateralGroup(task.id, groups[0].types[0].key);

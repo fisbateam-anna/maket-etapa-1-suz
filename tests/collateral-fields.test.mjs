@@ -562,7 +562,8 @@ test("collateral contracts table renders linked credit and pledge agreements in 
   assert.notEqual(relatedEnd, -1);
   assert.notEqual(tableStart, -1);
   assert.notEqual(tableEnd, -1);
-  const contractSources = `${appSource.slice(relatedStart, relatedEnd)}\n${appSource.slice(tableStart, tableEnd)}`;
+  const numericFormatting = `${extractConstantSource("function parseNumericInput(value)", "function updateMarketAdjustment")}${extractConstantSource("function formatFullMoney(value)", "function getContractDebtRub")}`;
+  const contractSources = `${numericFormatting}\n${appSource.slice(relatedStart, relatedEnd)}\n${appSource.slice(tableStart, tableEnd)}`;
   const dateFormatting = `${appSource.slice(appSource.indexOf("function getDateTimeSortValue(value)"), appSource.indexOf("\nfunction matchesNumericRange"))}\n${appSource.slice(appSource.indexOf("function formatRegistryDateTime(value)"), appSource.indexOf("\nfunction isDateTimeDisplayLabel"))}`;
   const contractFixture = structuredClone(initialData);
   const sandbox = {
@@ -593,8 +594,8 @@ test("collateral contracts table renders linked credit and pledge agreements in 
         && (!pledgeDate || candidate.includes(`<td>${pledgeDate}</td>`)));
     return row ? Array.from(row.matchAll(/<td>(.*?)<\/td>/g), (match) => match[1].replace(/\s+/g, " ")) : [];
   };
-  assert.deepEqual(getCells(html, "ZL-26/228-1"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-26/228-1", "05.02.2026", "2 400 000 000", "RUB"]);
-  assert.deepEqual(getCells(html, "ZL-26/316-1"), ["Кредит", "LC-26/316", "18.03.2026", "ZL-26/316-1", "18.03.2026", "800 000 000", "RUB"]);
+  assert.deepEqual(getCells(html, "ZL-26/228-1"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-26/228-1", "05.02.2026", "2 400 000 000,00", "RUB"]);
+  assert.deepEqual(getCells(html, "ZL-26/316-1"), ["Кредит", "LC-26/316", "18.03.2026", "ZL-26/316-1", "18.03.2026", "800 000 000,00", "RUB"]);
 
   const mergedDuplicateHtml = sandbox.render({
     ...mixedCollateral,
@@ -604,7 +605,7 @@ test("collateral contracts table renders linked credit and pledge agreements in 
     pledgeContractAmount: 123456,
     pledgeContractCurrency: "USD"
   });
-  assert.deepEqual(getCells(mergedDuplicateHtml, "ZL-MERGED"), ["-", "-", "-", "ZL-MERGED", "01.04.2026", "123 456", "USD"]);
+  assert.deepEqual(getCells(mergedDuplicateHtml, "ZL-MERGED"), ["-", "-", "-", "ZL-MERGED", "01.04.2026", "123 456,00", "USD"]);
 
   const allocatedFallbackHtml = sandbox.render({
     ...mixedCollateral,
@@ -612,20 +613,20 @@ test("collateral contracts table renders linked credit and pledge agreements in 
     pledgeContractNumber: "ZL-ALLOC",
     pledgeContractDate: "2026-04-05"
   });
-  assert.deepEqual(getCells(allocatedFallbackHtml, "ZL-ALLOC"), ["-", "-", "-", "ZL-ALLOC", "05.04.2026", "777", "-"]);
+  assert.deepEqual(getCells(allocatedFallbackHtml, "ZL-ALLOC"), ["-", "-", "-", "ZL-ALLOC", "05.04.2026", "777,00", "-"]);
 
   const ambiguousLinkHtml = sandbox.render({
     ...mixedCollateral,
     encumbrances: [{ number: "ZL-AMBIGUOUS", date: "2026-04-02", amount: 1000 }]
   });
-  assert.deepEqual(getCells(ambiguousLinkHtml, "ZL-AMBIGUOUS"), ["-", "-", "-", "ZL-AMBIGUOUS", "02.04.2026", "1 000", "-"]);
+  assert.deepEqual(getCells(ambiguousLinkHtml, "ZL-AMBIGUOUS"), ["-", "-", "-", "ZL-AMBIGUOUS", "02.04.2026", "1 000,00", "-"]);
 
   const uniqueLinkHtml = sandbox.render({
     ...mixedCollateral,
     contractIds: ["CTR-2026-0228"],
     encumbrances: [{ number: "ZL-UNIQUE", date: "2026-04-03", amount: 2000 }]
   });
-  assert.deepEqual(getCells(uniqueLinkHtml, "ZL-UNIQUE"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-UNIQUE", "03.04.2026", "2 400 000 000", "RUB"]);
+  assert.deepEqual(getCells(uniqueLinkHtml, "ZL-UNIQUE"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-UNIQUE", "03.04.2026", "2 400 000 000,00", "RUB"]);
 
   const emptyHtml = sandbox.render({ encumbrances: [] });
   assert.match(emptyHtml, /<td colspan="7">Договоры и обеспечения не указаны\.<\/td>/);
@@ -640,7 +641,7 @@ test("collateral contracts table renders linked credit and pledge agreements in 
   });
   const mainOnlyRow = Array.from(mainOnlyHtml.matchAll(/<tr>(.*?)<\/tr>/g), (match) => match[1])
     .find((candidate) => candidate.includes("BG-26/228"));
-  assert.deepEqual(Array.from(mainOnlyRow.matchAll(/<td>(.*?)<\/td>/g), (match) => match[1].replace(/\s+/g, " ")), ["Банковская гарантия", "BG-26/228", "05.02.2026", "-", "-", "2 400 000 000", "RUB"]);
+  assert.deepEqual(Array.from(mainOnlyRow.matchAll(/<td>(.*?)<\/td>/g), (match) => match[1].replace(/\s+/g, " ")), ["Банковская гарантия", "BG-26/228", "05.02.2026", "-", "-", "2 400 000 000,00", "RUB"]);
 
   const multiPledgeHtml = sandbox.render({
     ...mixedCollateral,
@@ -658,8 +659,8 @@ test("collateral contracts table renders linked credit and pledge agreements in 
   assert.match(multiPledgeHtml, /27\.10\.2026/);
   assert.match(multiPledgeHtml, /27\.11\.2026/);
   assert.match(multiPledgeHtml, /28\.10\.2026/);
-  assert.deepEqual(getCells(multiPledgeHtml, "ZL-MULTI-1", "27.10.2026"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-MULTI-1", "27.10.2026", "2 400 000 000", "RUB"]);
-  assert.deepEqual(getCells(multiPledgeHtml, "ZL-MULTI-1", "27.11.2026"), ["Кредит", "LC-26/316", "18.03.2026", "ZL-MULTI-1", "27.11.2026", "800 000 000", "RUB"]);
+  assert.deepEqual(getCells(multiPledgeHtml, "ZL-MULTI-1", "27.10.2026"), ["Банковская гарантия", "BG-26/228", "05.02.2026", "ZL-MULTI-1", "27.10.2026", "2 400 000 000,00", "RUB"]);
+  assert.deepEqual(getCells(multiPledgeHtml, "ZL-MULTI-1", "27.11.2026"), ["Кредит", "LC-26/316", "18.03.2026", "ZL-MULTI-1", "27.11.2026", "800 000 000,00", "RUB"]);
   assert.deepEqual(getCells(multiPledgeHtml, "ZL-MULTI-2", "28.10.2026"), ["-", "-", "-", "ZL-MULTI-2", "28.10.2026", "-", "-"]);
 
   const dateOnlyHtml = sandbox.render({
@@ -686,7 +687,7 @@ test("collateral contracts table renders linked credit and pledge agreements in 
     pledgeContractNumber: "",
     pledgeContractDate: ""
   });
-  assert.deepEqual(getCells(pledgeAmountFallbackHtml, "ZL-USD"), ["-", "BG-26/228", "05.02.2026", "ZL-USD", "30.10.2026", "2 000", "USD"]);
+  assert.deepEqual(getCells(pledgeAmountFallbackHtml, "ZL-USD"), ["-", "BG-26/228", "05.02.2026", "ZL-USD", "30.10.2026", "2 000,00", "USD"]);
 });
 
 test("import template columns follow v8 and vary only by the selected collateral type", () => {

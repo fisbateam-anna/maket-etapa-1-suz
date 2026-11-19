@@ -139,6 +139,8 @@ test("collateral change history combines user and source into one column", () =>
   const taskHistory = extractBetween("function renderTaskHistory(task)", "function formatLatestTaskHistoryEvent");
   const taskHeaders = Array.from(taskHistory.matchAll(/<th>(.*?)<\/th>/g), (match) => match[1]);
   assert.deepEqual(taskHeaders, ["Дата", "Действие", "Пользователь", "Статус", "Было", "Стало", "Комментарий"]);
+  assert.match(taskHistory, /<h2>История действий по задаче<\/h2>/);
+  assert.doesNotMatch(taskHistory, /formatLatestTaskHistoryEvent|Записей:\s*\$\{rows\.length\}/);
 });
 
 test("collateral header uses the latest completed valuation task for the collateral", () => {
