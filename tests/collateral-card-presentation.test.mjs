@@ -18,6 +18,13 @@ function extractBetween(startMarker, endMarker) {
   return appSource.slice(start, end);
 }
 
+const dateFormatting = [
+  extractBetween("function getDateTimeSortValue(value)", "\nfunction matchesNumericRange"),
+  extractBetween("function formatRegistryDateTime(value)", "\nfunction isDateTimeDisplayLabel"),
+  extractBetween("function formatHistoryDisplayValue(value)", "\nfunction getCollateralRiskSignals"),
+  extractBetween("function isDateTimeDisplayLabel(label)", "\nfunction getRegistrySortEntries")
+].join("\n");
+
 test("collateral overview renders type fields, shared fields, basis and address in the requested panels", () => {
   const source = extractBetween("function renderCollateralOverview(collateral)", "function renderCollateralDisplayFieldGrid");
   let typeFields = {};
@@ -108,7 +115,7 @@ test("collateral change history combines user and source into one column", () =>
   const sandbox = {
     escapeHtml: (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
   };
-  vm.runInNewContext(`${historyRenderer}\nglobalThis.render = renderCollateralHistory;`, sandbox);
+  vm.runInNewContext(`${dateFormatting}\n${historyRenderer}\nglobalThis.render = renderCollateralHistory;`, sandbox);
   const html = sandbox.render({ history: [
     { date: "2026-11-10", user: "Иван Петров", source: "АРМ пользователя", field: "Статус", oldValue: "Новый", newValue: "В залоге", reason: "Регистрация" },
     { date: "2026-11-09", user: "Система", source: "АБС", field: "Проверка", oldValue: "Ожидает", newValue: "Выполнена", reason: "Синхронизация" },
@@ -195,7 +202,7 @@ test("collateral card escapes user-provided markup in read-only fields", () => {
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-",
     getCollateralEditableInputType: (label) => label === "Дополнительная информация" ? "textarea" : "text"
   };
-  vm.runInNewContext(`${renderer}\nglobalThis.render = renderCollateralDisplayFieldGrid;`, sandbox);
+  vm.runInNewContext(`${dateFormatting}\n${renderer}\nglobalThis.render = renderCollateralDisplayFieldGrid;`, sandbox);
   const html = sandbox.render({ "Дополнительная информация": "<img src=x onerror=alert(1)>" });
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img/);
@@ -208,7 +215,7 @@ test("legacy collateral read-only grid escapes values unless a field is explicit
     escapeHtml: (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"),
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-"
   };
-  vm.runInNewContext(`${renderer}\nglobalThis.render = renderReadonlyFieldGrid;`, sandbox);
+  vm.runInNewContext(`${dateFormatting}\n${renderer}\nglobalThis.render = renderReadonlyFieldGrid;`, sandbox);
   const html = sandbox.render({
     "Дополнительная информация": "<img src=x onerror=alert(1)>",
     "Задача оценки": '<button class="link">tsk-001</button>'

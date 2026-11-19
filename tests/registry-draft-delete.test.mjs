@@ -46,6 +46,7 @@ test("application link stays clean and delete action is permission-gated in its 
   assert.doesNotMatch(forbidden.context.renderDeleteAction(forbidden.draft), /open-delete-application/);
   assert.match(active.context.renderDeleteAction(active.draft), /data-action="open-delete-application"[^>]*disabled aria-disabled="true"/);
 });
+
 test("application delete action is modeled as its own final column", () => {
   const block = sourceBlock("function getApplicationRegistryColumns(", "\nfunction isApplicationVisibleInRegistry(");
   const emptyValue = () => "";
@@ -148,3 +149,4 @@ test("collateral registry waits for a search criterion and treats application co
   assert.equal(context.hasCriteria({ status: ["Новый", "В залоге"], name: "квартира" }), true);
   assert.equal(context.hasCriteria({}, "app-30102026-001"), true);
 });
+

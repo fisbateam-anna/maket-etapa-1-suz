@@ -1,4 +1,4 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-arm-v4-20261110-r24";
+import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=ft-arm-v4-20261116-r28";
 import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
 
@@ -2192,6 +2192,7 @@ const state = {
   sort: { scope: "", field: "", dir: "asc" },
   documentApplyFilters: {},
   taskActiveCollateral: {},
+  taskCollateralGroupExpanded: {},
   taskCardTabs: {},
   newTask: {
     key: "",
@@ -2218,6 +2219,8 @@ const state = {
 		    applicationInspectionLink: "",
 		    applicationInspectionActFile: "",
 		    applicationInspectionRecordedAt: "",
+		    applicationInspectionApplyBinding: "application::",
+        applicationPreInspections: [],
 		    applicationDeals: [],
 		    applicationContacts: [],
 		    registrationScenario: "",
@@ -3403,7 +3406,7 @@ const TASK_REGISTRY_COLLATERAL_PAGE_SIZE = 40;
 
 function getCollateralCreatedDate(collateral) {
   const createdAt = String(collateral?.createdAt || "").trim();
-  return createdAt ? formatProfileIdentifierDate(createdAt.slice(0, 10)) : "—";
+  return createdAt ? formatRegistryDateTime(createdAt) : "—";
 }
 
 function renderTaskRegistryCollateralCell(task, collaterals) {
@@ -3559,7 +3562,10 @@ function render() {
     return;
   }
   const content = renderRoute(path, query);
-  const mainClass = COMPACT_REGISTRY_ROUTES.has(path) ? "main registry-main" : "main";
+  const isApplicationFormPage = path === "/app/applications/new" || /^\/app\/applications\/[^/]+$/.test(path);
+  const mainClass = COMPACT_REGISTRY_ROUTES.has(path)
+    ? "main registry-main"
+    : isApplicationFormPage ? "main application-page-main" : "main";
   if (isMobileOnlyRole) {
     app.innerHTML = `
       <div class="mobile-app-shell">
@@ -3586,7 +3592,7 @@ function render() {
     return;
   }
   app.innerHTML = `
-    <div class="app-shell">
+    <div class="app-shell${isApplicationFormPage ? " application-page-shell" : ""}">
       ${renderTopbar(role, path)}
       <main class="${mainClass}">${content}</main>
       ${renderModal()}
@@ -3783,9 +3789,10 @@ function renderRoute(path, query) {
 function renderPageHeader(title, text, actions = "", options = {}) {
   const defaultRoute = getDefaultRouteForRole(getRole());
   const breadcrumb = options.showBreadcrumb === false ? "" : `<div class="breadcrumbs"><button class="link" data-route="${defaultRoute}">Главная</button><span>/</span><span>${escapeHtml(title)}</span></div>`;
+  const headerClass = options.headerClass ? ` ${escapeHtml(options.headerClass)}` : "";
   return `
     ${breadcrumb}
-    <section class="page-header">
+    <section class="page-header${headerClass}">
       <div><h1>${escapeHtml(title)}</h1>${text ? `<p>${escapeHtml(text)}</p>` : ""}</div>
       <div class="header-actions">${actions}</div>
     </section>
@@ -3902,9 +3909,11 @@ function renderNotFound(title, route) {
 function renderInfoGrid(items) {
   return `
     <dl class="info-grid">
-      ${Object.entries(items).map(([key, value]) => `
-        <div><dt>${escapeHtml(key)}</dt><dd>${typeof value === "string" && value.startsWith("<") ? value : escapeHtml(value ?? "-")}</dd></div>
-      `).join("")}
+      ${Object.entries(items).map(([key, value]) => {
+        const isMarkup = typeof value === "string" && value.startsWith("<");
+        const displayValue = !isMarkup && isDateTimeDisplayLabel(key) ? formatRegistryDateTime(value) : value;
+        return `<div><dt>${escapeHtml(key)}</dt><dd>${isMarkup ? value : escapeHtml(displayValue ?? "-")}</dd></div>`;
+      }).join("")}
     </dl>
   `;
 }
@@ -3938,6 +3947,16 @@ function formatShortMoney(value) {
   if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1).replace(".", ",")} млрд ₽`;
   if (amount >= 1_000_000) return `${Math.round(amount / 1_000_000).toLocaleString("ru-RU")} млн ₽`;
   return formatMoney(amount, "RUB");
+}
+
+function formatFullMoney(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "-";
+  const amount = typeof value === "number" ? value : parseNumericInput(value);
+  if (!Number.isFinite(amount)) return String(value);
+  return new Intl.NumberFormat("ru-RU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount).replace(/[\u00a0\u202f]/g, " ");
 }
 
 function getContractDebtRub(contract) {
@@ -4388,7 +4407,7 @@ function renderTaskQueuePanel(queueRows, visibleCount, baseCount) {
                 </div>
                 <div>
                   ${badge(task.priority)}
-                  <small>${escapeHtml(task.dueDate)} · ${escapeHtml(urgency)}</small>
+                  <small>${escapeHtml(formatRegistryDateTime(task.dueDate))} · ${escapeHtml(urgency)}</small>
                 </div>
               </article>
             `;
@@ -4489,7 +4508,7 @@ function renderTaskRiskHeatmapPanel(baseRows, visual) {
               <div>
                 <a class="link registry-object-link" href="#${escapeHtml(getTaskCardRoute(task))}">${escapeHtml(task.id)}</a>
                 <strong>${escapeHtml(task.type)}</strong>
-                <small>${escapeHtml(task.assignee)} · ${escapeHtml(task.dueDate)} · ${escapeHtml(getTaskUrgency(task))}</small>
+                <small>${escapeHtml(task.assignee)} · ${escapeHtml(formatRegistryDateTime(task.dueDate))} · ${escapeHtml(getTaskUrgency(task))}</small>
               </div>
               ${badge(task.priority)}
             </article>
@@ -4759,7 +4778,7 @@ function getTaskRegistrationNumberDate(task, collaterals) {
     const date = task?.registrationDates?.[collateralId]
       || task?.registration?.[collateralId]?.date
       || "";
-    return [[number, date].filter(Boolean).join(" от ")];
+    return [[number, date ? formatRegistryDateTime(date) : ""].filter(Boolean).join(" от ")];
   }).filter(Boolean));
   return values.length ? values.join(", ") : "";
 }
@@ -4772,6 +4791,11 @@ function formatRegistryDateTime(value) {
   const dateText = `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.${date.getUTCFullYear()}`;
   const hasTime = /(?:[ T]\d{2}:\d{2})/.test(String(value || ""));
   return hasTime ? `${dateText} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}` : dateText;
+}
+
+function isDateTimeDisplayLabel(label) {
+  const text = String(label || "").trim();
+  return /дата/i.test(text) || /^срок$/i.test(text) || /срок\s+(?:исполнения|действия|окончания|возврата)/i.test(text);
 }
 
 function getRegistrySortEntries(scope, partition = "") {
@@ -5854,10 +5878,10 @@ function renderApplicationLinkedTasksField(application) {
 function renderApplicationLinkedTasksTable(application) {
   const tasks = getApplicationTasks(application);
   return `
-    <section class="application-linked-tasks-table-section">
+    <section class="panel application-form-group application-form-group-linked-tasks application-linked-tasks-table-section">
       <div class="panel-title">
         <div>
-          <h2>Связанные задачи</h2>
+          <h2 class="shared-component-title">Связанные задачи</h2>
           <span class="panel-note">Задачи, созданные в рамках заявки.</span>
         </div>
       </div>
@@ -5866,8 +5890,7 @@ function renderApplicationLinkedTasksTable(application) {
           <table class="application-linked-tasks-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Номер</th>
+                <th>Номер задачи</th>
                 <th>Тип</th>
                 <th>Статус</th>
                 <th>Исполнитель</th>
@@ -5878,13 +5901,12 @@ function renderApplicationLinkedTasksTable(application) {
             <tbody>
               ${tasks.map((task) => `
                 <tr>
-                  <td>${renderApplicationLinkedTaskIdCell(task)}</td>
-                  <td>${escapeHtml(task.number || task.taskNumber || task.id || "-")}</td>
+                  <td>${renderApplicationLinkedTaskNumberCell(task)}</td>
                   <td>${escapeHtml(getTaskDisplayType(task))}</td>
                   <td>${badge(task.status || "-")}</td>
                   <td>${escapeHtml(task.assignee || "-")}</td>
-                  <td>${escapeHtml(getTaskCreatedDateTime(task))}</td>
-                  <td>${escapeHtml(task.dueDate || "-")}</td>
+                  <td>${escapeHtml(formatRegistryDateTime(getTaskCreatedDateTime(task)))}</td>
+                  <td>${escapeHtml(formatRegistryDateTime(task.dueDate))}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -5924,7 +5946,7 @@ function renderApplicationReturnNotice(application) {
           </div>
           <div class="application-return-notice-meta">
             <span>Дата возврата</span>
-            <strong>${escapeHtml(request.date || "Не указана")}</strong>
+            <strong>${escapeHtml(request.date ? formatRegistryDateTime(request.date) : "Не указана")}</strong>
           </div>
         </div>
         <div class="application-return-response">
@@ -5952,10 +5974,11 @@ function renderApplicationReturnNotice(application) {
   `;
 }
 
-function renderApplicationLinkedTaskIdCell(task) {
+function renderApplicationLinkedTaskNumberCell(task) {
   const id = task?.id || "-";
-  if (!task || !canViewTaskRecord(task, getRole())) return `<span class="muted">${escapeHtml(id)}</span>`;
-  return `<button class="link registry-object-link application-linked-task-link" data-route="${escapeHtml(getTaskCardRoute(id))}">${escapeHtml(legacyObjectNumberAliases[id] || id)}</button>`;
+  const number = task?.number || task?.taskNumber || legacyObjectNumberAliases[id] || id;
+  if (!task || !canViewTaskRecord(task, getRole())) return `<span class="muted">${escapeHtml(number)}</span>`;
+  return renderRegistryRecordLink(getTaskCardRoute(task), number, "link registry-object-link application-linked-task-link");
 }
 
 const APPLICATION_REGISTRY_COLLATERAL_PAGE_SIZE = 40;
@@ -6334,7 +6357,7 @@ function renderInsurancePoliciesRegistry() {
             <td>${escapeHtml(row.clientName)}<br><small>${escapeHtml(row.collateral.clientId)}</small></td>
             <td>${row.contract ? escapeHtml(row.contract.number) : "-"}</td>
             <td>${escapeHtml(row.company)}</td>
-            <td>${escapeHtml(row.from)} - ${escapeHtml(row.to)}<br><small>${row.daysLeft === null ? "Срок не рассчитан" : `${row.daysLeft} дн.`}</small></td>
+            <td>${escapeHtml(formatRegistryDateTime(row.from))} - ${escapeHtml(formatRegistryDateTime(row.to))}<br><small>${row.daysLeft === null ? "Срок не рассчитан" : `${row.daysLeft} дн.`}</small></td>
             <td>${formatMoney(row.amount)}</td>
             <td>${badge(row.premiumStatus)}</td>
             <td>${badge(row.status)}</td>
@@ -6405,7 +6428,7 @@ function renderTaskSourcesRegistry() {
           <td>${escapeHtml(task.source)}</td>
           <td>${escapeHtml(task.assignee)}</td>
           <td>${badge(task.status)}</td>
-          <td>${escapeHtml(task.dueDate)}</td>
+          <td>${escapeHtml(formatRegistryDateTime(task.dueDate))}</td>
         </tr>
       `).join("")}</tbody></table>
     </section>
@@ -6784,17 +6807,22 @@ function getTaskHeaderTitle(task) {
     .join(" - ");
 }
 
+const TASK_CARD_OPTIONAL_BLOCKS = Object.freeze({
+  signals: false,
+  participants: false
+});
+
 function renderTaskCardHeader(task, actions = "", collaterals = getTaskCollaterals(task)) {
   const defaultRoute = getDefaultRouteForRole(getRole());
   const title = getTaskHeaderTitle(task);
   return `
     <div class="breadcrumbs"><button class="link" data-route="${defaultRoute}">Главная</button><span>/</span><span>${escapeHtml(title)}</span></div>
-    <section class="page-header task-page-header">
+    <section class="page-header task-page-header${TASK_CARD_OPTIONAL_BLOCKS.signals ? "" : " is-without-signals"}">
       <div class="task-page-heading">
         <h1>${escapeHtml(title)}</h1>
       </div>
       <div class="header-actions">${actions}</div>
-      ${renderTaskActionGuidance(task, collaterals)}
+      ${TASK_CARD_OPTIONAL_BLOCKS.signals ? renderTaskActionGuidance(task, collaterals) : ""}
     </section>
   `;
 }
@@ -6815,9 +6843,9 @@ function renderTaskCard(taskId) {
   return `
     <div class="${taskPageClass}">
       ${renderTaskCardHeader(task, renderTaskHeaderActions(task, role), collaterals)}
-      <div class="task-summary-layout">
+      <div class="task-summary-layout${TASK_CARD_OPTIONAL_BLOCKS.participants ? "" : " is-single-column"}">
         ${renderTaskMainInfo(task, collaterals)}
-        ${renderTaskParticipantsPanel(task)}
+        ${TASK_CARD_OPTIONAL_BLOCKS.participants ? renderTaskParticipantsPanel(task) : ""}
       </div>
       ${renderTaskCardTabs(task, collateral, collaterals, activeContracts)}
     </div>
@@ -6880,10 +6908,54 @@ function renderTaskCardTabContent(activeTab, task, collateral, collaterals, acti
   return `
     <section class="task-detail-main task-tab-main">
       ${renderTaskCollateralContext(task, collaterals, collateral)}
+      ${renderTaskMainInspectionContactsGroup(task, collateral)}
       ${renderTaskDocumentsPanel(task, collaterals, collateral)}
-      ${renderTaskGeneralBlocks(task, collateral, collaterals)}
+      ${renderTaskMainAdditionalBlocks(task, collateral, collaterals)}
     </section>
   `;
+}
+
+function renderTaskMainInspectionContactsGroup(task, collateral) {
+  return `
+    <section class="panel application-form-group application-form-group-inspection-contacts task-main-inspection-contacts-group">
+      ${renderTaskApplicationPreInspectionBlock(task)}
+      ${renderTaskMainContactPersonsBlock(task, collateral)}
+    </section>
+  `;
+}
+
+function renderTaskMainContactPersonsBlock(task, collateral) {
+  if (!collateral) return renderTaskContactsWithoutActiveCollateral(task);
+  return renderInspectionContactsBlock(task, collateral);
+}
+
+function renderTaskMainAdditionalBlocks(task, collateral, collaterals) {
+  if (isInspectionCardTaskType(task?.type) || isDefectInspectionTaskType(task?.type)) return "";
+  return renderTaskGeneralBlocks(task, collateral, collaterals);
+}
+
+function renderTaskContactsWithoutActiveCollateral(task) {
+  const application = getTaskApplication(task);
+  const contacts = getApplicationContactRows(application, getApplicationCollaterals(application))
+    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, null));
+  return renderContactPersonsBlock({
+    contacts,
+    panelClass: "task-form-panel inspection-contacts-panel is-readonly",
+    tableClass: "inspection-contacts-table-wrap",
+    phoneLabel: "Телефон контактного лица",
+    commentLabel: "Комментарий",
+    showCallDate: true,
+    renderRow: (contact) => `
+      <tr>
+        <td>${escapeHtml(contact.role || "-")}</td>
+        <td>${escapeHtml(contact.name || "-")}</td>
+        <td>${escapeHtml(contact.phone || "-")}</td>
+        <td>${escapeHtml(contact.comment || "-")}</td>
+        <td>${escapeHtml(formatContactCallDateValue(contact.callDate || "") || "-")}</td>
+        <td></td>
+      </tr>
+    `
+  });
 }
 
 function getTaskDisplayType(task) {
@@ -7129,7 +7201,8 @@ function renderTaskInfoField(label, value, options = {}) {
     options.wide ? "task-info-field-wide" : "",
     options.comment ? "task-info-field-comment" : ""
   ].filter(Boolean).join(" ");
-  const valueHtml = options.html ? (value || "-") : escapeHtml(value ?? "-");
+  const displayValue = !options.html && isDateTimeDisplayLabel(label) ? formatRegistryDateTime(value) : value;
+  const valueHtml = options.html ? (value || "-") : escapeHtml(displayValue ?? "-");
   return `
     <div class="${classes}">
       <span>${escapeHtml(label)}</span>
@@ -7275,6 +7348,21 @@ function isObjectCheckFailedStatus(status) {
   return /не пройд/i.test(String(status || ""));
 }
 
+function isExplicitNegativeCheckResult(result) {
+  const value = String(result || "").toLowerCase().replace(/ё/g, "е");
+  if (!value) return false;
+  const positiveResult = value.replace(/(?:арест[а-я]*|запрет[а-я]*|ограничен[а-я]*|обременен[а-я]*|дефект[а-я]*|поврежден[а-я]*)\s+не\s+выявлен[а-я]*/g, "");
+  return /не\s+(?:подтвержден|соответствует|зарегистрирован|сверен)|утрачен|снят\s+с\s+учет|отрицательн|негативн|(?:арест|запрет|ограничен|обремен|несоответ|дефект|поврежден)[^.;]{0,45}(?:выявлен|установлен|обнаружен)|(?:выявлен|установлен|обнаружен)[^.;]{0,45}(?:арест|запрет|ограничен|обремен|несоответ|дефект|поврежден)|розыск/i.test(positiveResult);
+}
+
+function hasNegativeCollateralCheckResult(collateral) {
+  const type = String(collateral?.type || "");
+  if (!(isRealEstateCollateralType(type) || isAutoVehicleCollateralType(type) || isSelfPropelledCollateralType(type))) return false;
+  return getCollateralObjectCheckRows(null, collateral, "collateral").some((row) =>
+    isObjectCheckFailedStatus(row.status) || isExplicitNegativeCheckResult(row.result)
+  );
+}
+
 function isObjectCheckControlStatus(status) {
   return /контрол|ошибка|уточнен/i.test(String(status || ""));
 }
@@ -7343,51 +7431,57 @@ function renderTaskMainInfo(task, collaterals = getTaskCollaterals(task)) {
   const applicationSubtype = getTaskApplicationSubtypeValue(task) || "-";
   const applicationPurpose = getTaskApplicationPurposeValue(task) || "-";
   const applicationStatus = application?.status || task?.applicationStatus || "-";
-  const applicationReceivedAt = getTaskApplicationReceivedAt(task);
   const applicationInitiator = application?.initiator || task?.initiator || getTaskInitiator(task);
   const applicationInitiatorSegment = application?.initiatorSegment
     || task?.initiatorSegment
     || getApplicationInitiatorSegment({ ...application, initiator: applicationInitiator, product: task?.dealProduct });
   const clientInn = getTaskHeaderClientInn(task);
   const taskSetterComment = getTaskSetterComment(task);
+  const taskAuthor = getTaskAuthorName(task);
   const applicationComment = getTaskApplicationComment(task, application);
   const creationContext = getTaskCreationContext(task);
   const executorDepartment = getEmployeeDepartmentByName(task.assignee);
   const parentObjectHtml = renderTaskObjectLink(creationContext.parentRoute, creationContext.parentLabel);
   return `
-    <section class="panel task-main-info-panel">
-      <div class="panel-title">
-        <div>
-          <h2>Основная информация по задаче</h2>
-        </div>
-      </div>
-      <div class="task-main-info-modern">
-        <div class="task-main-info-hero">
-          ${renderTaskInfoField("Клиент", getTaskHeaderClient(task), { primary: true, note: clientInn && clientInn !== "-" ? `ИНН ${clientInn}` : "" })}
-          <div class="task-main-info-keyfacts">
-            ${renderTaskInfoField("Статус", task.status || "-")}
-            ${renderTaskInfoField("Дата создания задачи", task.createdAt || "-")}
-            ${renderTaskInfoField("Срок исполнения задачи", taskDueDate)}
-            ${renderTaskInfoField("Текущий исполнитель", task.assignee || "-")}
-            ${renderTaskInfoField("Подразделение исполнителя", executorDepartment)}
+    <section class="panel task-parameters-layout" aria-label="Параметры задачи и заявки">
+      <div class="task-parameters-top">
+        <div class="task-main-info-column">
+          <div class="task-main-info-panel">
+            <div class="panel-title">
+              <div>
+                <h2 class="shared-component-title">Параметры задачи</h2>
+              </div>
+            </div>
+            <div class="task-main-info-modern">
+              <div class="task-main-info-hero">
+                ${renderTaskInfoField("Клиент", getTaskHeaderClient(task), { primary: true, note: clientInn && clientInn !== "-" ? `ИНН ${clientInn}` : "" })}
+                <div class="task-main-info-keyfacts">
+                  ${renderTaskInfoField("Статус", task.status || "-")}
+                  ${renderTaskInfoField("Дата создания задачи", task.createdAt || "-")}
+                  ${renderTaskInfoField("Срок исполнения задачи", taskDueDate)}
+                  ${renderTaskInfoField("Автор задачи", taskAuthor)}
+                  ${renderTaskInfoField("Текущий исполнитель", task.assignee || "-")}
+                  ${renderTaskInfoField("Подразделение исполнителя", executorDepartment)}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="task-main-origin-row" aria-label="Происхождение задачи">
+            <div class="task-main-origin-compact">
+              ${renderTaskInfoField("Источник создания", creationContext.source)}
+              ${renderTaskInfoField("Родительский объект", parentObjectHtml, { html: true })}
+            </div>
+            <div class="task-main-origin-comment">
+              ${renderTaskInfoField("Комментарий постановщика", taskSetterComment, { comment: true })}
+            </div>
           </div>
         </div>
-        <div class="task-main-origin-row" aria-label="Происхождение задачи">
-          <div class="task-main-origin-compact">
-            ${renderTaskInfoField("Источник создания", creationContext.source)}
-            ${renderTaskInfoField("Родительский объект", parentObjectHtml, { html: true })}
-          </div>
-          <div class="task-main-origin-comment">
-            ${renderTaskInfoField("Комментарий постановщика", taskSetterComment, { comment: true })}
-          </div>
-        </div>
-        ${renderTaskApplicationContractsCompactList(applicationDealRows)}
         <details class="task-application-compact-context">
           <summary class="task-application-compact-head">
             <span class="task-application-compact-chevron" aria-hidden="true"></span>
             <span class="task-application-compact-title">
-              <strong>Параметры заявки ${escapeHtml(applicationNumber)}</strong>
-              <small>Тип, подтип, цель, статус, инициатор и суть обращения</small>
+              <strong class="shared-component-title">Параметры заявки</strong>
+              <span class="task-application-compact-number">${escapeHtml(applicationNumber)}</span>
             </span>
           </summary>
           <div class="task-info-grid task-application-compact-grid">
@@ -7395,12 +7489,14 @@ function renderTaskMainInfo(task, collaterals = getTaskCollaterals(task)) {
             ${renderTaskInfoField("Подтип заявки", applicationSubtype)}
             ${renderTaskInfoField("Цель заявки", applicationPurpose)}
             ${renderTaskInfoField("Статус заявки", applicationStatus)}
-            ${renderTaskInfoField("Дата поступления заявки", applicationReceivedAt)}
             ${renderTaskInfoField("Инициатор", applicationInitiator)}
             ${renderTaskInfoField("Сегмент инициатора", applicationInitiatorSegment)}
             ${renderTaskInfoField("Суть обращения / комментарий", applicationComment, { wide: true, comment: true })}
           </div>
         </details>
+      </div>
+      <div class="task-parameters-supporting">
+        ${renderTaskApplicationContractsReadOnlyTable(applicationDealRows)}
       </div>
     </section>
   `;
@@ -7464,26 +7560,33 @@ function renderTaskApplicationDealsTable(rows, taskCollaterals = []) {
   `;
 }
 
-function renderTaskApplicationContractsCompactList(rows = []) {
-  const filledRows = rows.filter((row) => row.contractNumber || row.product || row.limit);
-  if (!filledRows.length) return "";
+function renderTaskApplicationContractsReadOnlyTable(rows = []) {
+  const filledRows = rows.filter((row) =>
+    row.product || row.contractNumber || row.contractDate || row.limit || row.currency || normalizeApplicationPledgeContractLinks(row.pledgeContractLinks).length
+  );
   return `
-    <div class="task-application-contracts">
-      <span>Договоры заявки</span>
-      <div>
-        ${filledRows.map((row) => {
-          const amount = formatDealLimit(row.limit);
-          const product = normalizeApplicationDealProduct(row.product) || "-";
-          return `
-            <div class="task-application-contract-row">
-              <span><em>${escapeHtml(APPLICATION_DEAL_COLUMNS[0])}</em><strong>${escapeHtml(product)}</strong></span>
-              <span><em>${escapeHtml(APPLICATION_DEAL_COLUMNS[1])}</em>${escapeHtml(row.contractNumber || "-")}</span>
-              <span><em>${escapeHtml(APPLICATION_DEAL_COLUMNS[2])}</em>${escapeHtml(formatDocumentDateCell(row.contractDate))}</span>
-              <span><em>${escapeHtml(APPLICATION_DEAL_COLUMNS[3])}</em>${escapeHtml(amount)}</span>
-              <span><em>${escapeHtml(APPLICATION_DEAL_COLUMNS[4])}</em>${escapeHtml(row.currency || "RUB")}</span>
-            </div>
-          `;
-        }).join("")}
+    <div class="task-deals-inline">
+      <h3 class="shared-component-title">Договоры и обеспечения</h3>
+      <div class="application-deals-table-wrap task-deals-inline-table-wrap">
+        <table class="application-deals-table task-deals-inline-table">
+          <thead><tr>${APPLICATION_DEAL_COLUMNS.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}<th>Договор залога</th></tr></thead>
+          <tbody>${filledRows.length ? filledRows.map((row) => {
+            const pledgeContracts = normalizeApplicationPledgeContractLinks(row.pledgeContractLinks)
+              .map((link) => [link.number, link.date ? `от ${formatDocumentDateCell(link.date)}` : ""].filter(Boolean).join(" "))
+              .filter(Boolean)
+              .join(", ") || "-";
+            return `
+              <tr>
+                <td>${escapeHtml(normalizeApplicationDealProduct(row.product) || "-")}</td>
+                <td>${escapeHtml(row.contractNumber || "-")}</td>
+                <td>${escapeHtml(formatDocumentDateCell(row.contractDate))}</td>
+                <td>${escapeHtml(formatDealLimit(row.limit))}</td>
+                <td>${escapeHtml(row.currency || "RUB")}</td>
+                <td>${escapeHtml(pledgeContracts)}</td>
+              </tr>
+            `;
+          }).join("") : `<tr><td colspan="6"><div class="empty-state compact">Договоры по заявке не указаны.</div></td></tr>`}</tbody>
+        </table>
       </div>
     </div>
   `;
@@ -7535,7 +7638,7 @@ function renderTaskClientContractInfo(task, activeCollateral, activeContracts = 
 
 function renderTaskCollateralContext(task, collaterals, activeCollateral) {
   if (!collaterals.length) {
-    return `<section class="panel task-collateral-panel"><h2>Информация по объектам залога</h2><p class="hint">Объект залога не привязан к задаче.</p></section>`;
+    return `<section class="panel task-collateral-panel"><h2 class="shared-component-title">Информация по объектам залога</h2><p class="hint shared-component-hint">Объект залога не привязан к задаче.</p></section>`;
   }
   return renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, { sourceTask: task });
 }
@@ -7546,18 +7649,10 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
   const availableCollaterals = collaterals.filter((item) => !isTaskCollateralExcluded(task, item.id));
   const hasMultipleCollaterals = collaterals.length > 1;
   const canMarkExcluded = hasMultipleCollaterals && canMarkTaskCollateralExcluded(task, selectable);
-  const columnCount = canMarkExcluded ? 12 : 11;
+  const showExclusionColumn = canMarkTaskCollateralExcluded(task, selectable);
+  const columnCount = showExclusionColumn ? 13 : 12;
   const scrollClass = collaterals.length > 10 ? "is-scrollable" : "";
   const isSingleCollateral = collaterals.length === 1;
-  const hint = options.hint || (!hasCollaterals
-    ? options.emptyHint || "Объекты залога не выбраны."
-    : !selectable
-    ? "Состав обеспечения по заявке сгруппирован по залогодателю и виду залога."
-    : !availableCollaterals.length
-    ? "Все объекты исключены. Снимите признак исключения, чтобы продолжить работу."
-    : isSingleCollateral
-    ? "В задаче один объект залога. Исключение объекта недоступно."
-    : "Выберите строку, чтобы документы, договор и страхование обновились по активному залогу.");
   const note = options.note || (!hasCollaterals
     ? "0 объектов"
     : !selectable
@@ -7567,25 +7662,29 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
     : isSingleCollateral
     ? "1 объект"
     : `Активен: ${activeCollateral?.id || availableCollaterals[0]?.id || "-"}`);
-  const groupSummary = renderTaskCollateralGroupSummary(collaterals);
-  const rowOptions = { ...options, selectable, canMarkExcluded, columnCount };
+  const rowOptions = { ...options, selectable, canMarkExcluded, showExclusionColumn, columnCount };
+  const collateralGroups = hasCollaterals ? buildTaskCollateralGroups(collaterals) : [];
+  const groupStateId = options.sourceTask?.id || task?.id || "";
+  const hasExpandedObjects = collateralGroups.some((pledgorGroup) =>
+    isTaskCollateralGroupExpanded(groupStateId, pledgorGroup.key)
+      && pledgorGroup.types.some((typeGroup) => isTaskCollateralGroupExpanded(groupStateId, typeGroup.key))
+  );
   const groupedRows = hasCollaterals
-    ? renderTaskCollateralGroupedRows(task, collaterals, activeCollateral, rowOptions)
+    ? renderTaskCollateralGroupedRows(task, collateralGroups, activeCollateral, { ...rowOptions, groupStateId })
     : `<tr><td colspan="${columnCount}"><div class="empty-state compact">${escapeHtml(options.emptyRowText || "Объекты залога не выбраны.")}</div></td></tr>`;
   const headerActions = options.headerActions || "";
   return `
-    <section class="panel table-panel task-collateral-panel task-collateral-info ${selectable ? "task-object-selector" : "task-object-overview"} ${canMarkExcluded ? "has-exclusion-column" : ""}">
+    <section class="panel table-panel task-collateral-panel task-collateral-info ${selectable ? "task-object-selector" : "task-object-overview"} ${showExclusionColumn ? "has-exclusion-column" : ""}">
       <div class="panel-title">
-        <div><h2>Информация по объектам залога</h2><p class="hint">${escapeHtml(hint)}</p></div>
+        <div><h2 class="shared-component-title">Информация по объектам залога</h2></div>
         <div class="task-collateral-title-side">
-          <span class="panel-note">${escapeHtml(note)}</span>
+          <span class="panel-note${selectable && note.startsWith("Активен:") ? " task-active-collateral-badge" : ""}">${escapeHtml(note)}</span>
           ${headerActions}
         </div>
       </div>
-      ${groupSummary}
       <div class="table-wrap compact-table task-collateral-table-wrap ${scrollClass}">
         <table>
-          <thead><tr><th>ID</th>${canMarkExcluded ? "<th>Исключен</th>" : ""}<th>Вид залога</th><th>Профильный идентификатор</th><th>Объект</th><th>Адрес / регион</th><th>Залогодатель</th><th>Договор залога</th><th>Категория</th><th>Залоговая стоимость</th><th>Рыночная стоимость</th><th>Справедливая стоимость</th></tr></thead>
+          ${hasExpandedObjects ? `<thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Подвид залога</th><th>Наименование залога</th><th>Адрес объекта</th><th>Договор залога</th><th>Дата последнего осмотра</th><th>Дата последней оценки</th><th>Ликвидность</th><th>Залоговая стоимость</th><th>Рыночная стоимость</th><th>Справедливая стоимость</th>${showExclusionColumn ? "<th>Исключен</th>" : ""}</tr></thead>` : ""}
           <tbody>${groupedRows}</tbody>
         </table>
       </div>
@@ -7645,51 +7744,73 @@ function renderTaskCollateralGroupSummary(collaterals = []) {
   `;
 }
 
-function renderTaskCollateralGroupedRows(task, collaterals, activeCollateral, options = {}) {
-  const columnCount = options.columnCount || 11;
-  return buildTaskCollateralGroups(collaterals).map((pledgorGroup) => `
+function renderTaskCollateralGroupedRows(task, groups, activeCollateral, options = {}) {
+  const columnCount = options.columnCount || 12;
+  const taskId = options.groupStateId || task?.id || "";
+  return groups.map((pledgorGroup) => {
+    const pledgorExpanded = isTaskCollateralGroupExpanded(taskId, pledgorGroup.key);
+    return `
     <tr class="task-collateral-group-row task-collateral-pledgor-row">
       <td colspan="${columnCount}">
-        <div>
-          <strong>Залогодатель: ${escapeHtml(pledgorGroup.pledgor)}</strong>
-          <span>${pledgorGroup.count} ${pluralize(pledgorGroup.count, "объект", "объекта", "объектов")} · ${pledgorGroup.types.length} ${pluralize(pledgorGroup.types.length, "вид залога", "вида залога", "видов залога")} · Залоговая стоимость ${formatShortMoney(pledgorGroup.pledgeValue)}</span>
-        </div>
+        <button type="button" class="task-collateral-group-disclosure" data-action="toggle-task-collateral-group"
+          data-task="${escapeHtml(taskId)}" data-group-key="${escapeHtml(pledgorGroup.key)}" aria-expanded="${pledgorExpanded}"
+          aria-label="${pledgorExpanded ? "Свернуть" : "Раскрыть"} группу залогодателей: ${escapeHtml(pledgorGroup.pledgor)}">
+          <span class="task-collateral-group-chevron" aria-hidden="true"></span>
+          <span class="task-collateral-group-content">
+            <strong>Залогодатель: ${escapeHtml(pledgorGroup.pledgor)}</strong>
+            <span>${pledgorGroup.count} ${pluralize(pledgorGroup.count, "объект", "объекта", "объектов")} · Залоговая стоимость ${formatShortMoney(pledgorGroup.pledgeValue)}</span>
+          </span>
+        </button>
       </td>
     </tr>
-    ${pledgorGroup.types.map((typeGroup) => `
+    ${pledgorExpanded ? pledgorGroup.types.map((typeGroup) => {
+      const typeExpanded = isTaskCollateralGroupExpanded(taskId, typeGroup.key);
+      return `
       <tr class="task-collateral-group-row task-collateral-type-row">
         <td colspan="${columnCount}">
-          <div>
-            <strong>Вид залога: ${escapeHtml(typeGroup.type)}</strong>
-            <span>${typeGroup.count} ${pluralize(typeGroup.count, "объект", "объекта", "объектов")} · Залоговая стоимость ${formatShortMoney(typeGroup.pledgeValue)}</span>
-          </div>
+          <button type="button" class="task-collateral-group-disclosure" data-action="toggle-task-collateral-group"
+            data-task="${escapeHtml(taskId)}" data-group-key="${escapeHtml(typeGroup.key)}" aria-expanded="${typeExpanded}"
+            aria-label="${typeExpanded ? "Свернуть" : "Раскрыть"} группу вида залога: ${escapeHtml(typeGroup.type)}">
+            <span class="task-collateral-group-chevron" aria-hidden="true"></span>
+            <span class="task-collateral-group-content">
+              <strong>Вид залога: ${escapeHtml(typeGroup.type)}</strong>
+              <span>${typeGroup.count} ${pluralize(typeGroup.count, "объект", "объекта", "объектов")} · Залоговая стоимость ${formatShortMoney(typeGroup.pledgeValue)}</span>
+            </span>
+          </button>
         </td>
       </tr>
-      ${typeGroup.items.map((item) => renderTaskCollateralRow(task, item, activeCollateral, options)).join("")}
-    `).join("")}
-  `).join("");
+      ${typeExpanded ? typeGroup.items.map((item) => renderTaskCollateralRow(task, item, activeCollateral, options)).join("") : ""}
+    `;
+    }).join("") : ""}
+  `;
+  }).join("");
 }
 
 function buildTaskCollateralGroups(collaterals = []) {
   const pledgorGroups = [];
   const pledgorMap = new Map();
+  const seenCollateralIds = new Set();
   collaterals.forEach((collateral) => {
+    if (!collateral?.id || seenCollateralIds.has(collateral.id)) return;
+    seenCollateralIds.add(collateral.id);
     const type = getTaskCollateralGroupType(collateral);
-    const pledgor = getTaskCollateralGroupPledgor(collateral);
-    if (!pledgorMap.has(pledgor)) {
-      const group = { pledgor, count: 0, pledgeValue: 0, types: [], typeMap: new Map() };
-      pledgorMap.set(pledgor, group);
+    const pledgors = getTaskCollateralGroupPledgors(collateral);
+    const key = `pledgor:${JSON.stringify(pledgors.map((name) => name.toLocaleLowerCase("ru")))}`;
+    const pledgor = pledgors.join(", ");
+    if (!pledgorMap.has(key)) {
+      const group = { key, pledgors, pledgor, count: 0, pledgeValue: 0, types: [], typeMap: new Map() };
+      pledgorMap.set(key, group);
       pledgorGroups.push(group);
     }
-    const pledgorGroup = pledgorMap.get(pledgor);
+    const pledgorGroup = pledgorMap.get(key);
     if (!pledgorGroup.typeMap.has(type)) {
-      const typeGroup = { type, count: 0, pledgeValue: 0, items: [] };
+      const typeGroup = { key: `type:${JSON.stringify([key, type])}`, type, count: 0, pledgeValue: 0, items: [] };
       pledgorGroup.typeMap.set(type, typeGroup);
       pledgorGroup.types.push(typeGroup);
     }
     const typeGroup = pledgorGroup.typeMap.get(type);
     const latest = getLatestCollateralEvaluation(collateral);
-    const pledgeValue = latest.pledge || collateral.pledgeValue || 0;
+    const pledgeValue = Number(latest.pledge || collateral.pledgeValue || 0);
     pledgorGroup.count += 1;
     pledgorGroup.pledgeValue += pledgeValue;
     typeGroup.count += 1;
@@ -7703,14 +7824,31 @@ function getTaskCollateralGroupType(collateral) {
   return collateral?.type || "Вид не указан";
 }
 
-function getTaskCollateralGroupPledgor(collateral) {
-  return getMainPledgor(collateral).name || "Залогодатель не указан";
+function getTaskCollateralGroupPledgors(collateral) {
+  const names = [...new Set((collateral?.pledgors || [])
+    .map((item) => String(item?.name || "").trim().replace(/\s+/g, " "))
+    .filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "ru"));
+  if (names.length) return names;
+  return [getMainPledgor(collateral).name || "Залогодатель не указан"];
+}
+
+function isTaskCollateralGroupExpanded(taskId, groupKey) {
+  const stateKey = `${taskId}::${groupKey}`;
+  const saved = state.taskCollateralGroupExpanded?.[stateKey];
+  return typeof saved === "boolean" ? saved : groupKey.startsWith("pledgor:");
+}
+
+function toggleTaskCollateralGroup(taskId, groupKey) {
+  state.taskCollateralGroupExpanded ||= {};
+  const stateKey = `${taskId}::${groupKey}`;
+  state.taskCollateralGroupExpanded[stateKey] = !isTaskCollateralGroupExpanded(taskId, groupKey);
 }
 
 function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
-  const contract = getContract(item.contractIds?.[0] || task.contractId);
   const selectable = options.selectable !== false;
   const canMarkExcluded = options.canMarkExcluded === true;
+  const showExclusionColumn = options.showExclusionColumn === true;
   const active = (selectable && item.id === activeCollateral?.id)
     || (options.rowSelectable === true && item.id === options.selectedCollateralId);
   const excluded = canMarkExcluded && isTaskCollateralExcluded(task, item.id);
@@ -7718,32 +7856,40 @@ function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
   const marketValue = latest.market || item.marketValue || 0;
   const pledgeValue = latest.pledge || item.pledgeValue || 0;
   const fairValue = getEvaluationFairValue(latest, item);
-  const pledgor = getMainPledgor(item);
+  const pledgeNumber = getCollateralSuzNumber(item) || item.id || "-";
+  const lastInspection = getLatestInspectionScheduleItem(item);
+  const lastInspectionDate = lastInspection?.task?.inspectionVisitDate
+    || lastInspection?.task?.completedAt
+    || lastInspection?.date
+    || "-";
+  const lastEvaluationDate = getCollateralRegistryLatestAppraisalDate(item);
+  const hasNegativeCheck = hasNegativeCollateralCheckResult(item);
   const rowAction = selectable && !excluded
     ? ` data-action="select-task-collateral" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}"`
     : options.rowSelectable === true
       ? ` data-action="select-application-collateral" data-collateral="${escapeHtml(item.id)}"`
     : "";
   return `
-    <tr class="${[active ? "is-active" : "", options.rowSelectable === true && active ? "is-selected" : "", excluded ? "is-excluded-row" : ""].filter(Boolean).join(" ")}"${rowAction}>
-      <td><button class="link" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(item.id)}</button></td>
-      ${canMarkExcluded ? `
+    <tr class="${[active ? "is-active" : "", options.rowSelectable === true && active ? "is-selected" : "", excluded ? "is-excluded-row" : "", hasNegativeCheck ? "has-negative-check-result" : ""].filter(Boolean).join(" ")}"${rowAction}>
+      <td><button class="link" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(pledgeNumber)}</button></td>
+      <td><span class="task-collateral-cell task-collateral-identifier">${escapeHtml(getCollateralObjectIdentifier(item))}</span></td>
+      <td><span class="task-collateral-cell">${escapeHtml(getCollateralSubtype(item))}</span></td>
+      <td><strong class="task-collateral-cell is-object">${escapeHtml(getCollateralName(item))}</strong></td>
+      <td><span class="task-collateral-cell is-address">${escapeHtml(getCollateralRegistryAddress(item) || "-")}</span></td>
+      <td><span class="task-collateral-cell">${escapeHtml(getTaskCollateralPledgeContractText(item))}</span></td>
+      <td>${escapeHtml(formatRegistryDateTime(lastInspectionDate))}</td>
+      <td>${escapeHtml(formatRegistryDateTime(lastEvaluationDate))}</td>
+      <td><span class="task-collateral-cell">${escapeHtml(getCollateralLiquidity(item))}</span></td>
+      <td class="task-collateral-money">${escapeHtml(formatFullMoney(pledgeValue))}</td>
+      <td class="task-collateral-money">${escapeHtml(formatFullMoney(marketValue))}</td>
+      <td class="task-collateral-money">${escapeHtml(formatFullMoney(fairValue))}</td>
+      ${showExclusionColumn ? `
         <td class="task-collateral-excluded-cell">
-          <label class="task-collateral-excluded-control" title="Исключить объект из рассмотрения по задаче">
-            <input type="checkbox" data-task-collateral-excluded data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}" ${excluded ? "checked" : ""}>
+          <label class="task-collateral-excluded-control${canMarkExcluded ? "" : " is-disabled"}" title="${canMarkExcluded ? "Исключить объект из рассмотрения по задаче" : "Единственный объект нельзя исключить из задачи"}">
+            <input type="checkbox" data-task-collateral-excluded data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}" ${excluded ? "checked" : ""} ${canMarkExcluded ? "" : "disabled"}>
           </label>
         </td>
       ` : ""}
-      <td><span class="task-collateral-cell">${escapeHtml(getTaskCollateralGroupType(item))}</span></td>
-      <td><span class="task-collateral-cell task-collateral-identifier">${escapeHtml(getCollateralObjectIdentifier(item))}</span></td>
-      <td><strong class="task-collateral-cell is-object">${escapeHtml(item.description)}</strong><small>${escapeHtml(item.clientId)}</small></td>
-      <td><span class="task-collateral-cell is-address">${escapeHtml(item.address || item.region || "-")}</span></td>
-      <td><span class="task-collateral-cell is-client">${escapeHtml(pledgor.name)}</span></td>
-      <td>${renderTaskCollateralContractLink(contract, task.contractNumber || task.contractId)}</td>
-      <td><span class="task-collateral-cell">${escapeHtml(getCollateralQualityClass(item))}</span></td>
-      <td class="task-collateral-money">${formatShortMoney(pledgeValue)}</td>
-      <td class="task-collateral-money">${formatShortMoney(marketValue)}</td>
-      <td class="task-collateral-money">${formatShortMoney(fairValue)}</td>
     </tr>
   `;
 }
@@ -7796,9 +7942,14 @@ function updateTaskCollateralExcluded(fieldEl) {
   persistTaskState();
 }
 
-function renderTaskCollateralContractLink(contract, fallback = "") {
-  if (contract) return `<span class="task-collateral-cell">${escapeHtml(contract.number)}</span>`;
-  return `<span class="task-collateral-cell">${escapeHtml(fallback || "-")}</span>`;
+function getTaskCollateralPledgeContractText(collateral) {
+  const contracts = (collateral?.encumbrances || [])
+    .map((item) => [item?.number, item?.date ? `от ${formatDocumentDateCell(item.date)}` : ""].filter(Boolean).join(" "))
+    .filter(Boolean);
+  if (contracts.length) return contracts.join(", ");
+  const number = String(collateral?.pledgeContractNumber || collateral?.pledgeContract?.number || "").trim();
+  const date = collateral?.pledgeContractDate || collateral?.pledgeContract?.date;
+  return [number, date ? `от ${formatDocumentDateCell(date)}` : ""].filter(Boolean).join(" ") || "-";
 }
 
 function renderTaskSpecificBlocks(task, collateral, collaterals) {
@@ -7968,7 +8119,7 @@ function renderLeaseAnalysisBlock(task, collateral) {
               <tr>
                 <td>${escapeHtml(row.requisites)}</td>
                 <td>${escapeHtml(row.source)}</td>
-                <td>${escapeHtml(row.checkedAt)}</td>
+                <td>${escapeHtml(formatRegistryDateTime(row.checkedAt))}</td>
                 <td>${escapeHtml(row.eventFlag)}</td>
                 <td>
                   <select data-lease-analysis-field="status" data-task="${escapeHtml(task?.id || "")}" data-collateral="${escapeHtml(collateral?.id || "")}" data-lease="${escapeHtml(row.id)}">
@@ -8044,7 +8195,7 @@ function renderInspectionVisitDispatchActions(task, collateral) {
   const result = getFieldInspectionResult(task, collateral);
   const statusText = method === INSPECTION_VISIT_METHOD_WHITE_LIST
     ? "Выездник не требуется"
-    : (result ? `Результат получен: ${result.completedAt || "-"}` : "Готов к запуску");
+    : (result ? `Результат получен: ${formatRegistryDateTime(result.completedAt)}` : "Готов к запуску");
   return `
     <div class="inspection-visit-actions">
       <button class="btn btn-primary" data-action="launch-field-inspection" data-task="${escapeHtml(task?.id || "")}" data-collateral="${escapeHtml(collateralId)}">Запустить выездной осмотр</button>
@@ -8283,7 +8434,7 @@ function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "in
   return `
     <section class="panel contact-persons-panel ${panelClass}">
       <div class="panel-title">
-        <div><h2>Контактные лица</h2></div>
+        <div><h2 class="shared-component-title">Контактные лица</h2></div>
         ${headerActions}
       </div>
       <div class="table-wrap compact-table contact-persons-table-wrap ${tableClass}">
@@ -8305,7 +8456,7 @@ function renderContactPersonEditableCells(contact, fieldDatasetName, attrs, extr
     <td><input value="${escapeHtml(contact.phone)}" placeholder="+7 ___ ___-__-__" required ${fieldAttr("phone")} ${attrs} aria-label="Телефон контактного лица"></td>
     ${extraCells}
     <td><textarea ${fieldAttr("comment")} ${attrs} aria-label="Комментарий по контактному лицу" placeholder="Дополнительная информация">${escapeHtml(contact.comment)}</textarea></td>
-    <td><input class="contact-person-call-date-input" value="${escapeHtml(formatContactCallDateValue(contact.callDate || ""))}" placeholder="ДД.ММ.ГГГГ ЧЧ:ММ" ${fieldAttr("callDate")} ${attrs} aria-label="Дата звонка контактному лицу"></td>
+    <td><input class="contact-person-call-date-input" value="${escapeHtml(formatContactCallDateValue(contact.callDate || ""))}" placeholder="ДД.ММ.ГГГГ ЧЧ:ММ:СС" ${fieldAttr("callDate")} ${attrs} aria-label="Дата звонка контактному лицу"></td>
   `;
 }
 
@@ -8361,22 +8512,16 @@ function getSerializableApplicationContacts() {
 function syncApplicationContactCollateralLinks() {
   const selected = new Set(state.newTask.selectedCollateralIds || []);
   const collaterals = [...selected].map(getCollateral).filter(Boolean);
+  const application = state.newTask.key?.startsWith("application-card:")
+    ? getApplicationByNumber(state.newTask.applicationNumber)
+    : null;
+  const taskIds = new Set(getApplicationTasks(application).map((task) => task.id));
   getDraftApplicationContacts().forEach((row) => {
     const normalized = normalizeApplicationContactRow(row);
-    if (normalized.applyScope === "collateral") {
-      const pledgorValue = getApplicationContactPledgorBindingForCollateralValue(normalized.applyValue, collaterals);
-      if (pledgorValue && collaterals.some((collateral) => isApplicationContactPledgorMatch(pledgorValue, collateral))) {
-        row.applyScope = "pledgor";
-        row.applyValue = pledgorValue;
-        row.collateralIds = getApplicationContactStorageCollateralIds(row, collaterals);
-        return;
-      }
-      row.applyScope = "application";
-      row.applyValue = "";
-      row.collateralIds = [];
-      return;
-    }
-    if (normalized.applyScope === "pledgor" && !collaterals.some((collateral) => isApplicationContactPledgorMatch(normalized.applyValue, collateral))) {
+    const targetExists = normalized.applyScope === "application"
+      || (normalized.applyScope === "collateral" && collaterals.some((collateral) => collateral.id === normalized.applyValue))
+      || (normalized.applyScope === "task" && taskIds.has(normalized.applyValue));
+    if (!targetExists) {
       row.applyScope = "application";
       row.applyValue = "";
       row.collateralIds = [];
@@ -8410,9 +8555,9 @@ function buildApplicationFallbackContactRows(collaterals = []) {
   return [...byPledgor.values()].flatMap((group, groupIndex) => {
     const groupCollaterals = group.collaterals;
     const primaryCollateral = groupCollaterals[0];
-    const collateralIds = groupCollaterals.map((collateral) => collateral.id).filter(Boolean);
-    const binding = group.value
-      ? { applyScope: "pledgor", applyValue: group.value }
+    const collateralIds = [primaryCollateral?.id].filter(Boolean);
+    const binding = primaryCollateral
+      ? { applyScope: "collateral", applyValue: primaryCollateral.id }
       : { applyScope: "application", applyValue: "" };
     const contactRoles = uniqueItems(groupCollaterals.map(getMainInspectionContactRole).filter(Boolean));
     const accessRole = contactRoles.length === 1
@@ -8441,15 +8586,25 @@ function buildApplicationFallbackContactRows(collaterals = []) {
   });
 }
 
-function getApplicationContactsForCollateral(application, collateral) {
-  const collaterals = getApplicationCollaterals(application);
-  return getApplicationContactRows(application, collaterals)
-    .filter((contact) => doesApplicationContactApplyToApplicationOrPledgor(contact, collateral, collaterals));
+function getApplicationContactPledgorBindingValue(collateral) {
+  const pledgor = getMainPledgor(collateral);
+  return pledgor.idn || collateral?.clientId || pledgor.name || collateral?.clientName || "";
 }
 
-function renderApplicationContactsBlock(collaterals) {
+function normalizeApplicationContactBindingKey(value = "") {
+  return String(value || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function getApplicationContactsForCollateral(application, collateral, task = null) {
+  const collaterals = getApplicationCollaterals(application);
+  return getApplicationContactRows(application, collaterals)
+    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, collateral));
+}
+
+function renderApplicationContactsBlock(collaterals, application = null) {
   syncApplicationContactCollateralLinks();
   const contacts = getDraftApplicationContacts().map((contact, index) => ({ ...normalizeApplicationContactRow(contact, index), editable: true, index }));
+  const relatedTasks = application ? getApplicationTasks(application) : [];
   return renderContactPersonsBlock({
     contacts,
     panelClass: "application-contacts-panel",
@@ -8460,13 +8615,13 @@ function renderApplicationContactsBlock(collaterals) {
     phoneLabel: "Телефон контактного лица",
     commentLabel: "Комментарий",
     showCallDate: true,
-    renderRow: (contact) => renderApplicationContactRow(contact, collaterals)
+    renderRow: (contact) => renderApplicationContactRow(contact, collaterals, application, relatedTasks)
   });
 }
 
-function renderApplicationContactRow(contact, collaterals) {
+function renderApplicationContactRow(contact, collaterals, application = null, relatedTasks = []) {
   const attrs = `data-index="${escapeHtml(contact.index)}"`;
-  const applyCell = `<td>${renderApplicationContactApplySelect(contact, collaterals)}</td>`;
+  const applyCell = `<td>${renderApplicationContactApplySelect(contact, collaterals, application, relatedTasks)}</td>`;
   return `
     <tr>
       ${renderContactPersonEditableCells(contact, "application-contact-field", attrs, applyCell)}
@@ -8475,9 +8630,9 @@ function renderApplicationContactRow(contact, collaterals) {
   `;
 }
 
-function renderApplicationContactApplySelect(contact, collaterals) {
+function renderApplicationContactApplySelect(contact, collaterals, application = null, relatedTasks = []) {
   const value = getApplicationContactBindingValue(contact);
-  const options = getApplicationContactApplyOptions(collaterals);
+  const options = getApplicationContactApplyOptions(collaterals, application, relatedTasks);
   return `
     <select class="application-contact-apply-select" data-application-contact-field="applyBinding" data-index="${escapeHtml(contact.index)}" aria-label="Область применения контактного лица">
       ${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
@@ -8485,56 +8640,30 @@ function renderApplicationContactApplySelect(contact, collaterals) {
   `;
 }
 
-function getApplicationContactApplyOptions(collaterals) {
-  return [
-    { value: getApplicationContactBindingValue({ applyScope: "application", applyValue: "" }), label: "Вся заявка" },
-    ...getApplicationContactPledgorOptions(collaterals)
-  ];
+function getApplicationContactApplyOptions(collaterals, application = null, relatedTasks = []) {
+  return getApplicabilityOptions("application", { application, collaterals, relatedTasks });
 }
 
-function getDocumentApplicabilityOptions(collaterals) {
-  return [
-    { value: getDocumentBindingValue({ applyScope: "application", applyValue: "" }), label: "Вся заявка" },
-    ...getDocumentCollateralApplicabilityOptions(collaterals, "заявки")
-  ];
-}
-
-function getTaskDocumentApplicabilityOptions(task, collaterals) {
-  return [
-    { value: getDocumentBindingValue({ applyScope: "task", applyValue: task?.id || "task" }), label: "Текущая задача" },
-    ...getDocumentCollateralApplicabilityOptions(collaterals, "задачи")
-  ];
-}
-
-function getDocumentCollateralApplicabilityOptions(collaterals = [], scopeLabel = "заявки") {
-  const options = collaterals.map((collateral) => ({
-    value: getDocumentBindingValue({ applyScope: "collateral", applyValue: collateral.id }),
-    label: `Объект: ${getCollateralObjectIdentifier(collateral)}, ${getShortApplicationContactObjectLabel(collateral)}`
-  }));
-  if (collaterals.length > 1) {
-    return [
-      { value: getDocumentBindingValue({ applyScope: "collaterals", applyValue: "all" }), label: `Все объекты залога ${scopeLabel}` },
-      ...options
-    ];
+function getApplicabilityOptions(context, { application = null, task = null, collaterals = [], relatedTasks = [] } = {}) {
+  const options = [];
+  const add = (scope, value, label) => options.push({ value: `${scope}::${value || ""}`, label });
+  if (context === "task") {
+    if (task) add("task", task.id || task.number || "task", "Текущая задача");
+    add("application", "", "Вся заявка");
+    collaterals.forEach((collateral) => add("collateral", collateral.id, getApplicabilityCollateralLabel(collateral)));
+    return options;
   }
+  add("application", "", "Вся заявка");
+  collaterals.forEach((collateral) => add("collateral", collateral.id, getApplicabilityCollateralLabel(collateral)));
+  relatedTasks.forEach((relatedTask) => {
+    const taskId = relatedTask?.id || relatedTask?.number;
+    if (taskId) add("task", taskId, `Задача ${relatedTask.number || taskId}`);
+  });
   return options;
 }
 
-function getApplicationContactPledgorOptions(collaterals) {
-  const map = new Map();
-  collaterals.forEach((collateral) => {
-    const value = getApplicationContactPledgorBindingValue(collateral);
-    if (!value) return;
-    const key = normalizeApplicationContactBindingKey(value);
-    const pledgor = getMainPledgor(collateral);
-    const current = map.get(key) || { value, name: pledgor.name || collateral.clientName || "Залогодатель", inn: pledgor.idn || collateral.clientId || "", count: 0 };
-    current.count += 1;
-    map.set(key, current);
-  });
-  return [...map.values()].map((item) => ({
-    value: getApplicationContactBindingValue({ applyScope: "pledgor", applyValue: item.value }),
-    label: `Залогодатель: ${item.name}${item.inn ? `, ИНН ${item.inn}` : ""}${item.count > 1 ? ` (${item.count} ${pluralize(item.count, "объект", "объекта", "объектов")})` : ""}`
-  }));
+function getApplicabilityCollateralLabel(collateral) {
+  return `Объект: ${getCollateralObjectIdentifier(collateral)}, ${getShortApplicationContactObjectLabel(collateral)}`;
 }
 
 function getShortApplicationContactObjectLabel(collateral) {
@@ -8548,7 +8677,8 @@ function getApplicationContactBindingValue(contact) {
 
 function parseApplicationContactBinding(value = "") {
   const [scope, ...rest] = String(value || "").split("::");
-  const normalizedScope = ["application", "pledgor", "collateral"].includes(scope) ? scope : "application";
+  if (scope === "pledgor") return { scope: "application", value: "" };
+  const normalizedScope = ["application", "task", "collateral"].includes(scope) ? scope : "application";
   return { scope: normalizedScope, value: normalizedScope === "application" ? "" : rest.join("::") };
 }
 
@@ -8556,55 +8686,36 @@ function getNormalizedApplicationContactBinding(row, collateralIds = []) {
   const explicitScope = row.applyScope || row.appliesToScope || row.scope || row.bindingScope || "";
   const explicitValue = row.applyValue || row.appliesToValue || row.target || row.bindingValue || "";
   const encoded = row.appliesTo || row.applyTo || row.binding || "";
-  if (explicitScope) return normalizeApplicationContactBinding(explicitScope, explicitValue);
-  if (encoded) return parseApplicationContactBinding(encoded);
+  if (explicitScope) {
+    if (explicitScope === "pledgor") return collateralIds[0]
+      ? { scope: "collateral", value: collateralIds[0] }
+      : { scope: "application", value: "" };
+    return normalizeApplicationContactBinding(explicitScope, explicitValue);
+  }
+  if (encoded) {
+    const [encodedScope] = String(encoded).split("::");
+    if (encodedScope === "pledgor") return collateralIds[0]
+      ? { scope: "collateral", value: collateralIds[0] }
+      : { scope: "application", value: "" };
+    return parseApplicationContactBinding(encoded);
+  }
   return inferApplicationContactBindingFromCollateralIds(collateralIds);
 }
 
 function normalizeApplicationContactBinding(scope, value = "") {
-  const normalizedScope = ["application", "pledgor", "collateral"].includes(scope) ? scope : "application";
+  const normalizedScope = ["application", "task", "collateral"].includes(scope) ? scope : "application";
   return { scope: normalizedScope, value: normalizedScope === "application" ? "" : String(value || "") };
 }
 
 function inferApplicationContactBindingFromCollateralIds(collateralIds = []) {
   const ids = uniqueItems(collateralIds.filter(Boolean));
-  if (!ids.length) return { scope: "application", value: "" };
-  const collaterals = ids.map(getCollateral).filter(Boolean);
-  const pledgorValues = uniqueItems(collaterals.map(getApplicationContactPledgorBindingValue).filter(Boolean).map(normalizeApplicationContactBindingKey));
-  if (pledgorValues.length === 1) {
-    return { scope: "pledgor", value: getApplicationContactPledgorBindingValue(collaterals[0]) };
-  }
-  return { scope: "application", value: "" };
-}
-
-function getApplicationContactPledgorBindingValue(collateral) {
-  const pledgor = getMainPledgor(collateral);
-  return pledgor.idn || collateral?.clientId || pledgor.name || collateral?.clientName || "";
-}
-
-function normalizeApplicationContactBindingKey(value = "") {
-  return String(value || "").replace(/\s+/g, "").toLowerCase();
-}
-
-function isApplicationContactPledgorMatch(value, collateral) {
-  const expectedValue = normalizeApplicationContactBindingKey(getApplicationContactPledgorBindingValue(collateral));
-  const expectedName = normalizeApplicationContactBindingKey(getMainPledgor(collateral).name || collateral?.clientName || "");
-  const current = normalizeApplicationContactBindingKey(value);
-  return Boolean(current && (current === expectedValue || current === expectedName));
-}
-
-function getApplicationContactPledgorBindingForCollateralValue(value, collaterals = []) {
-  const collateral = collaterals.find((item) => item.id === value) || getCollateral(value);
-  return collateral ? getApplicationContactPledgorBindingValue(collateral) : "";
+  return ids.length ? { scope: "collateral", value: ids[0] } : { scope: "application", value: "" };
 }
 
 function getApplicationContactCollateralIds(contact, collaterals = []) {
   const normalized = normalizeApplicationContactRow(contact);
-  if (normalized.applyScope === "application") return collaterals.map((collateral) => collateral.id).filter(Boolean);
+  if (normalized.applyScope === "application" || normalized.applyScope === "task") return [];
   if (normalized.applyScope === "collateral") return collaterals.some((collateral) => collateral.id === normalized.applyValue) ? [normalized.applyValue] : [];
-  if (normalized.applyScope === "pledgor") return collaterals
-    .filter((collateral) => isApplicationContactPledgorMatch(normalized.applyValue, collateral))
-    .map((collateral) => collateral.id);
   return [];
 }
 
@@ -8614,15 +8725,11 @@ function getApplicationContactStorageCollateralIds(contact, collaterals = []) {
   return getApplicationContactCollateralIds(normalized, collaterals);
 }
 
-function doesApplicationContactApplyToApplicationOrPledgor(contact, collateral, collaterals = []) {
-  if (!collateral) return false;
+function doesApplicationContactApplyToTarget(contact, application, task, collateral) {
   const normalized = normalizeApplicationContactRow(contact);
   if (normalized.applyScope === "application") return true;
-  if (normalized.applyScope === "pledgor") return isApplicationContactPledgorMatch(normalized.applyValue, collateral);
-  if (normalized.applyScope === "collateral") {
-    const pledgorValue = getApplicationContactPledgorBindingForCollateralValue(normalized.applyValue, collaterals);
-    return pledgorValue ? isApplicationContactPledgorMatch(pledgorValue, collateral) : false;
-  }
+  if (normalized.applyScope === "task") return Boolean(task?.id && normalized.applyValue === task.id);
+  if (normalized.applyScope === "collateral") return Boolean(collateral?.id && normalized.applyValue === collateral.id);
   return false;
 }
 
@@ -8726,7 +8833,7 @@ function getAlternateContactPhone(collateral, offset = 1) {
 }
 
 function getInspectionContactRows(task, collateral) {
-  const applicationContacts = getApplicationContactsForCollateral(getTaskApplication(task), collateral);
+  const applicationContacts = getApplicationContactsForCollateral(getTaskApplication(task), collateral, task);
   const baseRows = applicationContacts.length ? applicationContacts : getDefaultInspectionContactRows(collateral);
   const collateralId = collateral?.id || task?.collateralId || "";
   return [
@@ -8742,12 +8849,7 @@ function getInspectionContactKey(contact, index = 0) {
 
 function formatContactCallDateValue(value) {
   const raw = String(value || "").trim();
-  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (isoMatch) {
-    const [, year, month, day, hour, minute] = isoMatch;
-    return `${day}.${month}.${year} ${hour}:${minute}`;
-  }
-  return raw;
+  return raw ? formatRegistryDateTime(raw) : "";
 }
 
 function getInspectionContactResultStore(task, collateralId) {
@@ -9661,6 +9763,9 @@ function renderTaskField(field) {
   if (field.type === "multiselect") {
     return renderTaskMultiSelectField(field, classes, extraAttrs);
   }
+  if (field.type === "date" && field.readonly) {
+    return `<label class="${classes}">${escapeHtml(field.label)}<input type="text" value="${escapeHtml(formatRegistryDateTime(value))}" readonly${extraAttrs}></label>`;
+  }
   return `<label class="${classes}">${escapeHtml(field.label)}<input type="${escapeHtml(field.type || "text")}" value="${escapeHtml(value)}" ${field.readonly ? "readonly" : ""}${extraAttrs}></label>`;
 }
 
@@ -9885,7 +9990,7 @@ function renderCollateralObjectCheckTable(task, collateral, options = {}) {
             <tr>
               <td><strong>${escapeHtml(row.name)}</strong>${row.note ? `<small>${escapeHtml(row.note)}</small>` : ""}</td>
               <td>${escapeHtml(row.source || "-")}</td>
-              <td>${escapeHtml(row.checkedAt || "-")}</td>
+              <td>${escapeHtml(formatRegistryDateTime(row.checkedAt))}</td>
               <td>${escapeHtml(row.result || "-")}</td>
               <td>${renderObjectCheckStatusCell(task, collateral, row, editable)}</td>
               <td>${renderObjectCheckCommentCell(task, collateral, row, editable)}</td>
@@ -10791,11 +10896,20 @@ function doesApplicationDocumentApplyToTask(doc, task) {
   const source = doc || {};
   const explicitTaskId = source.requestTaskId || source.requestedByTaskId || source.returnedTaskId || "";
   if (explicitTaskId && explicitTaskId !== task.id) return false;
-  const targetIds = getDocumentTargetIds(source, "application");
-  if (targetIds.some((id) => /^TSK-/i.test(id))) return targetIds.includes(task.id);
+  const targetIds = getDocumentExplicitTargetValues(source);
+  if (targetIds.includes("application")) return true;
+  const taskIds = targetIds.filter((id) => /^TSK-/i.test(id));
+  if (taskIds.includes(task.id)) return true;
   const taskCollateralIds = getTaskCollateralIds(task);
   const collateralIds = getDocumentExplicitCollateralIds(source, "application");
   if (collateralIds.length) return collateralIds.some((id) => taskCollateralIds.includes(id));
+  const binding = getNormalizedDocumentBinding(source, source.target || "application", "application", "application");
+  if (binding.scope === "task") return binding.value === task.id;
+  if (binding.scope === "collateral") return taskCollateralIds.includes(binding.value);
+  if (binding.scope === "collaterals") {
+    return binding.value === "all" || splitDocumentCollateralBindingValue(binding.value).some((id) => taskCollateralIds.includes(id));
+  }
+  if (taskIds.length) return false;
   const target = String(source.target || source.collateralId || "").trim();
   if (/^COL-/i.test(target)) return taskCollateralIds.includes(target);
   return true;
@@ -11141,7 +11255,8 @@ function printSection(title, rows) {
 
 function printField(label, value) {
   const normalized = value === null || value === undefined || value === "" ? "-" : value;
-  return `${label}: ${normalized}`;
+  const displayValue = isDateTimeDisplayLabel(label) ? formatRegistryDateTime(normalized) : normalized;
+  return `${label}: ${displayValue}`;
 }
 
 function collateralField(collateral, names, fallback = "-") {
@@ -11384,7 +11499,7 @@ function buildPledgeOperationPrintContent(task, collateral, contract) {
       printField("Статус обременения", collateral?.encumbrances?.[0]?.status || "Готовится регистрация")
     ]),
     ...printSection("Проверка предмета залога", checks.map((row) =>
-      `${row.name}; источник: ${row.source}; дата: ${row.checkedAt}; результат: ${row.result}; статус: ${row.status}; комментарий: ${row.comment || "-"}`
+      `${row.name}; источник: ${row.source}; дата: ${formatRegistryDateTime(row.checkedAt)}; результат: ${row.result}; статус: ${row.status}; комментарий: ${row.comment || "-"}`
     )),
     ...printSection("Страхование", [
       printField("Страховая компания", insurance.company || "-"),
@@ -11439,8 +11554,6 @@ function getTaskRouteText(task) {
 }
 
 function getTaskRouteActionButtons(task) {
-  const closed = isTaskClosed(task);
-  const disabled = closed ? "disabled" : "";
   const actions = [];
   if (canUseRouteAction(task)) {
     actions.push(`<button class="btn btn-secondary" data-action="open-return-initiator" data-task="${escapeHtml(task.id)}">Вернуть на инициатора</button>`);
@@ -11448,7 +11561,9 @@ function getTaskRouteActionButtons(task) {
   if (canUseRouteAction(task) && canSendTaskToRevision(getRole())) {
     actions.push(`<button class="btn btn-secondary" data-action="task-return" data-task="${escapeHtml(task.id)}">Отправить на доработку</button>`);
   }
-  actions.push(`<button class="btn btn-secondary" data-action="open-subtask" data-task="${escapeHtml(task.id)}" ${disabled}>Создать задачу по заявке</button>`);
+  if (canUseRouteAction(task)) {
+    actions.push(`<button class="btn btn-secondary" data-action="open-subtask" data-task="${escapeHtml(task.id)}">Создать задачу по заявке</button>`);
+  }
   if (canUseRouteAction(task) && (isInspectionTaskType(task.type) || isMonitoringTaskType(task.type))) {
     actions.push(`<button class="btn btn-secondary" data-action="create-followup-task" data-task="${escapeHtml(task.id)}" data-task-type="${escapeHtml(getRouteValuationTaskType(task))}">Создать задачу на оценку</button>`);
   }
@@ -11494,11 +11609,11 @@ function renderTaskHistory(task) {
 
 function formatLatestTaskHistoryEvent(item) {
   if (!item) return "Последних действий нет";
-  return ["Последнее", item.date, item.action, item.user].filter(Boolean).join(" · ");
+  return ["Последнее", formatRegistryDateTime(item.date), item.action, item.user].filter(Boolean).join(" · ");
 }
 
 function renderTaskHistoryEvent(item) {
-  const result = item.newValue || item.status || "";
+  const result = formatHistoryDisplayValue(item.newValue || item.status || "");
   const details = [
     getTaskHistoryValueText("До", item.oldValue),
     getTaskHistoryValueText("После", result),
@@ -11508,7 +11623,7 @@ function renderTaskHistoryEvent(item) {
     <article class="task-history-event">
       <div>
         <strong>${escapeHtml(item.action || "-")}</strong>
-        <span>${escapeHtml([item.date, item.user].filter(Boolean).join(" · ") || "-")}</span>
+        <span>${escapeHtml([formatRegistryDateTime(item.date), item.user].filter(Boolean).join(" · ") || "-")}</span>
       </div>
       ${result ? badge(result) : ""}
       ${details ? `<p>${escapeHtml(details)}</p>` : ""}
@@ -11520,21 +11635,30 @@ function renderTaskHistoryTableRow(item) {
   const cell = (value) => value === null || value === undefined || !String(value).trim() || String(value).trim() === "-" ? "" : escapeHtml(value);
   return `
     <tr>
-      <td>${cell(item.date)}</td>
+      <td>${cell(formatRegistryDateTime(item.date))}</td>
       <td>${cell(item.action)}</td>
       <td>${cell(item.user)}</td>
       <td>${cell(item.status)}</td>
-      <td>${cell(item.oldValue)}</td>
-      <td>${cell(item.newValue)}</td>
+      <td>${cell(formatHistoryDisplayValue(item.oldValue))}</td>
+      <td>${cell(formatHistoryDisplayValue(item.newValue))}</td>
       <td>${cell(item.comment)}</td>
     </tr>
   `;
 }
 
 function getTaskHistoryValueText(label, value) {
-  const text = String(value || "").trim();
+  const text = String(formatHistoryDisplayValue(value) || "").trim();
   if (!text || text === "-") return "";
   return `${label}: ${text}`;
+}
+
+function formatHistoryDisplayValue(value) {
+  const text = String(value ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(text)
+    || /^\d{2}\.\d{2}\.\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?$/.test(text)) {
+    return formatRegistryDateTime(text);
+  }
+  return value ?? "";
 }
 
 function getCollateralRiskSignals(collateral) {
@@ -11640,10 +11764,10 @@ function getDueRiskLevel(status, days, options = {}) {
 
 function buildDueRiskSource(status, days, dueDate) {
   if (!dueDate) return status || "Срок не указан";
-  if (days === null) return `${status || "Статус"}, дата ${dueDate}`;
+  if (days === null) return `${status || "Статус"}, дата ${formatRegistryDateTime(dueDate)}`;
   if (days < 0) return `${status || "Статус"}, просрочено на ${Math.abs(days)} дн.`;
   if (days <= 30) return `${status || "Статус"}, осталось ${days} дн.`;
-  return `${status || "Статус"}, срок до ${dueDate}`;
+  return `${status || "Статус"}, срок до ${formatRegistryDateTime(dueDate)}`;
 }
 
 function isRiskText(value) {
@@ -13146,8 +13270,10 @@ function renderValuationInspectionProblemChecklist(prefill) {
 
 function getValuationInspectionPrefill(task, collateral) {
   const inspectionTask = findRelatedInspectionTaskForValuation(task, collateral);
-  const applicationInspection = getApplicationPreInspection(getTaskApplication(task));
-  const hasApplicationInspection = Boolean(applicationInspection?.completed);
+  const applicationInspectionRecord = getApplicationPreInspectionRecords(getTaskApplication(task))
+    .find((record) => record.completed && doesPreInspectionApplyToTask(record, task, collateral)) || null;
+  const hasApplicationInspection = Boolean(applicationInspectionRecord);
+  const applicationInspection = hasApplicationInspection ? applicationInspectionRecord : null;
   const sourceTask = inspectionTask || task;
   const result = getInspectionResult(sourceTask, collateral);
   const problemChecklistRows = inspectionTask ? getInspectionProblemChecklistRows(result, inspectionTask, collateral) : [];
@@ -13155,7 +13281,7 @@ function getValuationInspectionPrefill(task, collateral) {
     sourceTask: inspectionTask,
     applicationInspection: hasApplicationInspection ? applicationInspection : null,
     completed: inspectionTask || hasApplicationInspection || collateral?.monitoring?.lastInspection ? "ДА" : "НЕТ",
-    date: inspectionTask?.dueDate || String(applicationInspection.recordedAt || "").slice(0, 10) || collateral?.monitoring?.lastInspection || "",
+    date: inspectionTask?.dueDate || String(applicationInspection?.recordedAt || "").slice(0, 10) || collateral?.monitoring?.lastInspection || "",
     format: inspectionTask ? getInspectionFormat(inspectionTask) : hasApplicationInspection ? "Выездной" : "Дистанционный",
     method: inspectionTask ? getInspectionVisitMethod(inspectionTask, collateral) : hasApplicationInspection ? "Мобильный оценщик" : "-",
     resource: inspectionTask?.assignee || (hasApplicationInspection ? "Мобильный оценщик" : task?.assignee) || "Сотрудник Банка",
@@ -14412,14 +14538,14 @@ function refreshMarketCalculationView(task, collateral, matrix, calc) {
   });
 }
 
-function renderDocumentWidget({ context, ownerId, task = null, documents = [], collaterals = [], activeCollateral = null, title = "Документы", subtitle = "Файлы и вложения", description = "" }) {
+function renderDocumentWidget({ context, ownerId, task = null, application = null, relatedTasks = [], documents = [], collaterals = [], activeCollateral = null, title = "Документы", subtitle = "Файлы и вложения", description = "", className = "" }) {
   const targets = isDocumentContextWithApplicationTargets(context) ? (collaterals.length ? collaterals : [activeCollateral].filter(Boolean)) : [];
   const activeTarget = activeCollateral?.id || targets[0]?.id || getDocumentFallbackTarget(context);
   const normalizedDocuments = documents.map((doc, index) => normalizeDocumentRecord(doc, index, activeTarget, context, ownerId));
   const rules = getDocumentWidgetRules(context, task, targets, activeCollateral);
-  const applyOptions = getDocumentApplyOptions(context, ownerId, task, targets, activeCollateral, activeTarget);
+  const applyOptions = getDocumentApplyOptions(context, ownerId, task, targets, activeCollateral, activeTarget, application, relatedTasks);
   const filterKey = getDocumentFilterKey(context, ownerId);
-  const applyFilterValue = state.documentApplyFilters?.[filterKey] || "";
+  const applyFilterValue = context === "collateral" ? "" : state.documentApplyFilters?.[filterKey] || "";
   const sourceDocuments = applyDocumentRelationFilter(normalizedDocuments, applyOptions, applyFilterValue);
   const folders = buildDocumentFolders(sourceDocuments, applyFilterValue ? [] : rules, activeTarget);
   const followupCount = context === "task"
@@ -14429,19 +14555,18 @@ function renderDocumentWidget({ context, ownerId, task = null, documents = [], c
     ? folders.map((folder) => renderDocumentFolder(folder, context, ownerId, task, activeTarget, applyOptions)).join("")
     : renderDocumentEmptyFilterRow();
   return `
-    <section class="panel document-widget">
+    <section class="panel document-widget${className ? ` ${escapeHtml(className)}` : ""}">
       <div class="panel-title">
-        <div><h2>${escapeHtml(title)}</h2><p class="hint">${escapeHtml(subtitle)}. ${escapeHtml(description)}</p></div>
-        ${context === "task" && targets.length > 1 ? `<span class="panel-note">Активный залог: ${escapeHtml(activeTarget)}</span>` : ""}
+        <div><h2 class="shared-component-title">${escapeHtml(title)}</h2><p class="hint shared-component-hint">${escapeHtml(subtitle)}. ${escapeHtml(description)}</p></div>
       </div>
       ${followupCount ? renderDocumentFollowupLegend(followupCount) : ""}
-      ${renderDocumentApplyFilter(filterKey, applyFilterValue, applyOptions, sourceDocuments.length, normalizedDocuments.length)}
+      ${context === "collateral" ? "" : renderDocumentApplyFilter(filterKey, applyFilterValue, applyOptions)}
       <div class="document-tree-table" role="table" aria-label="${escapeHtml(title)}">
         <div class="document-table-header" role="row">
           <span>Наименование документа</span>
           <span>Применяется к</span>
           <span>Дата документа</span>
-          <span>Дата прикладывания</span>
+          <span>Дата сохранения</span>
           <span>Автор</span>
           <span>Действия</span>
         </div>
@@ -14455,7 +14580,7 @@ function getDocumentFilterKey(context, ownerId) {
   return `${context || "documents"}::${ownerId || "current"}`;
 }
 
-function renderDocumentApplyFilter(filterKey, value, options = [], visibleCount = 0, totalCount = 0) {
+function renderDocumentApplyFilter(filterKey, value, options = []) {
   const safeOptions = options.length
     ? options
     : [{ value: getDocumentBindingValue({ applyScope: "application", applyValue: "" }), label: "Вся заявка" }];
@@ -14468,7 +14593,6 @@ function renderDocumentApplyFilter(filterKey, value, options = [], visibleCount 
           ${safeOptions.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
         </select>
       </label>
-      <span class="document-filter-count">${escapeHtml(value ? `Показано ${visibleCount} из ${totalCount}` : `Документов: ${totalCount}`)}</span>
     </div>
   `;
 }
@@ -14481,12 +14605,6 @@ function applyDocumentRelationFilter(documents = [], options = [], filterValue =
 function doesDocumentMatchApplyFilter(doc, options = [], filterValue = "") {
   const selectedValues = getDocumentSelectedApplyValues(doc, options);
   if (selectedValues.includes(filterValue)) return true;
-  const filterBinding = parseDocumentBinding(filterValue);
-  const allCollateralsValue = getDocumentBindingValue({ applyScope: "collaterals", applyValue: "all" });
-  if (filterBinding.scope === "collateral" && selectedValues.includes(allCollateralsValue)) return true;
-  if (filterBinding.scope === "collaterals" && filterBinding.value === "all") {
-    return selectedValues.some((value) => ["collateral", "collaterals"].includes(parseDocumentBinding(value).scope));
-  }
   return false;
 }
 
@@ -14607,7 +14725,8 @@ function renderDocumentTableFileRow(doc, context, ownerId, task, activeTarget, a
   const readonly = Boolean(doc.readonly);
   const followupInfo = getInitiatorFollowupDocumentInfo(doc, task, context);
   const documentDate = getDocumentDateInputValue(doc.documentDate);
-  const attachedAt = formatDocumentDateCell(doc.attachedAt, true);
+  const displayDocumentDate = formatDocumentDateCell(doc.documentDate);
+  const attachedAt = formatDocumentDateCell(doc.attachedAt);
   const nameAttrs = getDocumentMetaFieldAttrs(doc, context, ownerId, activeTarget, "documentName");
   const dateAttrs = getDocumentMetaFieldAttrs(doc, context, ownerId, activeTarget, "documentDate");
   return `
@@ -14618,8 +14737,8 @@ function renderDocumentTableFileRow(doc, context, ownerId, task, activeTarget, a
           : `<input class="document-name-input" value="${escapeHtml(doc.documentName || doc.name || doc.title)}" ${nameAttrs} aria-label="Наименование документа">`}
       </span>
       <span class="document-relation-cell" data-label="Применяется к" role="cell">${readonly ? `<span class="document-readonly-relation">${escapeHtml(getDocumentRelationLabel(doc, applyOptions))}</span>` : renderDocumentRelationSelect(doc, context, ownerId, activeTarget, applyOptions)}</span>
-      <span class="document-date-cell" data-label="Дата документа" role="cell">${readonly ? escapeHtml(documentDate || "-") : `<input type="date" value="${escapeHtml(documentDate)}" ${dateAttrs} aria-label="Дата документа">`}</span>
-      <span class="document-attached-cell" data-label="Дата прикладывания" role="cell">${escapeHtml(attachedAt)}</span>
+      <span class="document-date-cell" data-label="Дата документа" role="cell">${readonly ? escapeHtml(displayDocumentDate) : `<input type="date" value="${escapeHtml(documentDate)}" ${dateAttrs} aria-label="Дата документа">`}</span>
+      <span class="document-attached-cell" data-label="Дата сохранения" role="cell">${escapeHtml(attachedAt)}</span>
       <span class="document-author-cell" data-label="Автор" role="cell">${escapeHtml(doc.author || "-")}</span>
       <span class="document-row-actions" role="cell">
         <a class="doc-download-button" href="${createDocumentDownloadHref(doc, context, ownerId)}" download="${escapeHtml(doc.name)}" title="Скачать файл" aria-label="Скачать файл ${escapeHtml(doc.name)}">
@@ -14643,7 +14762,7 @@ function getDocumentRelationLabel(doc, options = []) {
   if (doc.applyScope === "collateral" && doc.applyValue) return `Залог ${doc.applyValue}`;
   if (doc.applyScope === "collaterals") {
     const ids = splitDocumentCollateralBindingValue(doc.applyValue);
-    if (doc.applyValue === "all") return "Все объекты залога";
+    if (doc.applyValue === "all") return "Привязанные объекты залога";
     return ids.length
       ? `${ids.length} ${pluralize(ids.length, "объект залога", "объекта залога", "объектов залога")}: ${ids.join(", ")}`
       : "Выбранные объекты залога";
@@ -14671,7 +14790,7 @@ function getInitiatorFollowupDocumentInfo(doc, task, context = "task") {
   if (!doc.addedByInitiatorAfterReturn || !requestedTaskId || !task?.id || requestedTaskId !== task.id) return "";
   const reason = doc.requestReason || doc.requestComment || "Приложен в карточке заявки по запросу исполнителя";
   const author = doc.author || doc.uploadedBy || "Инициатор";
-  const attachedAt = formatDocumentDateCell(doc.attachedAt || doc.uploadedAt || doc.date, true);
+  const attachedAt = formatDocumentDateCell(doc.attachedAt || doc.uploadedAt || doc.date);
   return `${reason}${attachedAt !== "-" ? `. Дата: ${attachedAt}` : ""}. Автор: ${author}.`;
 }
 
@@ -14722,9 +14841,14 @@ function mergeDocumentRules(rules = []) {
   return [...map.values()];
 }
 
-function getDocumentApplyOptions(context, ownerId, task, targets = [], activeCollateral = null, activeTarget = "task") {
-  if (context === "task") return getTaskDocumentApplicabilityOptions(task || { id: ownerId }, targets);
-  if (context === "application" || context === "applicationDraft") return getDocumentApplicabilityOptions(targets);
+function getDocumentApplyOptions(context, ownerId, task, targets = [], activeCollateral = null, activeTarget = "task", application = null, relatedTasks = []) {
+  if (context === "task") {
+    const currentTask = task || { id: ownerId };
+    return getApplicabilityOptions("task", { application: getTaskApplication(currentTask), task: currentTask, collaterals: targets });
+  }
+  if (context === "application" || context === "applicationDraft") {
+    return getApplicabilityOptions("application", { application, relatedTasks, collaterals: targets });
+  }
   if (["collateral", "collateralDraft"].includes(context) && activeCollateral) {
     return [{
       value: getDocumentBindingValue({ applyScope: "collateral", applyValue: activeCollateral.id }),
@@ -14794,23 +14918,37 @@ function getDocumentSelectedApplyValues(doc = {}, options = []) {
     if (value && optionValues.has(value)) values.push(value);
   };
   const binding = getNormalizedDocumentBinding(doc, doc.target || "", doc.target || "task");
-  const allCollateralsValue = getDocumentBindingValue({ applyScope: "collaterals", applyValue: "all" });
-  const usesAllCollateralOption = Boolean(doc.applyAllCollaterals && optionValues.has(allCollateralsValue))
-    || (binding.scope === "collaterals" && binding.value === "all" && optionValues.has(allCollateralsValue));
   if (binding.scope === "collaterals") {
-    if (binding.value === "all") addValue(allCollateralsValue);
-    splitDocumentCollateralBindingValue(binding.value).forEach((id) => addValue(getDocumentBindingValue({ applyScope: "collateral", applyValue: id })));
+    const ids = binding.value === "all"
+      ? options.map((option) => parseDocumentBinding(option.value)).filter((item) => item.scope === "collateral").map((item) => item.value)
+      : splitDocumentCollateralBindingValue(binding.value);
+    ids.forEach((id) => addValue(getDocumentBindingValue({ applyScope: "collateral", applyValue: id })));
   } else {
     addValue(getDocumentBindingValue({ applyScope: binding.scope, applyValue: binding.value }));
   }
   getDocumentExplicitTargetValues(doc)
-    .filter((target) => !usesAllCollateralOption || !/^COL-/i.test(target))
     .forEach((target) => addValue(getDocumentApplyOptionValueForTarget(target, options)));
-  if (!usesAllCollateralOption) {
-    getDocumentExplicitCollateralIds(doc).forEach((id) => addValue(getDocumentBindingValue({ applyScope: "collateral", applyValue: id })));
-  }
+  getDocumentExplicitCollateralIds(doc).forEach((id) => addValue(getDocumentBindingValue({ applyScope: "collateral", applyValue: id })));
   const selected = uniqueItems(values);
   return selected.length ? selected : [options[0]?.value].filter(Boolean);
+}
+
+function normalizeLegacyAggregateDocumentBindings(documents = [], options = [], collaterals = [], dataset = {}) {
+  return documents.map((document) => {
+    if (!document || typeof document !== "object") return document;
+    const binding = getNormalizedDocumentBinding(document, document.target || "", document.target || "application", dataset.docContext || "applicationDraft", dataset.docOwner || "");
+    const hasLegacyAggregate = (binding.scope === "collaterals" && binding.value === "all") || document.applyAllCollaterals === true;
+    if (!hasLegacyAggregate) return document;
+    const selectedValues = getDocumentSelectedApplyValues(document, options);
+    const allCollateralValues = document.applyAllCollaterals
+      ? options.filter((option) => parseDocumentBinding(option.value).scope === "collateral").map((option) => option.value)
+      : [];
+    const relation = getDocumentRelationFromSelectedValues(uniqueItems([...selectedValues, ...allCollateralValues]), {
+      ...dataset,
+      docTarget: document.target || "application"
+    }, collaterals);
+    return { ...document, ...relation, applyAllCollaterals: false };
+  });
 }
 
 function getDocumentExplicitTargetValues(doc = {}) {
@@ -14818,7 +14956,8 @@ function getDocumentExplicitTargetValues(doc = {}) {
   if (Array.isArray(doc.targetIds)) values.push(...doc.targetIds);
   if (Array.isArray(doc.targets)) values.push(...doc.targets);
   if (doc.target) values.push(doc.target);
-  return uniqueItems(values.map((value) => normalizeDocumentTarget(value, "task")).filter(Boolean));
+  return uniqueItems(values.map((value) => normalizeDocumentTarget(value, "task"))
+    .filter((value) => value && !["task", "collateral"].includes(value)));
 }
 
 function getDocumentApplyOptionValueForTarget(target, options = []) {
@@ -14844,7 +14983,7 @@ function getDocumentBindingLabel(binding) {
   if (binding.scope === "task") return binding.value ? `Задача ${binding.value}` : "Текущая задача";
   if (binding.scope === "collateral") return binding.value ? `Залог ${binding.value}` : "Объект залога";
   if (binding.scope === "collaterals") {
-    if (binding.value === "all") return "Все объекты залога";
+    if (binding.value === "all") return "Привязанные объекты залога";
     const ids = splitDocumentCollateralBindingValue(binding.value);
     return ids.length
       ? `${ids.length} ${pluralize(ids.length, "объект залога", "объекта залога", "объектов залога")}: ${ids.join(", ")}`
@@ -14978,10 +15117,7 @@ function getDocumentDefaultAuthor(doc) {
 }
 
 function formatDocumentDateCell(value, includeTime = false) {
-  const text = String(value || "").trim();
-  if (!text) return "-";
-  const normalized = text.replace("T", " ");
-  return includeTime ? normalized.slice(0, 16) : normalized.slice(0, 10);
+  return formatRegistryDateTime(value);
 }
 
 function getDocumentDateInputValue(value) {
@@ -15014,8 +15150,8 @@ function createDocumentDownloadHref(doc, context, ownerId) {
     `Контекст: ${context}`,
     `Объект: ${ownerId}`,
     `Статус: ${doc.status || "Прикреплен"}`,
-    `Дата документа: ${doc.documentDate || doc.date || "-"}`,
-    `Дата прикладывания: ${doc.attachedAt || doc.uploadedAt || "-"}`,
+    `Дата документа: ${formatDocumentDateCell(doc.documentDate || doc.date)}`,
+    `Дата прикладывания: ${formatDocumentDateCell(doc.attachedAt || doc.uploadedAt)}`,
     `Автор: ${doc.author || doc.uploadedBy || doc.generatedBy || "-"}`,
     ...(doc.templateName ? [`Шаблон: ${doc.templateName}`] : []),
     ...(generatedContent.length ? ["", ...generatedContent] : [])
@@ -15128,7 +15264,7 @@ function renderCollateralTab(collateral) {
   if (state.collateralTab === "external") return renderCollateralExternal(collateral);
   if (state.collateralTab === "contracts") return renderCollateralContracts(collateral);
   if (state.collateralTab === "history") return renderCollateralHistory(collateral);
-  if (state.collateralTab === "documents") return renderDocumentWidget({ context: "collateral", ownerId: collateral.id, documents: getCollateralDocumentsForCard(collateral), activeCollateral: collateral, title: "Документы", subtitle: "Файлы карточки залога", description: "Документы, привязанные к объекту залога, и документы завершенных задач по этому объекту." });
+  if (state.collateralTab === "documents") return renderDocumentWidget({ context: "collateral", ownerId: collateral.id, documents: getCollateralDocumentsForCard(collateral), activeCollateral: collateral, title: "Документы", subtitle: "Файлы карточки залога", description: "Отображаются документы, привязанные к объекту залога." });
   return renderCollateralOverview(collateral);
 }
 
@@ -15314,7 +15450,8 @@ function renderCollateralDisplayFieldGrid(items, className = "", trustedMarkupFi
       ${Object.entries(items).map(([key, value]) => {
         const displayValue = isBlankFieldValue(value) ? "Не применяется" : value;
         const trustedMarkup = trustedMarkupFields.includes(key) && typeof displayValue === "string";
-        return renderCollateralReadOnlyField(key, displayValue ?? "-", { trustedMarkup, draft: draftContext, group: fieldGroup, inputTypeOverride: inputTypeOverrides[key] || "" });
+        const formattedValue = !trustedMarkup && isDateTimeDisplayLabel(key) ? formatRegistryDateTime(displayValue) : displayValue;
+        return renderCollateralReadOnlyField(key, formattedValue ?? "-", { trustedMarkup, draft: draftContext, group: fieldGroup, inputTypeOverride: inputTypeOverrides[key] || "" });
       }).join("")}
     </div>
   `;
@@ -15328,10 +15465,11 @@ function renderCollateralFieldShell(label, control, { readOnly = false, isWide =
 
 function renderCollateralReadOnlyField(label, value, { trustedMarkup = false, wide = false, draft = null, group = "", inputTypeOverride = "" } = {}) {
   const displayValue = isBlankFieldValue(value) ? "Не применяется" : value;
-  if (draft && !trustedMarkup) return renderNewCollateralField(label, group, displayValue, draft, [], { readOnly: true, wide, inputTypeOverride });
+  const formattedValue = !trustedMarkup && isDateTimeDisplayLabel(label) ? formatRegistryDateTime(displayValue) : displayValue;
+  if (draft && !trustedMarkup) return renderNewCollateralField(label, group, formattedValue, draft, [], { readOnly: true, wide, inputTypeOverride });
   const inputType = inputTypeOverride || getCollateralEditableInputType(label, displayValue);
   const isWide = wide || inputType === "textarea" || ["Наименование", "Профильный идентификатор объекта", "Адрес / место нахождения"].includes(label);
-  const content = trustedMarkup ? displayValue : escapeHtml(displayValue ?? "-");
+  const content = trustedMarkup ? displayValue : escapeHtml(formattedValue ?? "-");
   const control = `<div class="new-collateral-readonly-control ${inputType === "textarea" ? "is-multiline" : ""}" aria-readonly="true">${content}</div>`;
   return renderCollateralFieldShell(label, control, { readOnly: true, isWide });
 }
@@ -15366,6 +15504,7 @@ function renderReadonlyFieldGrid(items, trustedMarkupFields = []) {
       ${Object.entries(items).map(([key, value]) => {
         const displayValue = isBlankFieldValue(value) ? "Не применяется" : value;
         const trustedMarkup = trustedMarkupFields.includes(key) && typeof displayValue === "string";
+        const formattedValue = !trustedMarkup && isDateTimeDisplayLabel(key) ? formatRegistryDateTime(displayValue) : displayValue;
         const wide = String(displayValue).length > 45 || [
           "Наименование",
           "Профильный идентификатор объекта",
@@ -15377,7 +15516,7 @@ function renderReadonlyFieldGrid(items, trustedMarkupFields = []) {
         return `
           <div class="readonly-field ${wide ? "wide" : ""}">
             <span>${escapeHtml(key)}</span>
-            <strong>${trustedMarkup ? displayValue : escapeHtml(displayValue)}</strong>
+            <strong>${trustedMarkup ? displayValue : escapeHtml(formattedValue)}</strong>
           </div>
         `;
       }).join("")}
@@ -16163,7 +16302,7 @@ function renderCollateralUnifiedControlSchedule(collateral) {
         <thead><tr><th>Дата</th><th>Вид мероприятия</th><th>Выводы</th><th>Исполнитель</th><th>Статус</th><th>Задача / документ</th></tr></thead>
         <tbody>${rows.map((row) => `
           <tr>
-            <td>${escapeHtml(row.date)}</td>
+            <td>${escapeHtml(formatRegistryDateTime(row.date))}</td>
             <td>${escapeHtml(row.type)}</td>
             <td>${row.conclusions}</td>
             <td>${escapeHtml(row.executor)}</td>
@@ -16310,7 +16449,7 @@ function renderCollateralValues(collateral) {
             const previous = evaluations[index - 1];
             return `
               <tr>
-                <td>${escapeHtml(item.date)}</td>
+                <td>${escapeHtml(formatRegistryDateTime(item.date))}</td>
                 <td>${escapeHtml(item.appraiser)}</td>
                 <td>${formatMoney(item.market)}</td>
                 <td>${formatMoney(item.pledge)}</td>
@@ -16389,7 +16528,7 @@ function renderValuationHistoryChart(collateral, evaluations) {
           <h2>Динамика стоимости</h2>
           <p class="hint">Рыночная и залоговая стоимость по датам оценок.</p>
         </div>
-        <span class="panel-note">${escapeHtml(first.date)} - ${escapeHtml(last.date)}</span>
+        <span class="panel-note">${escapeHtml(formatRegistryDateTime(first.date))} - ${escapeHtml(formatRegistryDateTime(last.date))}</span>
       </div>
       <div class="valuation-chart-summary">
         <div><span>Последняя рыночная</span><strong>${formatMoney(last.market)}</strong></div>
@@ -16501,8 +16640,7 @@ function getDeltaClass(current, previous) {
 }
 
 function formatEvaluationDate(dateValue) {
-  const [year, month] = String(dateValue || "").split("-");
-  return year && month ? `${month}.${year}` : String(dateValue || "-");
+  return formatRegistryDateTime(dateValue);
 }
 
 function formatCollateralContractAmount(value) {
@@ -16689,7 +16827,7 @@ function getCollateralContractTableRows(collateral) {
 
 function renderCollateralContracts(collateral) {
   const rows = getCollateralContractTableRows(collateral);
-  return `<section class="panel table-panel"><h2>Договоры и обеспечения</h2><table><thead><tr><th>Продукт</th><th>Номер кредитного договора</th><th>Дата кредитного договора</th><th>Договор залога</th><th>Дата договора залога</th><th>Сумма/лимит</th><th>Валюта</th></tr></thead><tbody>${rows.length ? rows.map((row) => `<tr><td>${escapeHtml(row.product || "-")}</td><td>${escapeHtml(row.creditContractNumber || "-")}</td><td>${escapeHtml(row.creditContractDate || "-")}</td><td>${escapeHtml(row.pledgeContractNumber || "-")}</td><td>${escapeHtml(row.pledgeContractDate || "-")}</td><td>${escapeHtml(formatCollateralContractAmount(row.amount))}</td><td>${escapeHtml(row.currency || "-")}</td></tr>`).join("") : `<tr><td colspan="7">Договоры и обеспечения не указаны.</td></tr>`}</tbody></table></section>`;
+  return `<section class="panel table-panel"><h2>Договоры и обеспечения</h2><table class="collateral-deals-table"><thead><tr><th>Продукт</th><th>Номер кредитного договора</th><th>Дата кредитного договора</th><th>Договор залога</th><th>Дата договора залога</th><th>Сумма/лимит</th><th>Валюта</th></tr></thead><tbody>${rows.length ? rows.map((row) => `<tr><td>${escapeHtml(row.product || "-")}</td><td>${escapeHtml(row.creditContractNumber || "-")}</td><td>${escapeHtml(formatRegistryDateTime(row.creditContractDate))}</td><td>${escapeHtml(row.pledgeContractNumber || "-")}</td><td>${escapeHtml(formatRegistryDateTime(row.pledgeContractDate))}</td><td>${escapeHtml(formatCollateralContractAmount(row.amount))}</td><td>${escapeHtml(row.currency || "-")}</td></tr>`).join("") : `<tr><td colspan="7">Договоры и обеспечения не указаны.</td></tr>`}</tbody></table></section>`;
 }
 
 function renderCollateralPledgors(collateral) {
@@ -16730,17 +16868,17 @@ function renderCollateralRisks(collateral) {
 }
 
 function renderCollateralRiskRules(collateral) {
-  const nextInspection = collateral.monitoring?.nextInspection || "-";
+  const nextInspection = formatRegistryDateTime(collateral.monitoring?.nextInspection);
   const rules = [
     {
       title: "Страхование",
-      description: `Статус ${collateral.insuranceStatus || "-"}, срок действия до ${collateral.insuranceDue || collateral.insurance?.to || "-"}.`,
+      description: `Статус ${collateral.insuranceStatus || "-"}, срок действия до ${formatRegistryDateTime(collateral.insuranceDue || collateral.insurance?.to)}.`,
       status: collateral.insuranceStatus || "Не указано",
       tone: collateral.insuranceStatus === "Оплачена" ? "ok" : "warn"
     },
     {
       title: "Оценка",
-      description: `Статус ${collateral.appraisalStatus || "-"}, следующая переоценка до ${collateral.appraisalDue || "-"}.`,
+      description: `Статус ${collateral.appraisalStatus || "-"}, следующая переоценка до ${formatRegistryDateTime(collateral.appraisalDue)}.`,
       status: collateral.appraisalStatus || "Не указано",
       tone: collateral.appraisalStatus === "Действует" ? "ok" : "warn"
     },
@@ -16752,7 +16890,7 @@ function renderCollateralRiskRules(collateral) {
     },
     {
       title: "Мониторинг",
-      description: `Следующий контроль: ${nextInspection}. Последний осмотр: ${collateral.monitoring?.lastInspection || "-"}.`,
+      description: `Следующий контроль: ${nextInspection}. Последний осмотр: ${formatRegistryDateTime(collateral.monitoring?.lastInspection)}.`,
       status: collateral.monitoring?.condition || "По графику",
       tone: "info"
     },
@@ -16854,8 +16992,8 @@ function renderExternalAttributeCard(group) {
         ${group.rows.map((row) => `
           <div class="external-attribute-item ${row.tone || ""}">
             <span>${escapeHtml(row.parameter)}</span>
-            <strong>${escapeHtml(row.value)}</strong>
-            ${group.dates.length > 1 ? `<small>${escapeHtml(row.updatedAt)}</small>` : ""}
+            <strong>${escapeHtml(isDateTimeDisplayLabel(row.parameter) ? formatRegistryDateTime(row.value) : row.value)}</strong>
+            ${group.dates.length > 1 ? `<small>${escapeHtml(formatRegistryDateTime(row.updatedAt))}</small>` : ""}
           </div>
         `).join("")}
       </div>
@@ -16882,7 +17020,7 @@ function formatExternalAttributePanelNote(groups) {
 }
 
 function formatExternalAttributeGroupDate(group) {
-  return [...group.dates].filter(Boolean).sort().slice(-1)[0] || "-";
+  return formatRegistryDateTime([...group.dates].filter(Boolean).sort().slice(-1)[0]);
 }
 
 function pluralize(value, one, few, many) {
@@ -17036,7 +17174,7 @@ function getCollateralExternalSourceDetail(source, collateral) {
       applicable,
       dataType: "Данные ЕГРН и ограничения недвижимости",
       value: applicable ? `${data["Право собственности"] || "Право проверено"}; ${data["Ограничения"] || data["Запреты"] || "ограничения проверены"}` : "Источник не применяется к типу объекта",
-      message: applicable ? (data["Дата проверки"] ? `Проверка от ${data["Дата проверки"]}` : "Сведения ЕГРН проверены") : "Используется только для недвижимости"
+      message: applicable ? (data["Дата проверки"] ? `Проверка от ${formatRegistryDateTime(data["Дата проверки"])}` : "Сведения ЕГРН проверены") : "Используется только для недвижимости"
     };
   }
   if (source.id === "spectrum-auto") {
@@ -17241,7 +17379,7 @@ function addRealtyValuationAttributes(collateral, sourceRows, add) {
 function renderCollateralHistory(collateral) {
   return `<section class="panel table-panel"><h2>История изменений</h2><table><thead><tr><th>Дата</th><th>Пользователь / источник</th><th>Поле</th><th>Было</th><th>Стало</th><th>Основание</th></tr></thead><tbody>${(collateral.history || []).map((item) => {
     const actor = [...new Set([item.user, item.source].map((value) => String(value || "").trim()).filter(Boolean))].join(" / ") || "-";
-    return `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(actor)}</td><td>${escapeHtml(item.field)}</td><td>${escapeHtml(item.oldValue)}</td><td>${escapeHtml(item.newValue)}</td><td>${escapeHtml(item.reason)}</td></tr>`;
+    return `<tr><td>${escapeHtml(formatRegistryDateTime(item.date))}</td><td>${escapeHtml(actor)}</td><td>${escapeHtml(item.field)}</td><td>${escapeHtml(formatHistoryDisplayValue(item.oldValue))}</td><td>${escapeHtml(formatHistoryDisplayValue(item.newValue))}</td><td>${escapeHtml(item.reason)}</td></tr>`;
   }).join("")}</tbody></table></section>`;
 }
 
@@ -17416,17 +17554,12 @@ function getApplicationPledgeContractOptions(collaterals = []) {
     });
   });
   return options.map((option) => {
-    const collateralLabels = option.collateralIds.map((id) => {
-      const collateral = collaterals.find((item) => item.id === id);
-      return [getCollateralObjectIdentifier(collateral) || collateral?.id || id, getCollateralTypeLabel(collateral)].filter(Boolean).join(" · ");
-    });
+    const numberLabel = option.number || "Без номера";
+    const dateLabel = option.date ? `от ${formatDocumentDateCell(option.date)}` : "";
     return {
       ...option,
       key: getApplicationPledgeContractLinkKey(option),
-      label: [
-        `Договор залога ${option.number ? `№ ${option.number}` : "без номера"}${option.date ? ` от ${formatDocumentDateCell(option.date)}` : ""}`,
-        collateralLabels.join(", ")
-      ].filter(Boolean).join(" — ")
+      label: [numberLabel, dateLabel].filter(Boolean).join(" ")
     };
   });
 }
@@ -17455,6 +17588,28 @@ function getApplicationPledgeContractSelectedKeys(value, options = []) {
     && String(link.date || "").trim() === String(option.date || "").trim()
     && option.collateralIds.some((id) => link.collateralIds.includes(id))
   )).map((option) => option.key));
+}
+
+function positionApplicationPledgeContractPicker(details) {
+  const summary = details?.querySelector("summary");
+  const panel = details?.querySelector(".task-multi-select-options");
+  if (!summary || !panel || !details.open) return;
+  const bounds = summary.getBoundingClientRect();
+  const viewportPadding = 12;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const width = Math.min(Math.max(bounds.width, 420), viewportWidth - viewportPadding * 2);
+  const below = viewportHeight - bounds.bottom - viewportPadding;
+  const above = bounds.top - viewportPadding;
+  const placeAbove = below < 220 && above > below;
+  const available = placeAbove ? above : below;
+  const maxHeight = Math.max(120, Math.min(360, viewportHeight - viewportPadding * 2, available));
+  const top = placeAbove ? bounds.top - maxHeight - 4 : bounds.bottom + 4;
+  const left = Math.max(viewportPadding, Math.min(bounds.left, viewportWidth - width - viewportPadding));
+  panel.style.left = `${left}px`;
+  panel.style.top = `${Math.max(viewportPadding, Math.min(top, viewportHeight - maxHeight - viewportPadding))}px`;
+  panel.style.width = `${width}px`;
+  panel.style.maxHeight = `${maxHeight}px`;
 }
 
 function normalizeApplicationDealsForSave(rows, clientName, clientInn, pledgeContractOptions) {
@@ -17740,7 +17895,7 @@ function renderApplicationDealPledgeContractPicker(row, index, collaterals) {
   const selectedKeys = getApplicationPledgeContractSelectedKeys(row.pledgeContractLinks, options);
   const selectedOptions = options.filter((option) => selectedKeys.has(option.key));
   const summary = selectedOptions.length
-    ? selectedOptions.map((option) => `№ ${option.number || "без номера"}${option.date ? ` от ${formatDocumentDateCell(option.date)}` : ""}`).join(", ")
+    ? selectedOptions.map((option) => option.label).join(", ")
     : options.length ? "Выбрать договоры залога" : "Договоры залога не указаны";
   const optionList = options.length
     ? options.map((option) => `
@@ -17752,7 +17907,7 @@ function renderApplicationDealPledgeContractPicker(row, index, collaterals) {
     : `<span class="application-deal-pledge-empty">Добавьте договор залога в карточке выбранного объекта.</span>`;
   return `
     <div class="application-deal-pledge-picker">
-      <details class="task-multi-select">
+      <details class="task-multi-select" data-application-pledge-contract-picker>
         <summary>${escapeHtml(summary)}</summary>
         <div class="task-multi-select-options">${optionList}</div>
       </details>
@@ -17765,8 +17920,8 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
     <section class="application-deals-editor">
       <div class="panel-title">
         <div>
-          <h2>Договоры и обеспечения</h2>
-          <span class="panel-note">Договоры указываются по заявке в целом. Залоги выбираются отдельным составом заявки.</span>
+          <h2 class="shared-component-title">Договоры и обеспечения</h2>
+          <span class="panel-note shared-component-hint">Договоры указываются по заявке в целом. Залоги выбираются отдельным составом заявки.</span>
         </div>
         <div class="inline-actions application-deals-header-actions">
           <button class="btn btn-secondary" data-action="add-application-deal">Добавить строку</button>
@@ -17795,72 +17950,241 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
 }
 
 function getApplicationPreInspection(application = {}) {
-  const source = application?.preInspection || {};
-  const actFile = source.actFile?.name || source.actFile || source.actFileName || application?.inspectionActFile || "";
+  return getApplicationPreInspectionRecords(application)[0] || createApplicationPreInspectionRow();
+}
+
+function normalizeApplicationPreInspectionRecord(source = {}, fallback = {}) {
+  const actFile = source.actFile?.name || source.actFile || source.actFileName || fallback.inspectionActFile || "";
+  const applyScope = ["application", "task", "collateral"].includes(source.applyScope) ? source.applyScope : "application";
   return {
-    completed: isTruthyFlag(source.completed) || isTruthyFlag(application?.inspectionCompleted),
-    mobileAppraiserLink: source.mobileAppraiserLink || source.link || application?.mobileAppraiserLink || "",
+    completed: isTruthyFlag(source.completed) || isTruthyFlag(fallback.inspectionCompleted),
+    mobileAppraiserLink: source.mobileAppraiserLink || source.link || fallback.mobileAppraiserLink || "",
     actFile,
     recordedAt: source.recordedAt || source.date || source.completedAt || "",
-    source: source.source || "Заявка"
+    source: source.source || "Заявка",
+    applyScope,
+    applyValue: applyScope === "application" ? "" : String(source.applyValue || "")
   };
+}
+
+function getApplicationPreInspectionRecords(application = {}) {
+  const storedRecords = Array.isArray(application?.preInspections) && application.preInspections.length
+    ? application.preInspections
+    : [application?.preInspection || {}];
+  return storedRecords.map((record, index) => normalizeApplicationPreInspectionRecord(record || {}, index === 0 ? application : {}));
+}
+
+function getTaskApplicationPreInspection(task = {}) {
+  const visibleRecords = getTaskApplicationPreInspections(task);
+  if (visibleRecords.length) return visibleRecords[0];
+
+  const application = getTaskApplication(task);
+  const applicationRecords = getApplicationPreInspectionRecords(application || {});
+  const applicationResult = applicationRecords.find(hasApplicationPreInspectionData);
+  const taskSource = task.applicationPreInspection || task.preInspection || {};
+  const taskResult = normalizeApplicationPreInspectionRecord({
+    ...taskSource,
+    completed: task.applicationInspectionCompleted ?? taskSource.completed,
+    mobileAppraiserLink: task.applicationInspectionLink || taskSource.mobileAppraiserLink || taskSource.link,
+    actFile: task.applicationInspectionActFile || taskSource.actFile
+  }, task);
+  const applicationHasResult = Boolean(applicationResult);
+  const taskHasResult = hasApplicationPreInspectionData(taskResult);
+  const selected = applicationResult || taskResult || applicationRecords[0] || createApplicationPreInspectionRow();
+  if (applicationHasResult && !doesPreInspectionApplyToTask(applicationResult, task)) {
+    return { ...applicationResult, visible: false, source: "Заявка" };
+  }
+  if (!applicationHasResult && taskHasResult && !doesPreInspectionApplyToTask(taskResult, task)) {
+    return { ...taskResult, visible: false, source: "Заявка" };
+  }
+  return { ...selected, visible: false, source: "Заявка" };
+}
+
+function getTaskApplicationPreInspections(task = {}) {
+  const application = getTaskApplication(task);
+  const applicationRecords = getApplicationPreInspectionRecords(application || {}).filter(hasApplicationPreInspectionData);
+  const taskRecord = normalizeApplicationPreInspectionRecord({
+    completed: task.applicationInspectionCompleted,
+    mobileAppraiserLink: task.applicationInspectionLink,
+    actFile: task.applicationInspectionActFile,
+    ...(task.applicationPreInspection || task.preInspection || {})
+  });
+  const records = applicationRecords.length
+    ? applicationRecords
+    : hasApplicationPreInspectionData(taskRecord) ? [taskRecord] : [];
+  return records
+    .filter((record) => doesPreInspectionApplyToTask(record, task))
+    .map((record) => ({ ...record, visible: true, source: "Заявка" }));
+}
+
+function hasApplicationPreInspectionData(preInspection = {}) {
+  return Boolean(
+    preInspection.completed
+    || preInspection.mobileAppraiserLink
+    || preInspection.actFile
+    || ["task", "collateral"].includes(preInspection.applyScope)
+  );
+}
+
+function doesPreInspectionApplyToTask(preInspection = {}, task = {}, collateral = null) {
+  if (preInspection.applyScope === "task") return preInspection.applyValue === task?.id;
+  if (preInspection.applyScope === "collateral") {
+    return collateral
+      ? preInspection.applyValue === collateral.id
+      : getTaskCollateralIds(task).includes(preInspection.applyValue);
+  }
+  return true;
+}
+
+function createApplicationPreInspectionRow(source = {}) {
+  return normalizeApplicationPreInspectionRecord(source);
+}
+
+function getDraftApplicationPreInspections() {
+  if (!Array.isArray(state.newTask.applicationPreInspections)) state.newTask.applicationPreInspections = [];
+  if (!state.newTask.applicationPreInspections.length) {
+    state.newTask.applicationPreInspections.push(createApplicationPreInspectionRow({
+      completed: state.newTask.applicationInspectionCompleted,
+      mobileAppraiserLink: state.newTask.applicationInspectionLink,
+      actFile: state.newTask.applicationInspectionActFile,
+      recordedAt: state.newTask.applicationInspectionRecordedAt,
+      ...parseDocumentBinding(state.newTask.applicationInspectionApplyBinding || "application::")
+    }));
+  }
+  state.newTask.applicationPreInspections = state.newTask.applicationPreInspections
+    .map((record) => createApplicationPreInspectionRow(record));
+  return state.newTask.applicationPreInspections;
 }
 
 function getDraftApplicationPreInspection() {
-  return {
-    completed: isTruthyFlag(state.newTask.applicationInspectionCompleted),
-    mobileAppraiserLink: state.newTask.applicationInspectionLink || "",
-    actFile: state.newTask.applicationInspectionActFile || "",
-    recordedAt: state.newTask.applicationInspectionRecordedAt || "",
-    source: "Заявка"
-  };
+  return getDraftApplicationPreInspections()[0] || createApplicationPreInspectionRow();
 }
 
 function getDraftApplicationPreInspectionPayload() {
-  const preInspection = getDraftApplicationPreInspection();
-  return {
+  return getDraftApplicationPreInspectionPayloads()[0] || createApplicationPreInspectionRow();
+}
+
+function getDraftApplicationPreInspectionPayloads() {
+  return getDraftApplicationPreInspections().map((preInspection) => ({
     ...preInspection,
     recordedAt: preInspection.completed
       ? (preInspection.recordedAt || formatTaskHistoryDate(new Date()))
       : preInspection.recordedAt
-  };
+  }));
 }
 
-function renderApplicationPreInspectionBlock() {
-  const preInspection = getDraftApplicationPreInspection();
-  const actFileName = preInspection.actFile || "Файл не выбран";
+function addApplicationPreInspectionRow() {
+  getDraftApplicationPreInspections().push(createApplicationPreInspectionRow());
+  addToast("Строка добавлена", "Проведенный выездной осмотр", "ok");
+}
+
+function removeApplicationPreInspectionRow(index) {
+  const rows = getDraftApplicationPreInspections();
+  if (!Number.isInteger(index) || index < 0 || index >= rows.length) return;
+  if (rows.length <= 1) rows[0] = createApplicationPreInspectionRow();
+  else rows.splice(index, 1);
+  syncLegacyApplicationPreInspectionDraft(rows[0]);
+  addToast("Строка удалена", "Проведенный выездной осмотр", "warn");
+}
+
+function syncLegacyApplicationPreInspectionDraft(record = {}) {
+  state.newTask.applicationInspectionCompleted = Boolean(record.completed);
+  state.newTask.applicationInspectionLink = record.mobileAppraiserLink || "";
+  state.newTask.applicationInspectionActFile = record.actFile || "";
+  state.newTask.applicationInspectionRecordedAt = record.recordedAt || "";
+  state.newTask.applicationInspectionApplyBinding = `${record.applyScope || "application"}::${record.applyValue || ""}`;
+}
+
+function updateApplicationPreInspectionField(fieldEl) {
+  const index = Number(fieldEl.dataset.index);
+  const field = fieldEl.dataset.applicationPreinspectionField;
+  const record = getDraftApplicationPreInspections()[index];
+  if (!record || !field) return;
+  if (field === "applyBinding") {
+    const binding = parseDocumentBinding(fieldEl.value);
+    record.applyScope = ["application", "task", "collateral"].includes(binding.scope) ? binding.scope : "application";
+    record.applyValue = record.applyScope === "application" ? "" : binding.value;
+  } else if (field === "completed") {
+    record.completed = fieldEl.checked;
+    if (record.completed && !record.recordedAt) record.recordedAt = formatTaskHistoryDate(new Date());
+  } else {
+    record[field] = fieldEl.value;
+  }
+  if (index === 0) syncLegacyApplicationPreInspectionDraft(record);
+}
+
+function renderApplicationPreInspectionBlock(preInspection = getDraftApplicationPreInspections(), options = {}) {
+  const readOnly = options.readOnly === true;
+  const records = (Array.isArray(preInspection) ? preInspection : [preInspection]).filter(Boolean);
+  const rows = records.length ? records : [createApplicationPreInspectionRow()];
+  const applyOptions = readOnly
+    ? getApplicabilityOptions("task", { application: options.application, task: options.task, collaterals: options.collaterals || [] })
+    : getApplicabilityOptions("application", { application: options.application, collaterals: options.collaterals || [], relatedTasks: options.relatedTasks || [] });
+  const rowMarkup = rows.map((record, index) => {
+    const actFileName = record.actFile || (readOnly ? "-" : "Файл не выбран");
+    const bindingValue = `${record.applyScope || "application"}::${record.applyValue || ""}`;
+    const selectedExists = applyOptions.some((option) => option.value === bindingValue);
+    const selectedFallback = selectedExists ? "" : `<option value="${escapeHtml(bindingValue)}" selected>${escapeHtml(record.applyScope === "task" ? `Задача ${record.applyValue} (не найдена)` : `Объект: ${record.applyValue} (не найден)`)}</option>`;
+    return `
+      <div class="application-preinspection-row">
+        <div class="application-preinspection-grid">
+          <label class="application-preinspection-field application-preinspection-check">
+            <input type="checkbox" data-application-preinspection-field="completed" data-index="${index}" ${readOnly ? "disabled" : ""} ${record.completed ? "checked" : ""}>
+            <span>Осмотр произведен</span>
+          </label>
+          <label class="application-preinspection-field application-preinspection-apply">
+            <span>Применяется к</span>
+            <select data-application-preinspection-field="applyBinding" data-index="${index}" aria-label="К чему применяется результат выездного осмотра" ${readOnly ? "disabled" : ""}>
+              ${selectedFallback}
+              ${applyOptions.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === bindingValue ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="application-preinspection-field application-preinspection-link">
+            <span>Ссылка на мобильный оценщик</span>
+            <input data-application-preinspection-field="mobileAppraiserLink" data-index="${index}" value="${escapeHtml(record.mobileAppraiserLink || "")}" placeholder="Ссылка на результат осмотра" ${readOnly ? "readonly" : ""}>
+          </label>
+          <label class="application-preinspection-field application-inspection-act-drop">
+            <span>Акт осмотра</span>
+            <span class="application-inspection-act-control"><small class="application-inspection-act-name">${escapeHtml(actFileName)}</small></span>
+            ${readOnly ? "" : `<input type="file" data-application-inspection-act data-index="${index}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">`}
+          </label>
+        </div>
+        ${readOnly ? "" : `<button class="icon-btn application-preinspection-remove" title="Удалить строку" aria-label="Удалить строку осмотра" data-action="remove-application-preinspection-row" data-index="${index}">×</button>`}
+      </div>
+    `;
+  }).join("");
   return `
-    <section class="application-preinspection-block">
+    <section class="application-preinspection-block${readOnly ? " is-readonly" : ""}">
       <div class="panel-title">
-        <h2>Проведенный выездной осмотр</h2>
+        <h2 class="shared-component-title">Проведенный выездной осмотр</h2>
+        ${readOnly ? "" : `<button class="btn btn-secondary btn-small" data-action="add-application-preinspection-row">Добавить строку</button>`}
       </div>
-      <div class="application-preinspection-grid">
-        <label class="application-preinspection-field application-preinspection-check">
-          <input type="checkbox" data-new-task-field="applicationInspectionCompleted" ${preInspection.completed ? "checked" : ""}>
-          <span>Осмотр произведен</span>
-        </label>
-        <label class="application-preinspection-field application-preinspection-link">
-          <span>Ссылка на мобильный оценщик</span>
-          <input data-new-task-field="applicationInspectionLink" value="${escapeHtml(preInspection.mobileAppraiserLink)}" placeholder="Ссылка на результат осмотра">
-        </label>
-        <label class="application-preinspection-field application-inspection-act-drop">
-          <span>Акт осмотра</span>
-          <small class="application-inspection-act-name">${escapeHtml(actFileName)}</small>
-          <input type="file" data-application-inspection-act accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-        </label>
-      </div>
+      <div class="application-preinspection-rows">${rowMarkup}</div>
     </section>
   `;
+}
+
+function renderTaskApplicationPreInspectionBlock(task) {
+  const preInspections = getTaskApplicationPreInspections(task);
+  const visibleRecords = preInspections.length ? preInspections : [createApplicationPreInspectionRow()];
+  return renderApplicationPreInspectionBlock(visibleRecords, {
+    readOnly: true,
+    application: getTaskApplication(task),
+    task,
+    collaterals: getTaskCollaterals(task)
+  });
 }
 
 function attachApplicationInspectionAct(fieldEl) {
   const fileName = fieldEl.files?.[0]?.name || "";
   if (!fileName) return;
-  state.newTask.applicationInspectionActFile = fileName;
-  state.newTask.applicationInspectionCompleted = true;
-  if (!state.newTask.applicationInspectionRecordedAt) {
-    state.newTask.applicationInspectionRecordedAt = formatTaskHistoryDate(new Date());
-  }
+  const index = Number(fieldEl.dataset.index);
+  const record = getDraftApplicationPreInspections()[index];
+  if (!record) return;
+  record.actFile = fileName;
+  record.completed = true;
+  if (!record.recordedAt) record.recordedAt = formatTaskHistoryDate(new Date());
+  if (index === 0) syncLegacyApplicationPreInspectionDraft(record);
   addToast("Акт осмотра приложен", fileName, "ok");
 }
 
@@ -17882,7 +18206,7 @@ function ensureNewApplicationDraft(query) {
     clientName,
     inn: clientInn
   }));
-  state.newTask = {
+  const applicationDraft = {
     key,
     type: "Первичный осмотр",
     applicationNumber: identity.number,
@@ -17907,12 +18231,15 @@ function ensureNewApplicationDraft(query) {
     applicationInspectionLink: "",
     applicationInspectionActFile: "",
     applicationInspectionRecordedAt: "",
+    applicationInspectionApplyBinding: "application::",
+    applicationPreInspections: [createApplicationPreInspectionRow()],
     applicationDeals,
     applicationContacts: preselected ? buildApplicationFallbackContactRows([collateral].filter(Boolean)) : [createApplicationContactRow()],
     registrationScenario: collateral ? getCollateralRegistrationScenario(collateral) : "",
     selectedCollateralIds: preselected ? [preselected] : [],
     documents: []
   };
+  state.newTask = applicationDraft;
 	state.taskActiveCollateral["new-task-draft"] = preselected || "";
 }
 
@@ -17929,7 +18256,8 @@ function ensureApplicationCardDraft(application) {
   const clientName = getApplicationClientName(application);
   const clientInn = getApplicationInn(application);
   const products = getApplicationProducts(application);
-  const preInspection = getApplicationPreInspection(application);
+  const preInspections = getApplicationPreInspectionRecords(application);
+  const preInspection = preInspections[0] || createApplicationPreInspectionRow();
   const currencies = uniqueItems([
     ...deals.map((row) => row.currency),
     application.currency,
@@ -17964,6 +18292,8 @@ function ensureApplicationCardDraft(application) {
     applicationInspectionLink: preInspection.mobileAppraiserLink,
     applicationInspectionActFile: preInspection.actFile,
     applicationInspectionRecordedAt: preInspection.recordedAt,
+    applicationInspectionApplyBinding: `${preInspection.applyScope}::${preInspection.applyValue}`,
+    applicationPreInspections: preInspections,
     applicationDeals: deals.length ? deals : [createDraftApplicationDeal()],
     applicationContacts: getApplicationContactRows(application, collaterals),
     registrationScenario: application.registrationScenario || "",
@@ -18004,21 +18334,19 @@ function renderApplicationCreate(query, options = {}) {
     .join("");
   const dealRows = getDraftApplicationDeals();
   const title = isCard ? `Карточка заявки ${state.newTask.applicationNumber}` : "Создание заявки";
-  const subtitle = isCard
-    ? "Данные заявки, состав залога, договоры, документы и связанные задачи."
-    : "Входящий запрос инициатора, в рамках которого группируются клиенты, продукты, договоры, залоги, документы и последующие задачи.";
-  const submitAction = isCard ? "save-application-submit" : "create-application-submit";
+  const editableDraftCard = isCard && isDraftApplication(application);
   const submitAttrs = isCard ? ` data-application="${escapeHtml(application.id || application.number)}"` : "";
-  const submitLabel = isCard ? "Сохранить" : "Отправить заявку";
   const headerActions = `
     <button class="btn btn-secondary" data-route="/app/applications">Назад</button>
-    <button class="btn btn-primary" data-action="${submitAction}"${submitAttrs}>${submitLabel}</button>
+    ${isCard && !editableDraftCard
+      ? `<button class="btn btn-primary" data-action="save-application-submit"${submitAttrs}>Сохранить</button>`
+      : `<button class="btn btn-secondary" data-action="save-application-draft"${submitAttrs}>Сохранить</button><button class="btn btn-primary" data-action="create-application-submit"${submitAttrs}>Отправить заявку</button>`}
   `;
   const applicationStatus = state.newTask.applicationStatus || "Новая";
   const statusField = `<label>Статус заявки<input id="newTaskApplicationStatus" value="${escapeHtml(applicationStatus)}" readonly></label>`;
-  const parameterReadonlyAttr = isCard ? " readonly" : "";
-  const parameterDisabledAttr = isCard ? " disabled" : "";
-  const parameterGridClass = isCard ? " application-parameters-readonly" : "";
+  const parameterReadonlyAttr = isCard && !editableDraftCard ? " readonly" : "";
+  const parameterDisabledAttr = isCard && !editableDraftCard ? " disabled" : "";
+  const parameterGridClass = isCard && !editableDraftCard ? " application-parameters-readonly" : "";
   const draftTask = {
     id: draftTaskId,
     type: getApplicationDocumentTaskType(state.newTask.applicationType, state.newTask.applicationSubtype),
@@ -18034,12 +18362,12 @@ function renderApplicationCreate(query, options = {}) {
     documents: state.newTask.documents
   };
   return `
-    ${renderPageHeader(title, subtitle, headerActions)}
+    ${renderPageHeader(title, "", headerActions, { headerClass: "application-sticky-header" })}
     ${isCard ? renderApplicationReturnNotice(application) : ""}
-    <section class="task-create-layout">
-      <div class="panel">
+    <section class="task-create-layout application-create-layout">
+        <section class="panel application-form-group application-form-group-parameters">
         <div class="panel-title">
-          <h2>Параметры заявки</h2>
+          <h2 class="shared-component-title">Параметры заявки</h2>
         </div>
         <div class="form-grid task-context-grid${parameterGridClass}">
           <label>Номер заявки<input id="newTaskApplicationNumber" data-new-task-field="applicationNumber" value="${escapeHtml(state.newTask.applicationNumber)}" readonly></label>
@@ -18053,24 +18381,31 @@ function renderApplicationCreate(query, options = {}) {
           ${statusField}
         </div>
         <label>Суть обращения / комментарий<textarea id="newTaskComment" data-new-task-field="applicationComment"${parameterReadonlyAttr}>${escapeHtml(state.newTask.applicationComment || "Новая заявка для рассмотрения залоговой службой.")}</textarea></label>
-        ${renderApplicationPreInspectionBlock()}
-        ${renderApplicationContactsBlock(collaterals)}
+        </section>
+        ${isCard ? renderApplicationLinkedTasksTable(application) : ""}
+        <section class="panel application-form-group application-form-group-collateral-deals">
         ${renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCollateral, isCard ? application : null)}
         ${renderApplicationDealsTable(dealRows, collaterals, contractOptions, productOptions)}
-        ${isCard ? renderApplicationLinkedTasksTable(application) : ""}
-      </div>
-    </section>
-    ${renderDocumentWidget({
+        </section>
+        <section class="panel application-form-group application-form-group-inspection-contacts">
+        ${renderApplicationPreInspectionBlock(getDraftApplicationPreInspections(), { application, collaterals, relatedTasks: application ? getApplicationTasks(application) : [] })}
+        ${renderApplicationContactsBlock(collaterals, application)}
+        </section>
+      ${renderDocumentWidget({
       context: "applicationDraft",
       ownerId: draftTaskId,
       task: draftTask,
+      application,
+      relatedTasks: application ? getApplicationTasks(application) : [],
       documents: state.newTask.documents,
       collaterals,
       activeCollateral,
-      title: "Документы заявки",
+      title: "Документы",
       subtitle: "Файлы по заявке",
-      description: "Файлы по заявке и объектам залога."
-    })}
+      description: "Отображаются документы, привязанные к заявке, завершенным задачам и объектам залога.",
+      className: "application-form-group application-form-group-documents"
+      })}
+    </section>
   `;
 }
 
@@ -18277,7 +18612,7 @@ function renderReports() {
       : assignedToday.length
         ? `Сегодня: ${assignedToday.map((task) => task.id).join(", ")}`
         : nextTask
-          ? `${nextTask.id}, срок ${nextTask.dueDate}`
+          ? `${nextTask.id}, срок ${formatRegistryDateTime(nextTask.dueDate)}`
           : "Нет активных задач";
     return {
       assignee,
@@ -18437,8 +18772,8 @@ function renderReports() {
           reportCell(`${escapeHtml(collateral.type)}<br><small>${escapeHtml(collateral.region)}</small>`),
           reportCell(`${formatShortMoney(collateral.marketValue)}<br><small>залоговая: ${formatShortMoney(collateral.pledgeValue)}</small>`),
           reportCell(badge(getCollateralRiskState(collateral), riskTone(collateral))),
-          reportCell(`${badge(collateral.appraisalStatus)}<br><small>до ${escapeHtml(collateral.appraisalDue)}</small>`),
-          reportCell(`${badge(collateral.insuranceStatus)}<br><small>до ${escapeHtml(collateral.insuranceDue)}</small>`)
+          reportCell(`${badge(collateral.appraisalStatus)}<br><small>до ${escapeHtml(formatRegistryDateTime(collateral.appraisalDue))}</small>`),
+          reportCell(`${badge(collateral.insuranceStatus)}<br><small>до ${escapeHtml(formatRegistryDateTime(collateral.insuranceDue))}</small>`)
         ])
       })}
       ${renderReportTable({
@@ -18456,7 +18791,7 @@ function renderReports() {
             reportCell(`${escapeHtml(row.clientName)}<br><small>${escapeHtml(row.collateral.id)} · ${escapeHtml(row.collateral.type)}</small>`),
             row.company,
             formatShortMoney(row.amount),
-            reportCell(`${escapeHtml(row.from)} - ${escapeHtml(row.to)}<br><small>${row.daysLeft === null ? "срок не рассчитан" : `${row.daysLeft} дн.`}</small>`),
+            reportCell(`${escapeHtml(formatRegistryDateTime(row.from))} - ${escapeHtml(formatRegistryDateTime(row.to))}<br><small>${row.daysLeft === null ? "срок не рассчитан" : `${row.daysLeft} дн.`}</small>`),
             reportCell(badge(row.premiumStatus, row.premiumStatus === "Оплачена" ? "ok" : "warn")),
             control
           ];
@@ -18476,11 +18811,11 @@ function renderReports() {
               : "По графику";
           return [
             reportCell(`<strong>${escapeHtml(collateral.id)}</strong><br><small>${escapeHtml(collateral.clientName)}</small>`),
-            evaluation.date || "-",
+            formatRegistryDateTime(evaluation.date),
             reportCell(`${escapeHtml(evaluation.appraiser || "-")}<br><small>${escapeHtml(evaluation.method || "-")}</small>`),
             formatShortMoney(evaluation.market || collateral.marketValue),
             formatShortMoney(evaluation.pledge || collateral.pledgeValue),
-            reportCell(`${badge(collateral.appraisalStatus)}<br><small>${escapeHtml(collateral.appraisalDue)} · ${escapeHtml(days.label)}</small>`),
+            reportCell(`${badge(collateral.appraisalStatus)}<br><small>${escapeHtml(formatRegistryDateTime(collateral.appraisalDue))} · ${escapeHtml(days.label)}</small>`),
             action
           ];
         })
@@ -18500,8 +18835,8 @@ function renderReports() {
               : "По графику";
           return [
             reportCell(`<strong>${escapeHtml(collateral.id)}</strong><br><small>${escapeHtml(collateral.type)} · ${escapeHtml(collateral.region)}</small>`),
-            monitoring.lastInspection || "-",
-            reportCell(`${escapeHtml(monitoring.nextInspection || "-")}<br><small>${escapeHtml(days.label)}</small>`),
+            formatRegistryDateTime(monitoring.lastInspection),
+            reportCell(`${escapeHtml(formatRegistryDateTime(monitoring.nextInspection))}<br><small>${escapeHtml(days.label)}</small>`),
             monitoring.inspector || "-",
             monitoring.condition || "-",
             linkedTask ? reportCell(`${escapeHtml(linkedTask.id)}<br><small>${escapeHtml(linkedTask.type)}</small>`) : "Нет активной задачи",
@@ -18514,7 +18849,7 @@ function renderReports() {
         note: "контроль зарегистрированных обременений по объектам и договорам",
         columns: ["Обременение", "Объект / залогодатель", "Тип", "Договор", "Сумма", "Выделено / LTV", "Статус"],
         rows: encumbranceRows.map(({ collateral, encumbrance }) => [
-          reportCell(`<strong>${escapeHtml(encumbrance.number)}</strong><br><small>${escapeHtml(encumbrance.date)}</small>`),
+          reportCell(`<strong>${escapeHtml(encumbrance.number)}</strong><br><small>${escapeHtml(formatRegistryDateTime(encumbrance.date))}</small>`),
           reportCell(`${escapeHtml(collateral.id)} · ${escapeHtml(collateral.clientName)}<br><small>${escapeHtml(collateral.description)}</small>`),
           encumbrance.type,
           encumbrance.contract,
@@ -18745,9 +19080,9 @@ function renderMobileInspectionSubmitActions(task, collateral, checklist) {
   const sentAt = task.mobileResult?.sentAt || "";
   const savedAt = task.mobileDraft?.savedAt || "";
   const status = sentAt
-    ? `Передано в основной модуль: ${sentAt}`
+    ? `Передано в основной модуль: ${formatRegistryDateTime(sentAt)}`
     : savedAt
-      ? `Черновик сохранен: ${savedAt}`
+      ? `Черновик сохранен: ${formatRegistryDateTime(savedAt)}`
       : "Данные еще не сохранены";
   return `
     <div class="mobile-submit-panel">
@@ -20317,6 +20652,11 @@ function createTask(payload) {
 }
 
 document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-application-pledge-contract-picker]")) {
+    document.querySelectorAll("[data-application-pledge-contract-picker][open]").forEach((details) => {
+      details.open = false;
+    });
+  }
   if (state.registryColumnSettingsOpen && !event.target.closest("[data-registry-column-settings]")) {
     const key = state.registryColumnSettingsOpen;
     state.registryColumnSettingsOpen = "";
@@ -20462,6 +20802,11 @@ document.addEventListener("click", (event) => {
       state.taskActiveCollateral[task.id] = collateralId;
     }
   }
+  if (action === "toggle-task-collateral-group") {
+    const taskId = actionEl.dataset.task || "";
+    const groupKey = actionEl.dataset.groupKey || "";
+    if (taskId && groupKey) toggleTaskCollateralGroup(taskId, groupKey);
+  }
   if (action === "select-application-collateral") {
     const collateralId = actionEl.dataset.collateral || "";
     if ((state.newTask?.selectedCollateralIds || []).includes(collateralId)) {
@@ -20541,6 +20886,8 @@ document.addEventListener("click", (event) => {
   if (action === "risk-rule") addToast("Контрольное правило", `${actionEl.dataset.rule}: проверка выполнена по данным карточки залога.`, "info");
   if (action === "add-application-contact-row") addApplicationContactRow();
   if (action === "remove-application-contact-row") removeApplicationContactRow(Number(actionEl.dataset.index));
+  if (action === "add-application-preinspection-row") addApplicationPreInspectionRow();
+  if (action === "remove-application-preinspection-row") removeApplicationPreInspectionRow(Number(actionEl.dataset.index));
   if (action === "save-monitoring") {
     document.querySelectorAll(`[data-monitoring-field][data-collateral="${actionEl.dataset.collateral}"]`).forEach(updateCollateralMonitoringField);
     addToast("Настройки мониторинга сохранены", actionEl.dataset.collateral, "ok");
@@ -20552,7 +20899,8 @@ document.addEventListener("click", (event) => {
   if (action === "bulk-revaluation-action") handleListRevaluationAction(actionEl);
   if (action === "report-export") addToast("Отчет сформирован", "Файл подготовлен.", "ok");
   if (action === "print") window.print();
-  if (action === "create-application-submit") submitNewApplication();
+  if (action === "create-application-submit") submitNewApplication(actionEl.dataset.application || "");
+  if (action === "save-application-draft") saveNewApplicationDraft(actionEl.dataset.application || "");
   if (action === "save-application-submit") saveApplicationCard(actionEl.dataset.application);
   if (action === "create-task-submit") submitNewTask();
   render();
@@ -20613,6 +20961,11 @@ document.addEventListener("dragend", () => {
 }, true);
 
 document.addEventListener("scroll", (event) => {
+  const pledgeOptionsPanel = event.target?.closest?.(".application-deal-pledge-picker .task-multi-select-options");
+  if (pledgeOptionsPanel?.matches?.(".application-deal-pledge-picker .task-multi-select-options")) return;
+  if (typeof positionApplicationPledgeContractPicker === "function") {
+    (document.querySelectorAll?.("[data-application-pledge-contract-picker][open]") || []).forEach(positionApplicationPledgeContractPicker);
+  }
   const taskContent = event.target?.closest?.("[data-task-collateral-drawer-content]");
   if (taskContent && state.taskRegistryCollateralDrawer) {
     const task = getTask(state.taskRegistryCollateralDrawer.taskId);
@@ -20738,6 +21091,11 @@ document.addEventListener("input", (event) => {
     updateApplicationContactField(applicationContactField);
     return;
   }
+  const applicationPreinspectionField = event.target.closest("[data-application-preinspection-field]");
+  if (applicationPreinspectionField && applicationPreinspectionField.tagName !== "SELECT" && applicationPreinspectionField.type !== "checkbox") {
+    updateApplicationPreInspectionField(applicationPreinspectionField);
+    return;
+  }
   const newTaskField = event.target.closest("[data-new-task-field]");
   if (newTaskField && newTaskField.type !== "checkbox" && newTaskField.tagName !== "SELECT") {
     const field = newTaskField.dataset.newTaskField;
@@ -20753,6 +21111,11 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("toggle", (event) => {
+  const applicationPledgePicker = event.target.closest?.("[data-application-pledge-contract-picker]");
+  if (applicationPledgePicker) {
+    if (applicationPledgePicker.open) positionApplicationPledgeContractPicker(applicationPledgePicker);
+    return;
+  }
   const registryDetails = event.target.closest?.("[data-registry-multi-details]");
   if (registryDetails) {
     const key = `${registryDetails.dataset.scope || ""}:${registryDetails.dataset.filterName || ""}`;
@@ -20766,6 +21129,10 @@ document.addEventListener("toggle", (event) => {
   if (details.matches("[data-new-collateral-basis-details]")) state.newCollateralDraft.basisDocumentExpanded = details.open;
   if (details.matches("[data-new-collateral-type-details]")) state.newCollateralDraft.typeFieldsExpanded = details.open;
 }, true);
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll("[data-application-pledge-contract-picker][open]").forEach(positionApplicationPledgeContractPicker);
+});
 
 document.addEventListener("change", (event) => {
   if (event.target.matches("[data-import-update-confirm]") && state.modal?.type === "import") {
@@ -21020,6 +21387,11 @@ document.addEventListener("change", (event) => {
   }
   if (event.target.matches("[data-application-inspection-act]")) {
     attachApplicationInspectionAct(event.target);
+    render();
+    return;
+  }
+  if (event.target.matches("[data-application-preinspection-field]")) {
+    updateApplicationPreInspectionField(event.target);
     render();
     return;
   }
@@ -21319,7 +21691,7 @@ function deferTask(taskId) {
     status: task.status,
     oldValue: previousStatus,
     newValue: task.status,
-    comment: `Причина: ${reason}. Дата возврата в работу: ${resumeDate || "-"}. ${userComment}`
+    comment: `Причина: ${reason}. Дата возврата в работу: ${formatRegistryDateTime(resumeDate)}. ${userComment}`
   });
   state.modal = null;
   addToast("Задача отложена", `${taskId}: ${reason}`, "warn");
@@ -22347,6 +22719,8 @@ function resetNewTaskDraft() {
     applicationInspectionLink: "",
     applicationInspectionActFile: "",
     applicationInspectionRecordedAt: "",
+    applicationInspectionApplyBinding: "application::",
+    applicationPreInspections: [createApplicationPreInspectionRow()],
     applicationDeals: [],
     applicationContacts: [],
     registrationScenario: "",
@@ -22427,32 +22801,33 @@ function createInitialTaskForApplication(application, collateralIds, contracts =
   });
 }
 
-function submitNewApplication() {
-  const createdAt = formatTaskHistoryDate(new Date());
-  const identity = getNextDataApplicationIdentity(state.data, createdAt);
-  const applicationNumber = identity.number;
+function buildApplicationFromForm(status, existingApplication = null) {
+  const createdAt = existingApplication?.createdAt || formatTaskHistoryDate(new Date());
+  const identity = existingApplication
+    ? { id: existingApplication.id, number: existingApplication.number }
+    : getNextDataApplicationIdentity(state.data, createdAt);
+  const applicationNumber = existingApplication?.number
+    || document.getElementById("newTaskApplicationNumber")?.value.trim()
+    || state.newTask.applicationNumber
+    || identity.number;
   state.newTask.applicationNumber = applicationNumber;
-  const initiator = state.newTask.initiator || getRole().user;
-  const initiatorSegment = document.getElementById("newTaskInitiatorSegment")?.value || "МСБ";
+  const duplicate = getApplicationByNumber(applicationNumber);
+  if (duplicate && duplicate !== existingApplication) {
+    addToast("Заявка уже существует", `${applicationNumber} уже есть в реестре заявок.`, "warn");
+    return null;
+  }
+  const initiator = existingApplication?.initiator || state.newTask.initiator || getRole().user;
+  const initiatorSegment = document.getElementById("newTaskInitiatorSegment")?.value || state.newTask.initiatorSegment || "МСБ";
   const clientName = document.getElementById("newTaskDealClientName")?.value.trim() || state.newTask.dealClientName || "";
   const clientInn = document.getElementById("newTaskDealClientInn")?.value.trim() || state.newTask.dealClientInn || "";
-  const status = state.newTask.applicationStatus || "Новая";
   const applicationType = normalizeApplicationType(document.getElementById("newTaskApplicationType")?.value || state.newTask.applicationType);
   const applicationSubtype = normalizeApplicationSubtype(applicationType, document.getElementById("newTaskApplicationSubtype")?.value || state.newTask.applicationSubtype);
   const applicationPurpose = normalizeApplicationPurpose(applicationType, applicationSubtype, document.getElementById("newTaskApplicationPurpose")?.value || state.newTask.applicationPurpose);
   const comment = document.getElementById("newTaskComment")?.value.trim() || "";
-  const selected = state.newTask.selectedCollateralIds.filter((id) => getCollateral(id));
+  const selected = uniqueItems((state.newTask.selectedCollateralIds || []).filter((id) => getCollateral(id)));
   const pledgeContractOptions = getApplicationPledgeContractOptions(selected.map(getCollateral).filter(Boolean));
   const deals = normalizeApplicationDealsForSave(getDraftApplicationDeals(), clientName, clientInn, pledgeContractOptions);
-  if (!applicationNumber) {
-    addToast("Укажите номер заявки", "Номер заявки нужен для группировки залогов, договоров и задач.", "warn");
-    return;
-  }
-  if (getApplicationByNumber(applicationNumber)) {
-    addToast("Заявка уже существует", `${applicationNumber} уже есть в реестре заявок.`, "warn");
-    return;
-  }
-  if (showApplicationValidationToast(getApplicationParameterValidation({ applicationNumber, applicationType, applicationSubtype, applicationPurpose, initiator, initiatorSegment, clientName, clientInn, status, comment }, selected))) return;
+  if (showApplicationValidationToast(getApplicationParameterValidation({ applicationNumber, applicationType, applicationSubtype, applicationPurpose, initiator, initiatorSegment, clientName, clientInn, status, comment }, selected))) return null;
   const contracts = uniqueItems(deals.map((row) => row.contractId).filter(Boolean)).map(getContract).filter(Boolean);
   const products = uniqueItems(deals.map((row) => row.product));
   const contractNumbers = uniqueItems(deals.map((row) => row.contractNumber).filter(Boolean)).join(", ");
@@ -22460,47 +22835,105 @@ function submitNewApplication() {
   const collateralIds = uniqueItems(selected);
   const limit = deals.reduce((sum, row) => sum + parseNumericInput(row.limit), 0);
   const contacts = getSerializableApplicationContacts();
-  const preInspection = getDraftApplicationPreInspectionPayload();
-  const application = {
-    id: identity.id,
-    number: identity.number,
-    createdAt,
-    source: "Ручное создание",
-    applicationType,
-    applicationSubtype,
-    applicationPurpose,
-    initiator,
-    initiatorSegment,
-    clientName,
-    clientNames: [clientName],
-    participantName: clientName,
-    participantInn: clientInn,
-    clientInns: [clientInn],
-    product: products[0] || "",
-    products,
-    limit,
-    currency: currencies[0] || state.newTask.dealCurrency || "RUB",
-    status,
-    decisionStatus: "Заявка зарегистрирована",
-    contractId: contracts[0]?.id || "",
-    contractIds: contracts.map((item) => item.id),
-    contractNumber: contractNumbers,
+  const preInspections = getDraftApplicationPreInspectionPayloads();
+  const preInspection = preInspections[0] || createApplicationPreInspectionRow();
+  return {
+    application: {
+      id: existingApplication?.id || identity.id,
+      number: applicationNumber,
+      createdAt,
+      source: existingApplication?.source || "Ручное создание",
+      applicationType,
+      applicationSubtype,
+      applicationPurpose,
+      initiator,
+      initiatorSegment,
+      clientName,
+      clientNames: [clientName],
+      participantName: clientName,
+      participantInn: clientInn,
+      clientInns: [clientInn],
+      product: products[0] || "",
+      products,
+      limit,
+      currency: currencies[0] || state.newTask.dealCurrency || "RUB",
+      status,
+      decisionStatus: status === "Черновик" ? "Черновик сохранен" : "Заявка зарегистрирована",
+      contractId: contracts[0]?.id || "",
+      contractIds: contracts.map((item) => item.id),
+      contractNumber: contractNumbers,
+      collateralIds,
+      taskIds: [],
+      deals,
+      contacts,
+      preInspection,
+      preInspections,
+      comment,
+      documents: state.newTask.documents || []
+    },
     collateralIds,
-    taskIds: [],
+    contracts,
     deals,
-    contacts,
-    preInspection,
-    comment,
-    documents: state.newTask.documents || []
+    clientName
   };
-  state.data.applications.unshift(application);
-  const initialTask = createInitialTaskForApplication(application, collateralIds, contracts, deals);
-  if (initialTask) application.taskIds = uniqueItems([...(application.taskIds || []), initialTask.id]);
+}
+
+function saveNewApplicationDraft(applicationId = "") {
+  const existingApplication = applicationId
+    ? getApplication(applicationId)
+    : getApplicationByNumber(state.newTask.applicationNumber);
+  if (existingApplication && !isDraftApplication(existingApplication)) {
+    addToast("Изменения не сохранены", "Редактировать параметры можно только до отправки заявки.", "warn");
+    return;
+  }
+  if (existingApplication && getApplicationTasks(existingApplication).length) {
+    addToast("Черновик нельзя сохранить", "У заявки в статусе «Черновик» не должно быть связанных задач.", "warn");
+    return;
+  }
+  const result = buildApplicationFromForm("Черновик", existingApplication);
+  if (!result) return;
+  let application = result.application;
+  if (existingApplication) Object.assign(existingApplication, application);
+  else state.data.applications.unshift(application);
+  application = existingApplication || application;
+  state.newTask.applicationStatus = "Черновик";
+  persistTaskState();
+  window.location.hash = getApplicationCardRoute(application);
+  addToast("Черновик сохранен", `${application.number}: задача будет создана после отправки.`, "ok");
+}
+
+function submitNewApplication(applicationId = "") {
+  const existingApplication = applicationId
+    ? getApplication(applicationId)
+    : getApplicationByNumber(state.newTask.applicationNumber);
+  if (existingApplication && !isDraftApplication(existingApplication)) {
+    addToast("Заявка уже существует", `${existingApplication.number} уже отправлена.`, "warn");
+    return;
+  }
+  if (existingApplication && getApplicationTasks(existingApplication).length) {
+    addToast("Заявка уже содержит задачи", "Повторная отправка черновика не должна создавать дубликат задачи.", "warn");
+    return;
+  }
+  const result = buildApplicationFromForm("Новая", existingApplication);
+  if (!result) return;
+  let application = result.application;
+  const previousDraft = existingApplication ? clone(existingApplication) : null;
+  if (existingApplication) Object.assign(existingApplication, application);
+  else state.data.applications.unshift(application);
+  application = existingApplication || application;
+  const initialTask = createInitialTaskForApplication(application, result.collateralIds, result.contracts, result.deals);
+  if (!initialTask) {
+    if (existingApplication) Object.assign(existingApplication, previousDraft);
+    else state.data.applications = state.data.applications.filter((item) => item !== application);
+    addToast("Не удалось создать задачу", "Проверьте, что к заявке привязан хотя бы один доступный объект залога.", "warn");
+    return;
+  }
+  application.taskIds = uniqueItems([...(application.taskIds || []), initialTask.id]);
   persistTaskState();
   resetNewTaskDraft();
   state.taskActiveCollateral["new-task-draft"] = "";
   window.location.hash = "/app/applications";
-  addToast("Заявка создана", initialTask ? `${application.number}: создана задача ${initialTask.id}` : `${application.number}: ${clientName}`, "ok");
+  addToast("Заявка отправлена", `${application.number}: создана задача ${initialTask.id}`, "ok");
 }
 
 function saveApplicationCard(applicationId) {
@@ -22529,7 +22962,22 @@ function saveApplicationCard(applicationId) {
   const collateralIds = uniqueItems(selected);
   const limit = deals.reduce((sum, row) => sum + parseNumericInput(row.limit), 0);
   const contacts = getSerializableApplicationContacts();
-  const preInspection = getDraftApplicationPreInspectionPayload();
+  const preInspections = getDraftApplicationPreInspectionPayloads();
+  const preInspection = preInspections[0] || createApplicationPreInspectionRow();
+  const applicationCollaterals = selected.map(getCollateral).filter(Boolean);
+  const applicationTasks = getApplicationTasks(application);
+  const applicabilityOptions = getApplicabilityOptions("application", {
+    application,
+    collaterals: applicationCollaterals,
+    relatedTasks: applicationTasks
+  });
+  const documents = normalizeLegacyAggregateDocumentBindings(
+    state.newTask.documents || application.documents || [],
+    applicabilityOptions,
+    applicationCollaterals,
+    { docContext: "applicationDraft", docOwner: "new-task-draft" }
+  );
+  state.newTask.documents = documents;
   Object.assign(application, {
     source: application.source || state.newTask.applicationSource || "Ручное создание",
     product: products[0] || "",
@@ -22543,7 +22991,8 @@ function saveApplicationCard(applicationId) {
     deals,
     contacts,
     preInspection,
-    documents: state.newTask.documents || application.documents || []
+    preInspections,
+    documents
   });
   persistTaskState();
   window.location.hash = getApplicationCardRoute(application);
@@ -22690,7 +23139,8 @@ function getSelectedDocumentRelationValues(fieldEl) {
 
 function getDocumentRelationFromSelectedValues(values = [], dataset = {}, collaterals = []) {
   const bindings = uniqueItems(values).map(parseDocumentBinding);
-  const baseBinding = [...bindings].reverse().find((binding) => ["application", "task"].includes(binding.scope));
+  const baseBindings = bindings.filter((binding) => ["application", "task"].includes(binding.scope));
+  const baseBinding = [...baseBindings].reverse()[0];
   const allCollateralsSelected = bindings.some((binding) => binding.scope === "collaterals" && binding.value === "all");
   const explicitCollateralIds = bindings.flatMap((binding) => {
     if (binding.scope === "collateral" && binding.value) return [binding.value];
@@ -22711,8 +23161,10 @@ function getDocumentRelationFromSelectedValues(values = [], dataset = {}, collat
           ? { scope: "collateral", value: collateralIds[0] }
           : getDocumentDefaultBindingForContext(dataset.docContext, dataset.docOwner)
   );
-  const baseTargetIds = baseBinding ? getDocumentTargetIdsForBinding(baseBinding, []) : [];
-  const targetIds = baseBinding ? uniqueItems([...baseTargetIds, ...collateralIds]) : getDocumentTargetIdsForBinding(binding, collateralIds);
+  const baseTargetIds = baseBindings.flatMap((selectedBinding) => getDocumentTargetIdsForBinding(selectedBinding, []));
+  const targetIds = baseBindings.length
+    ? uniqueItems([...baseTargetIds, ...collateralIds])
+    : getDocumentTargetIdsForBinding(binding, collateralIds);
   const target = baseBinding
     ? getDocumentStorageTarget(baseBinding, dataset.docTarget || "task", collateralIds)
     : getDocumentStorageTarget(binding, dataset.docTarget || "task", collateralIds);

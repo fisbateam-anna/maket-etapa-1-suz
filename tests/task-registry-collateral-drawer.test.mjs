@@ -194,7 +194,7 @@ test("drawer renders all seeded objects with five FT columns", () => {
     collaterals: initialData.collaterals
   };
   const renderers = createRenderers(task);
-  renderers.state.taskRegistryCollateralDrawer = { taskId: task.id, limit: 100 };
+  renderers.state.taskRegistryCollateralDrawer = { taskId: task.id, limit: initialData.collaterals.length };
   const markup = renderers.renderDrawer("inspection");
 
   const rows = [...markup.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].slice(1);

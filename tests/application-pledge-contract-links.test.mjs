@@ -41,7 +41,7 @@ function createPledgeHelpersContext(overrides = {}) {
   };
 }
 
-test("application pledge choices keep identical agreements separate by collateral", () => {
+test("application pledge choices show number and date while keeping identical agreements separate by collateral", () => {
   const sandbox = createPledgeHelpersContext();
   vm.runInNewContext(`${pledgeEntrySource}\n${pledgeLinkSource}\n${pledgeOptionsSource}\nglobalThis.options = getApplicationPledgeContractOptions;`, sandbox);
   const collaterals = [
@@ -56,10 +56,10 @@ test("application pledge choices keep identical agreements separate by collatera
   assert.deepEqual(JSON.parse(JSON.stringify(firstAgreement[0].collateralIds)), ["COL-1"]);
   assert.deepEqual(JSON.parse(JSON.stringify(firstAgreement[1].collateralIds)), ["COL-2"]);
   assert.notEqual(firstAgreement[0].key, firstAgreement[1].key);
-  assert.match(firstAgreement[0].label, /EQ-01/);
-  assert.doesNotMatch(firstAgreement[0].label, /EQ-02/);
-  assert.match(firstAgreement[1].label, /EQ-02/);
-  assert.doesNotMatch(firstAgreement[1].label, /EQ-01/);
+  assert.equal(firstAgreement[0].label, "ZL-26/10 от 2026-10-01");
+  assert.equal(firstAgreement[1].label, "ZL-26/10 от 2026-10-01");
+  assert.doesNotMatch(firstAgreement[0].label, /EQ-01|Оборудование/);
+  assert.equal(options.find((option) => option.number === "ZL-26/11").label, "ZL-26/11 от 2026-10-02");
   const expandedOptions = sandbox.options([...collaterals, { id: "COL-4", type: "Машина", profileIdentifier: "VIN-04", pledgeContracts: [{ number: "ZL-26/10", date: "2026-10-01" }] }]);
   assert.equal(expandedOptions.find((option) => option.collateralIds[0] === "COL-1").key, firstAgreement[0].key);
   assert.deepEqual(JSON.parse(JSON.stringify(sandbox.options([collaterals[2]]))), []);
@@ -118,7 +118,7 @@ test("previously grouped selections remain selected as separate collateral optio
 test("application deal table appends the pledge selector and preserves multi-selection", () => {
   const pickerSource = extractBetween(appSource, "function renderApplicationDealPledgeContractPicker(row, index, collaterals)", "\nfunction renderApplicationDealsTable");
   const tableSource = extractBetween(appSource, "function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions, productOptions)", "\nfunction getApplicationPreInspection");
-  const option = { number: "ZL-26/10", date: "2026-10-01", collateralIds: ["COL-1"], key: '["zl-26/10","2026-10-01",["COL-1"]]', label: "Договор залога № ZL-26/10 от 2026-10-01 — EQ-01 · Оборудование" };
+  const option = { number: "ZL-26/10", date: "2026-10-01", collateralIds: ["COL-1"], key: '["zl-26/10","2026-10-01",["COL-1"]]', label: "ZL-26/10 от 2026-10-01" };
   const sandbox = {
     APPLICATION_DEAL_COLUMNS: ["Продукт", "Номер договора", "Дата договора", "Сумма/лимит сделки", "Валюта сделки"],
     getApplicationPledgeContractOptions: () => [option],
@@ -135,11 +135,29 @@ test("application deal table appends the pledge selector and preserves multi-sel
   const selectedRow = { pledgeContractLinks: [{ number: "ZL-26/10", date: "2026-10-01", collateralIds: ["COL-1"] }] };
   const picker = sandbox.renderPicker(selectedRow, 0, [{ id: "COL-1" }]);
   assert.match(picker, /data-application-deal-field="pledgeContractLinks"[^>]*checked/);
-  assert.match(picker, /<summary>№ ZL-26\/10 от 2026-10-01<\/summary>/);
+  assert.match(picker, /<summary>ZL-26\/10 от 2026-10-01<\/summary>/);
   const table = sandbox.renderTable([selectedRow], [{ id: "COL-1" }], "", "");
   assert.ok(table.indexOf("Валюта сделки") < table.indexOf("Договор залога"));
   assert.match(table, /data-application-deal-field="pledgeContractLinks"/);
   assert.match(table, /data-action="remove-application-deal"/);
+});
+
+test("pledge contract picker escapes the table clipping area and keeps a viewport-bounded scroll panel", () => {
+  const positionSource = extractBetween(appSource, "function positionApplicationPledgeContractPicker(details)", "\nfunction normalizeApplicationDealsForSave");
+  const styles = extractBetween(stylesSource, ".application-deal-pledge-picker .task-multi-select-options {", "\n.application-deal-pledge-picker .task-multi-select-options label span");
+  const panel = { style: {} };
+  const summary = { getBoundingClientRect: () => ({ left: 870, top: 700, bottom: 736, width: 260 }) };
+  const details = { open: true, querySelector: (selector) => selector === "summary" ? summary : panel };
+  const context = { window: { innerWidth: 1000, innerHeight: 800 } };
+  vm.runInNewContext(`${positionSource}\nglobalThis.position = positionApplicationPledgeContractPicker;`, context);
+  context.position(details);
+  assert.equal(panel.style.left, "568px");
+  assert.equal(panel.style.width, "420px");
+  assert.equal(panel.style.top, "336px");
+  assert.equal(panel.style.maxHeight, "360px");
+  assert.match(styles, /position:\s*fixed/);
+  assert.match(styles, /max-height:\s*min\(360px, calc\(100dvh - 24px\)\)/);
+  assert.match(styles, /overscroll-behavior:\s*contain/);
 });
 
 test("collateral contract table resolves pledge links from the saved application deals", () => {
@@ -175,7 +193,7 @@ test("collateral contract table resolves pledge links from the saved application
 
 test("application object block precedes deals, contact stripe is local, and task deal table stays unchanged", () => {
   const applicationRender = extractBetween(appSource, "function renderApplicationCreate(query, options = {})", "\nfunction renderTaskCreate(query)");
-  const taskDeals = extractBetween(appSource, "function renderTaskApplicationDealsTable(rows, taskCollaterals = [])", "\nfunction renderTaskApplicationContractsCompactList");
+  const taskDeals = extractBetween(appSource, "function renderTaskApplicationDealsTable(rows, taskCollaterals = [])", "\nfunction renderTaskApplicationContractsReadOnlyTable");
   assert.ok(applicationRender.indexOf("renderApplicationCollateralObjectsInfo(draftTask") < applicationRender.indexOf("renderApplicationDealsTable(dealRows"));
   assert.match(stylesSource, /\.task-create-layout \.application-contacts-panel::before\s*\{\s*display:\s*none;/);
   assert.doesNotMatch(taskDeals, /Договор залога/);

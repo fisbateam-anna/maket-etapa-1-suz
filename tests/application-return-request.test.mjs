@@ -22,9 +22,11 @@ function createEscapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+const dateFormatting = `${extractBetween("function getDateTimeSortValue(value)", "\nfunction matchesNumericRange")}\n${extractBetween("function formatRegistryDateTime(value)", "\nfunction isDateTimeDisplayLabel")}`;
+
 test("application card shows every unresolved task return with an individual response action", () => {
   const helperSource = extractBetween("function getApplicationReturnRequests(application)", "function getApplicationCollaterals(application)");
-  const renderSource = extractBetween("function renderApplicationReturnNotice(application)", "function renderApplicationLinkedTaskIdCell(task)");
+  const renderSource = extractBetween("function renderApplicationReturnNotice(application)", "function renderApplicationLinkedTaskNumberCell(task)");
   const activeTask = {
     id: "tsk-23102026-003",
     type: "Физический осмотр",
@@ -64,7 +66,7 @@ test("application card shows every unresolved task return with an individual res
     escapeHtml: createEscapeHtml,
     getTaskCardRoute: (task) => `/app/tasks/${task.id}`
   };
-  vm.runInNewContext(`${helperSource}\n${renderSource}\nglobalThis.renderNotice = renderApplicationReturnNotice;`, sandbox);
+  vm.runInNewContext(`${dateFormatting}\n${helperSource}\n${renderSource}\nglobalThis.renderNotice = renderApplicationReturnNotice;`, sandbox);
   const html = sandbox.renderNotice({ id: "app-1" });
   assert.match(html, /Требуется доработка заявки/);
   assert.match(html, /Ответьте отдельно по каждому возврату/);
@@ -76,7 +78,7 @@ test("application card shows every unresolved task return with an individual res
   assert.match(html, /Приложите выписку ЕГРН по квартире &lt;COL-1&gt;/);
   assert.match(html, /Уточните дату предыдущей оценки/);
   assert.match(html, /Иван Исполнитель/);
-  assert.match(html, /2026-10-23 11:20/);
+  assert.match(html, /23\.10\.2026 11:20:00/);
   assert.match(html, /Дата возврата/);
   assert.doesNotMatch(html, />Дата</);
   assert.doesNotMatch(html, /Ожидает ответа/);
@@ -92,7 +94,7 @@ test("application card shows every unresolved task return with an individual res
 
 test("application card hides the return notice after the task is resumed", () => {
   const helperSource = extractBetween("function getApplicationReturnRequests(application)", "function getApplicationCollaterals(application)");
-  const renderSource = extractBetween("function renderApplicationReturnNotice(application)", "function renderApplicationLinkedTaskIdCell(task)");
+  const renderSource = extractBetween("function renderApplicationReturnNotice(application)", "function renderApplicationLinkedTaskNumberCell(task)");
   const sandbox = {
     getApplicationTasks: () => [{
       id: "tsk-23102026-003",
@@ -102,7 +104,7 @@ test("application card hides the return notice after the task is resumed", () =>
     escapeHtml: createEscapeHtml,
     getTaskCardRoute: () => "/app/tasks/tsk-1"
   };
-  vm.runInNewContext(`${helperSource}\n${renderSource}\nglobalThis.renderNotice = renderApplicationReturnNotice;`, sandbox);
+  vm.runInNewContext(`${dateFormatting}\n${helperSource}\n${renderSource}\nglobalThis.renderNotice = renderApplicationReturnNotice;`, sandbox);
   assert.equal(sandbox.renderNotice({ id: "app-1" }), "");
 });
 
