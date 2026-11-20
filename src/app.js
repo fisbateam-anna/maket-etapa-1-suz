@@ -1,6 +1,7 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=inspection-groups-20261120-r1";
+import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=application-multi-return-demo-20261120-r1";
 import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
+import { hydrateApplicationDemoData } from "./application-demo-data.js?v=application-demo-data-20261120-r3";
 
 const app = document.getElementById("app");
 let registryFilterRenderTimer = null;
@@ -18,6 +19,8 @@ const MVP1_INTEGRATION_IDS = new Set(["email", "avito", "auto-ru", "spectrum-aut
 const APPLICATION_DEAL_COLUMNS = ["Продукт", "Номер кредитного договора", "Дата кредитного договора", "Сумма/лимит", "Валюта"];
 const APPLICATION_DEAL_PRODUCT_TYPES = ["Кредит", "Лизинг", "Банковская гарантия"];
 const DEFAULT_APPLICATION_DEAL_PRODUCT_TYPE = "Кредит";
+const APPLICATION_BANK_OPTIONS = ["Банк 1", "Банк 2"];
+const APPLICATION_FINANCIAL_GROUP_OPTIONS = ["Лизинг", "Факторинг"];
 const COLLATERAL_GROUP_ATTRIBUTE = "Признак группы залога";
 const LEGACY_COLLATERAL_GROUP_ATTRIBUTE = "Идентификационный код группы";
 const APPLICATION_COLLATERAL_PICKER_FILTERS = [
@@ -73,10 +76,11 @@ function normalizeApplicationDealProducts(values = []) {
 }
 
 function renderApplicationDealProductOptions(value = "") {
-  const normalizedValue = normalizeApplicationDealProduct(value) || DEFAULT_APPLICATION_DEAL_PRODUCT_TYPE;
-  return APPLICATION_DEAL_PRODUCT_TYPES
-    .map((item) => `<option value="${escapeHtml(item)}" ${item === normalizedValue ? "selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
+  const normalizedValue = normalizeApplicationDealProduct(value);
+  return [
+    `<option value="" ${normalizedValue ? "" : "selected"}></option>`,
+    ...APPLICATION_DEAL_PRODUCT_TYPES.map((item) => `<option value="${escapeHtml(item)}" ${item === normalizedValue ? "selected" : ""}>${escapeHtml(item)}</option>`)
+  ].join("");
 }
 
 const REGISTRATION_SCENARIO_MOVABLE = "Регистрация залога движимого имущества";
@@ -1502,7 +1506,7 @@ function buildRuntimeData() {
   const runtimeData = ensureDocumentFollowupExamples(
     ensureApplicationsHaveInitialTasks(enrichTaskApplications(sanitizeMvp1Data(preparedData)))
   );
-  return ensureTaskSetterComments(runtimeData);
+  return ensureTaskSetterComments(hydrateApplicationDemoData(runtimeData));
 }
 
 function restoreLegacyApplicationInitialTaskMarkers(data) {
@@ -1723,7 +1727,7 @@ function enrichTaskApplications(data) {
       dealClientInn: task.dealClientInn || application.participantInn || contract?.inn || collaterals[0]?.clientId || "",
       dealProduct: normalizeApplicationDealProduct(task.dealProduct || application.product, contract?.product),
       dealLimit: task.dealLimit || application.limit || contract?.limit || "",
-      dealCurrency: task.dealCurrency || application.currency || contract?.currency || "RUB",
+      dealCurrency: task.dealCurrency ?? application.currency ?? contract?.currency ?? "RUB",
       participantName: task.participantName || application.participantName || contract?.clientName || collaterals[0]?.clientName || "",
       participantInn: task.participantInn || application.participantInn || contract?.inn || collaterals[0]?.clientId || ""
     };
@@ -3234,7 +3238,7 @@ function normalizeApplicationDealRow(row = {}, index = 0) {
     contractDate: getDealContractDate(row, contract),
     product: normalizeApplicationDealProduct(row.product || row.dealProduct, contract?.product),
     limit: limit || "",
-    currency: row.currency || contract?.currency || "RUB",
+    currency: row.currency ?? contract?.currency ?? "RUB",
     collateralIds: uniqueItems([...(row.collateralIds || []), ...parseListValue(row.collateralId)].filter(Boolean)),
     pledgeContractLinks: normalizeApplicationPledgeContractLinks(row.pledgeContractLinks),
     comment: row.comment || ""
@@ -5818,6 +5822,24 @@ function isDraftApplication(application) {
   return getApplicationRegistryStatus(application?.status) === "Черновик";
 }
 
+function getApplicationPageTitle(isCard, application, applicationNumber = "") {
+  if (!isCard) return "Создание заявки";
+  const number = applicationNumber || application?.number || application?.id || "";
+  return isDraftApplication(application) ? `Создание заявки ${number}` : `Карточка заявки ${number}`;
+}
+
+function shouldShowApplicationLinkedTasks(application, isCard) {
+  return Boolean(isCard && !isDraftApplication(application) && getApplicationTasks(application).length);
+}
+
+function renderApplicationReferenceOptions(options, selectedValue = "") {
+  const values = uniqueItems([...options, selectedValue].filter(Boolean));
+  return [
+    `<option value="" ${selectedValue ? "" : "selected"}></option>`,
+    ...values.map((item) => `<option value="${escapeHtml(item)}" ${item === selectedValue ? "selected" : ""}>${escapeHtml(item)}</option>`)
+  ].join("");
+}
+
 function renderApplicationRegistryNumberCell(application) {
   return renderApplicationRegistryNumberLink(application);
 }
@@ -6148,7 +6170,7 @@ function renderApplicationsRegistry() {
   return `
     <section class="registry-work-area registry-work-area-applications">
       ${renderRegistryPageHeader("Реестр заявок",
-        hasPermission(role, "appCreateEdit") ? `<button class="btn btn-primary" data-route="/app/applications/new">Создать заявку</button>` : "")}
+        hasPermission(role, "appCreateEdit") ? `<button class="btn btn-primary" data-action="start-new-application">Создать заявку</button>` : "")}
       ${renderRegistryFilterPanel("applications", filterGridMarkup)}
       <section class="panel table-panel" data-registry-table="applications" tabindex="-1">
         <div class="registry-results-summary">${renderRegistryResultCount("applications", rows.length)}</div>
@@ -7212,6 +7234,15 @@ function renderTaskInfoField(label, value, options = {}) {
   `;
 }
 
+function renderTaskApplicationReferenceFields(application, task) {
+  const bank = application?.bank || task?.bank || "-";
+  const financialGroupParticipant = application?.financialGroupParticipant || task?.financialGroupParticipant || "-";
+  return `
+    ${renderTaskInfoField("Банк", bank)}
+    ${renderTaskInfoField("Участник финансовой группы", financialGroupParticipant)}
+  `;
+}
+
 function renderTaskObjectLink(route, label) {
   if (!route || !label || label === "-") return `<span>${escapeHtml(label || "-")}</span>`;
   return `<button type="button" class="link task-info-link" data-route="${escapeHtml(route)}">${escapeHtml(label)}</button>`;
@@ -7446,35 +7477,36 @@ function renderTaskMainInfo(task, collaterals = getTaskCollaterals(task)) {
     <section class="panel task-parameters-layout" aria-label="Параметры задачи и заявки">
       <div class="task-parameters-top">
         <div class="task-main-info-column">
-          <div class="task-main-info-panel">
-            <div class="panel-title">
-              <div>
-                <h2 class="shared-component-title">Параметры задачи</h2>
+          <details class="task-main-info-panel" open>
+            <summary class="panel-title task-main-parameters-head">
+              <span class="task-application-compact-chevron" aria-hidden="true"></span>
+              <h2 class="shared-component-title">Параметры задачи</h2>
+            </summary>
+            <div class="task-main-info-content">
+              <div class="task-main-info-modern">
+                <div class="task-main-info-hero">
+                  ${renderTaskInfoField("Клиент", getTaskHeaderClient(task), { primary: true, note: clientInn && clientInn !== "-" ? `ИНН ${clientInn}` : "" })}
+                  <div class="task-main-info-keyfacts">
+                    ${renderTaskInfoField("Статус", task.status || "-")}
+                    ${renderTaskInfoField("Дата создания задачи", task.createdAt || "-")}
+                    ${renderTaskInfoField("Срок исполнения задачи", taskDueDate)}
+                    ${renderTaskInfoField("Автор задачи", taskAuthor)}
+                    ${renderTaskInfoField("Текущий исполнитель", task.assignee || "-")}
+                    ${renderTaskInfoField("Подразделение исполнителя", executorDepartment)}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="task-main-info-modern">
-              <div class="task-main-info-hero">
-                ${renderTaskInfoField("Клиент", getTaskHeaderClient(task), { primary: true, note: clientInn && clientInn !== "-" ? `ИНН ${clientInn}` : "" })}
-                <div class="task-main-info-keyfacts">
-                  ${renderTaskInfoField("Статус", task.status || "-")}
-                  ${renderTaskInfoField("Дата создания задачи", task.createdAt || "-")}
-                  ${renderTaskInfoField("Срок исполнения задачи", taskDueDate)}
-                  ${renderTaskInfoField("Автор задачи", taskAuthor)}
-                  ${renderTaskInfoField("Текущий исполнитель", task.assignee || "-")}
-                  ${renderTaskInfoField("Подразделение исполнителя", executorDepartment)}
+              <div class="task-main-origin-row" aria-label="Происхождение задачи">
+                <div class="task-main-origin-compact">
+                  ${renderTaskInfoField("Источник создания", creationContext.source)}
+                  ${renderTaskInfoField("Родительский объект", parentObjectHtml, { html: true })}
+                </div>
+                <div class="task-main-origin-comment">
+                  ${renderTaskInfoField("Комментарий постановщика", taskSetterComment, { comment: true })}
                 </div>
               </div>
             </div>
-          </div>
-          <div class="task-main-origin-row" aria-label="Происхождение задачи">
-            <div class="task-main-origin-compact">
-              ${renderTaskInfoField("Источник создания", creationContext.source)}
-              ${renderTaskInfoField("Родительский объект", parentObjectHtml, { html: true })}
-            </div>
-            <div class="task-main-origin-comment">
-              ${renderTaskInfoField("Комментарий постановщика", taskSetterComment, { comment: true })}
-            </div>
-          </div>
+          </details>
         </div>
         <details class="task-application-compact-context">
           <summary class="task-application-compact-head">
@@ -7491,6 +7523,7 @@ function renderTaskMainInfo(task, collaterals = getTaskCollaterals(task)) {
             ${renderTaskInfoField("Статус заявки", applicationStatus)}
             ${renderTaskInfoField("Инициатор", applicationInitiator)}
             ${renderTaskInfoField("Сегмент инициатора", applicationInitiatorSegment)}
+            ${renderTaskApplicationReferenceFields(application, task)}
             ${renderTaskInfoField("Суть обращения / комментарий", applicationComment, { wide: true, comment: true })}
           </div>
         </details>
@@ -7504,7 +7537,29 @@ function renderTaskMainInfo(task, collaterals = getTaskCollaterals(task)) {
 
 function getTaskApplicationDealRows(task, application, taskContracts = [], taskCollaterals = []) {
   const applicationRows = getApplicationDealRows(application);
-  if (applicationRows.length) return applicationRows;
+  if (applicationRows.length) {
+    const taskCollateralIds = new Set([
+      ...(taskCollaterals || []).map((collateral) => collateral?.id),
+      ...(task?.collateralIds || [])
+    ].filter(Boolean));
+    if (!taskCollateralIds.size) return applicationRows;
+
+    return applicationRows.map((row) => {
+      const taskLinksByAgreement = new Map();
+      normalizeApplicationPledgeContractLinks(row.pledgeContractLinks).forEach((link) => {
+        const collateralIds = link.collateralIds.filter((id) => taskCollateralIds.has(id));
+        if (!collateralIds.length) return;
+        const key = JSON.stringify([link.number.toLocaleLowerCase("ru-RU"), link.date]);
+        const existing = taskLinksByAgreement.get(key);
+        if (existing) {
+          existing.collateralIds = uniqueItems([...existing.collateralIds, ...collateralIds]);
+        } else {
+          taskLinksByAgreement.set(key, { ...link, collateralIds });
+        }
+      });
+      return { ...row, pledgeContractLinks: [...taskLinksByAgreement.values()] };
+    });
+  }
   if (taskContracts.length) {
     return taskContracts.map((contract, index) => normalizeApplicationDealRow({
       id: `task-deal-${index + 1}`,
@@ -7638,7 +7693,7 @@ function renderTaskClientContractInfo(task, activeCollateral, activeContracts = 
 
 function renderTaskCollateralContext(task, collaterals, activeCollateral) {
   if (!collaterals.length) {
-    return `<section class="panel task-collateral-panel"><h2 class="shared-component-title">Информация по объектам залога</h2><p class="hint shared-component-hint">Объект залога не привязан к задаче.</p></section>`;
+    return `<section class="panel task-collateral-panel task-main-section-stripe"><h2 class="shared-component-title">Информация по объектам залога</h2><p class="hint shared-component-hint">Объект залога не привязан к задаче.</p></section>`;
   }
   return renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, { sourceTask: task });
 }
@@ -7650,7 +7705,8 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
   const hasMultipleCollaterals = collaterals.length > 1;
   const canMarkExcluded = hasMultipleCollaterals && canMarkTaskCollateralExcluded(task, selectable);
   const showExclusionColumn = canMarkTaskCollateralExcluded(task, selectable);
-  const columnCount = showExclusionColumn ? 13 : 12;
+  const allowApplicationRemove = options.allowApplicationRemove === true;
+  const columnCount = (showExclusionColumn ? 13 : 12) + (allowApplicationRemove ? 1 : 0);
   const scrollClass = collaterals.length > 10 ? "is-scrollable" : "";
   const isSingleCollateral = collaterals.length === 1;
   const note = options.note || (!hasCollaterals
@@ -7674,7 +7730,7 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
     : `<tr><td colspan="${columnCount}"><div class="empty-state compact">${escapeHtml(options.emptyRowText || "Объекты залога не выбраны.")}</div></td></tr>`;
   const headerActions = options.headerActions || "";
   return `
-    <section class="panel table-panel task-collateral-panel task-collateral-info ${selectable ? "task-object-selector" : "task-object-overview"} ${showExclusionColumn ? "has-exclusion-column" : ""}">
+    <section class="panel table-panel task-collateral-panel task-collateral-info ${options.sourceTask ? "task-main-section-stripe" : ""} ${selectable ? "task-object-selector" : "task-object-overview"} ${showExclusionColumn ? "has-exclusion-column" : ""} ${allowApplicationRemove ? "has-application-remove-column" : ""}">
       <div class="panel-title">
         <div><h2 class="shared-component-title">Информация по объектам залога</h2></div>
         <div class="task-collateral-title-side">
@@ -7684,7 +7740,7 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
       </div>
       <div class="table-wrap compact-table task-collateral-table-wrap ${scrollClass}">
         <table>
-          ${hasExpandedObjects ? `<thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Подвид залога</th><th>Наименование залога</th><th>Адрес объекта</th><th>Договор залога</th><th>Дата последнего осмотра</th><th>Дата последней оценки</th><th>Ликвидность</th><th>Залоговая стоимость</th><th>Рыночная стоимость</th><th>Справедливая стоимость</th>${showExclusionColumn ? "<th>Исключен</th>" : ""}</tr></thead>` : ""}
+          ${hasExpandedObjects ? `<thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Подвид залога</th><th>Наименование залога</th><th>Адрес объекта</th><th>Договор залога</th><th>Дата последнего осмотра</th><th>Дата последней оценки</th><th>Ликвидность</th><th>Залоговая стоимость</th><th>Рыночная стоимость</th><th>Справедливая стоимость</th>${showExclusionColumn ? "<th>Исключен</th>" : ""}${allowApplicationRemove ? '<th><span class="visually-hidden">Действия</span></th>' : ""}</tr></thead>` : ""}
           <tbody>${groupedRows}</tbody>
         </table>
       </div>
@@ -7871,7 +7927,7 @@ function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
     : "";
   return `
     <tr class="${[active ? "is-active" : "", options.rowSelectable === true && active ? "is-selected" : "", excluded ? "is-excluded-row" : "", hasNegativeCheck ? "has-negative-check-result" : ""].filter(Boolean).join(" ")}"${rowAction}>
-      <td><button class="link" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(pledgeNumber)}</button></td>
+      <td><button class="link task-collateral-cell task-collateral-number" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(pledgeNumber)}</button></td>
       <td><span class="task-collateral-cell task-collateral-identifier">${escapeHtml(getCollateralObjectIdentifier(item))}</span></td>
       <td><span class="task-collateral-cell">${escapeHtml(getCollateralSubtype(item))}</span></td>
       <td><strong class="task-collateral-cell is-object">${escapeHtml(getCollateralName(item))}</strong></td>
@@ -7888,6 +7944,13 @@ function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
           <label class="task-collateral-excluded-control${canMarkExcluded ? "" : " is-disabled"}" title="${canMarkExcluded ? "Исключить объект из рассмотрения по задаче" : "Единственный объект нельзя исключить из задачи"}">
             <input type="checkbox" data-task-collateral-excluded data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}" ${excluded ? "checked" : ""} ${canMarkExcluded ? "" : "disabled"}>
           </label>
+        </td>
+      ` : ""}
+      ${options.allowApplicationRemove ? `
+        <td class="task-collateral-remove-cell">
+          <button type="button" class="icon-btn task-collateral-remove-button" data-action="remove-application-collateral"
+            data-collateral="${escapeHtml(item.id)}" title="Удалить залог из заявки"
+            aria-label="Удалить залог ${escapeHtml(pledgeNumber)} из заявки">×</button>
         </td>
       ` : ""}
     </tr>
@@ -17405,12 +17468,21 @@ function getNewTaskDraftContext(activeCollateral = null) {
 
 function syncNewTaskContext(field) {
   if (field === "applicationType") {
+    if (!state.newTask.applicationType) {
+      state.newTask.applicationSubtype = "";
+      state.newTask.applicationPurpose = "";
+      return;
+    }
     state.newTask.applicationType = normalizeApplicationType(state.newTask.applicationType);
     state.newTask.applicationSubtype = getDefaultApplicationSubtype(state.newTask.applicationType);
     state.newTask.applicationPurpose = getDefaultApplicationPurpose(state.newTask.applicationType, state.newTask.applicationSubtype);
     return;
   }
   if (field === "applicationSubtype") {
+    if (!state.newTask.applicationSubtype) {
+      state.newTask.applicationPurpose = "";
+      return;
+    }
     state.newTask.applicationSubtype = normalizeApplicationSubtype(state.newTask.applicationType, state.newTask.applicationSubtype);
     state.newTask.applicationPurpose = getDefaultApplicationPurpose(state.newTask.applicationType, state.newTask.applicationSubtype);
     return;
@@ -17473,19 +17545,22 @@ function syncNewTaskContext(field) {
 function hydrateNewTaskContextFromSelectedCollaterals() {
   const collateral = state.newTask.selectedCollateralIds.map(getCollateral).find(Boolean);
   if (!collateral) return;
+  const isApplicationContext = String(state.newTask.key || "").startsWith("application-");
   const contract = getContract(collateral.contractIds?.[0]);
   const application = getApplicationByContract(contract?.id);
   state.newTask.applicationNumber = state.newTask.applicationNumber || application?.number || "";
   state.newTask.applicationSource = state.newTask.applicationSource || application?.source || "Ручное создание";
   state.newTask.contractId = state.newTask.contractId || contract?.id || "";
   state.newTask.contractNumber = state.newTask.contractNumber || contract?.number || "";
-  state.newTask.dealClientName = state.newTask.dealClientName || application?.clientName || application?.participantName || contract?.clientName || collateral.clientName || "";
-  state.newTask.dealClientInn = state.newTask.dealClientInn || application?.participantInn || contract?.inn || "";
+  if (!isApplicationContext) {
+    state.newTask.dealClientName = state.newTask.dealClientName || application?.clientName || application?.participantName || contract?.clientName || collateral.clientName || "";
+    state.newTask.dealClientInn = state.newTask.dealClientInn || application?.participantInn || contract?.inn || "";
+    state.newTask.participantName = state.newTask.participantName || application?.participantName || contract?.clientName || collateral.clientName || "";
+    state.newTask.participantInn = state.newTask.participantInn || application?.participantInn || contract?.inn || collateral.clientId || "";
+  }
   state.newTask.dealProduct = normalizeApplicationDealProduct(state.newTask.dealProduct || application?.product, contract?.product);
   state.newTask.dealLimit = state.newTask.dealLimit || application?.limit || contract?.limit || "";
   state.newTask.dealCurrency = state.newTask.dealCurrency || application?.currency || contract?.currency || "RUB";
-  state.newTask.participantName = state.newTask.participantName || application?.participantName || contract?.clientName || collateral.clientName || "";
-  state.newTask.participantInn = state.newTask.participantInn || application?.participantInn || contract?.inn || collateral.clientId || "";
   const registrationSummary = getRegistrationScenarioSummary(state.newTask.selectedCollateralIds.map(getCollateral).filter(Boolean));
   state.newTask.registrationScenario = registrationSummary.scenario || state.newTask.registrationScenario || "";
 }
@@ -17500,7 +17575,7 @@ function createDraftApplicationDeal(overrides = {}) {
     contractDate: overrides.contractDate || "",
     product: normalizeApplicationDealProduct(overrides.product),
     limit: overrides.limit || "",
-    currency: overrides.currency || "RUB",
+    currency: Object.hasOwn(overrides, "currency") ? (overrides.currency || "") : "RUB",
     collateralIds: uniqueItems(overrides.collateralIds || []),
     pledgeContractLinks: normalizeApplicationPledgeContractLinks(overrides.pledgeContractLinks),
     comment: overrides.comment || ""
@@ -17628,7 +17703,7 @@ function syncApplicationDealLegacyFields() {
     row.product = normalizeApplicationDealProduct(row.product);
   });
   state.newTask.dealProduct = normalizeApplicationDealProducts(rows.map((row) => row.product)).join(", ");
-  const currencies = uniqueItems(rows.map((row) => row.currency || "RUB"));
+  const currencies = uniqueItems(rows.map((row) => row.currency).filter(Boolean));
   state.newTask.dealCurrency = currencies.length === 1 ? currencies[0] : currencies.join(", ");
   state.newTask.dealLimit = rows.reduce((sum, row) => sum + parseNumericInput(row.limit), 0) || "";
   rows.forEach((row) => {
@@ -17817,21 +17892,25 @@ function updateApplicationDealField(target) {
 }
 
 function renderApplicationTypeOptions(value) {
-  return APPLICATION_TYPES
-    .map((item) => `<option value="${escapeHtml(item.value)}" ${item.value === value ? "selected" : ""}>${escapeHtml(item.value)}</option>`)
-    .join("");
+  return [
+    `<option value="" ${value ? "" : "selected"}></option>`,
+    ...APPLICATION_TYPES.map((item) => `<option value="${escapeHtml(item.value)}" ${item.value === value ? "selected" : ""}>${escapeHtml(item.value)}</option>`)
+  ].join("");
 }
 
 function renderApplicationSubtypeOptions(type, value) {
-  return getApplicationSubtypeOptions(type)
-    .map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
+  if (!type) return `<option value="" selected></option>`;
+  return [
+    `<option value="" ${value ? "" : "selected"}></option>`,
+    ...getApplicationSubtypeOptions(type).map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`)
+  ].join("");
 }
 
 function renderApplicationPurposeOptions(value) {
-  return APPLICATION_PURPOSES
-    .map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
+  return [
+    `<option value="" ${value ? "" : "selected"}></option>`,
+    ...APPLICATION_PURPOSES.map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`)
+  ].join("");
 }
 
 function renderApplicationStatusOptions(value) {
@@ -17842,10 +17921,10 @@ function renderApplicationStatusOptions(value) {
 }
 
 function renderCurrencyOptions(value) {
-  return uniqueItems(["RUB", "USD", "EUR", "CNY", value, ...state.data.contracts.map((item) => item.currency)])
+  const options = uniqueItems(["RUB", "USD", "EUR", "CNY", value, ...state.data.contracts.map((item) => item.currency)])
     .filter(Boolean)
-    .map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
+    .map((item) => `<option value="${escapeHtml(item)}" ${item === value ? "selected" : ""}>${escapeHtml(item)}</option>`);
+  return [`<option value="" ${value ? "" : "selected"}></option>`, ...options].join("");
 }
 
 function renderApplicationDealCollateralIdentifiers(row) {
@@ -17877,12 +17956,47 @@ function renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCo
   return renderTaskCollateralObjectsInfo(draftTask, collaterals, activeCollateral, {
     selectable: false,
     rowSelectable: !application,
+    allowApplicationRemove: !application || isDraftApplication(application),
     selectedCollateralId: state.newTask?.applicationSelectedCollateralId || "",
     sourceApplication: application,
     headerActions: renderApplicationCollateralActions(collaterals, !application),
     emptyHint: "Залоги привязываются к заявке в целом.",
     emptyRowText: "Объекты залога не выбраны. Выберите объект залога или загрузите объекты из таблицы."
   });
+}
+
+function canRemoveApplicationCollateralLink() {
+  const key = String(state.newTask?.key || "");
+  if (key === "application-create" || key.startsWith("application-create:")) return true;
+  if (!key.startsWith("application-card:")) return false;
+  const application = getApplicationByNumber(state.newTask.applicationNumber);
+  return Boolean(application && isDraftApplication(application));
+}
+
+function removeApplicationCollateralFromDraft(collateralId) {
+  const draft = state.newTask;
+  const selectedIds = draft?.selectedCollateralIds || [];
+  if (!collateralId || !canRemoveApplicationCollateralLink() || !selectedIds.includes(collateralId)) return false;
+
+  const remainingIds = selectedIds.filter((id) => id !== collateralId);
+  draft.selectedCollateralIds = remainingIds;
+  draft.applicationSelectedCollateralId = draft.applicationSelectedCollateralId === collateralId
+    ? (remainingIds[0] || "")
+    : draft.applicationSelectedCollateralId;
+  if (state.taskActiveCollateral["new-task-draft"] === collateralId) {
+    state.taskActiveCollateral["new-task-draft"] = remainingIds[0] || "";
+  }
+  draft.applicationDeals = (draft.applicationDeals || []).map((row) => ({
+    ...row,
+    collateralIds: (row.collateralIds || []).filter((id) => id !== collateralId),
+    pledgeContractLinks: normalizeApplicationPledgeContractLinks(row.pledgeContractLinks)
+      .flatMap((link) => {
+        const linkedIds = link.collateralIds.filter((id) => id !== collateralId);
+        return linkedIds.length ? [{ ...link, collateralIds: linkedIds }] : [];
+      })
+  }));
+  addToast("Залог удален из заявки", "Карточка залога сохранена в реестре. Нажмите «Сохранить», чтобы сохранить состав заявки.", "ok");
+  return true;
 }
 
 function renderApplicationDealPledgeContractPicker(row, index, collaterals) {
@@ -17931,7 +18045,7 @@ function renderApplicationDealsTable(rows, selectedCollaterals, contractOptions,
               <td><input list="newTaskContracts" data-application-deal-index="${index}" data-application-deal-field="contractNumber" value="${escapeHtml(row.contractNumber)}" placeholder="При наличии"></td>
               <td><input type="date" data-application-deal-index="${index}" data-application-deal-field="contractDate" value="${escapeHtml(getDocumentDateInputValue(row.contractDate))}"></td>
               <td><input data-application-deal-index="${index}" data-application-deal-field="limit" value="${escapeHtml(row.limit ? Number(row.limit).toLocaleString("ru-RU") : "")}" inputmode="decimal"></td>
-              <td><select data-application-deal-index="${index}" data-application-deal-field="currency">${renderCurrencyOptions(row.currency || "RUB")}</select></td>
+              <td><select data-application-deal-index="${index}" data-application-deal-field="currency">${renderCurrencyOptions(row.currency || "")}</select></td>
               <td>${renderApplicationDealPledgeContractPicker(row, index, selectedCollaterals)}</td>
               <td><button class="icon-btn" title="Удалить строку" data-action="remove-application-deal" data-index="${index}">x</button></td>
             </tr>
@@ -18185,21 +18299,19 @@ function attachApplicationInspectionAct(fieldEl) {
 
 function ensureNewApplicationDraft(query) {
   const preselected = query.get("collateral") || "";
+  const hasCollateralContext = Boolean(getCollateral(preselected));
   const key = preselected ? `application-create:${preselected}` : "application-create";
   if (state.newTask.key === key) return;
-  const collateral = getCollateral(preselected);
+  const collateral = hasCollateralContext ? getCollateral(preselected) : null;
   const collateralContracts = (collateral?.contractIds || []).map(getContract).filter(Boolean);
-  const primaryContract = collateralContracts[0];
-  const clientName = primaryContract?.clientName || collateral?.clientName || "";
-  const clientInn = primaryContract?.inn || collateral?.clientId || "";
   const identity = getNextDataApplicationIdentity(state.data);
   const applicationDealsBase = collateralContracts.length
     ? collateralContracts.map((contract) => createDraftApplicationDealFromContract(contract, preselected ? [preselected] : []))
-    : [createDraftApplicationDeal()];
+    : [createDraftApplicationDeal(hasCollateralContext ? {} : { currency: "" })];
   const applicationDeals = applicationDealsBase.map((row) => ({
     ...row,
-    clientName,
-    inn: clientInn
+    clientName: "",
+    inn: ""
   }));
   const applicationDraft = {
     key,
@@ -18207,20 +18319,24 @@ function ensureNewApplicationDraft(query) {
     applicationNumber: identity.number,
     contractId: collateralContracts[0]?.id || "",
     contractNumber: collateralContracts.map((item) => item.number).join(", "),
-    dealClientName: clientName,
-    dealClientInn: clientInn,
+    dealClientName: "",
+    dealClientInn: "",
     dealProduct: normalizeApplicationDealProducts(collateralContracts.map((item) => item.product)).join(", "),
     dealLimit: collateralContracts.length ? sumBy(collateralContracts, (item) => item.limit) : "",
-    dealCurrency: uniqueItems(["RUB", ...collateralContracts.map((item) => item.currency || "RUB")])[0] || "RUB",
-    participantName: clientName,
-    participantInn: clientInn,
-    applicationType: "Оценка залога",
-    applicationSubtype: "Первоначальная оценка",
-    applicationPurpose: "Новый кредит / новая сделка",
+    dealCurrency: collateralContracts.length
+      ? uniqueItems(["RUB", ...collateralContracts.map((item) => item.currency || "RUB")])[0] || "RUB"
+      : hasCollateralContext ? "RUB" : "",
+    participantName: "",
+    participantInn: "",
+    applicationType: hasCollateralContext ? "Оценка залога" : "",
+    applicationSubtype: hasCollateralContext ? "Первоначальная оценка" : "",
+    applicationPurpose: hasCollateralContext ? "Новый кредит / новая сделка" : "",
+    bank: "",
+    financialGroupParticipant: "",
     initiator: getRole().user,
-    initiatorSegment: collateralContracts.length ? getApplicationInitiatorSegment({ initiator: getRole().user, product: collateralContracts[0]?.product }) : "МСБ",
+    initiatorSegment: collateralContracts.length ? getApplicationInitiatorSegment({ initiator: getRole().user, product: collateralContracts[0]?.product }) : hasCollateralContext ? "МСБ" : "",
     applicationSource: "Ручное создание",
-    applicationStatus: "Новая",
+    applicationStatus: "Черновик",
     applicationComment: "",
     applicationInspectionCompleted: false,
     applicationInspectionLink: "",
@@ -18243,6 +18359,8 @@ function ensureApplicationCardDraft(application) {
   const key = `application-card:${application.id || application.number}`;
   if (state.newTask.key === key) {
     state.newTask.applicationStatus = application.status || state.newTask.applicationStatus || "Новая";
+    state.newTask.bank ??= application.bank || "";
+    state.newTask.financialGroupParticipant ??= application.financialGroupParticipant || "";
     return;
   }
   const collaterals = getApplicationCollaterals(application);
@@ -18278,6 +18396,8 @@ function ensureApplicationCardDraft(application) {
     applicationType: getApplicationType(application),
     applicationSubtype: getApplicationSubtype(application),
     applicationPurpose: getApplicationPurpose(application),
+    bank: application.bank || "",
+    financialGroupParticipant: application.financialGroupParticipant || "",
     initiator: getApplicationInitiator(application),
     initiatorSegment: getApplicationInitiatorSegment(application),
     applicationSource: application.source || "Ручное создание",
@@ -18309,10 +18429,15 @@ function renderApplicationCreate(query, options = {}) {
   const application = options.application || null;
   if (isCard) ensureApplicationCardDraft(application);
   else ensureNewApplicationDraft(query);
+  if (!isCard) state.newTask.applicationStatus = "Черновик";
   const draftTaskId = "new-task-draft";
-  state.newTask.applicationType = normalizeApplicationType(state.newTask.applicationType);
-  state.newTask.applicationSubtype = normalizeApplicationSubtype(state.newTask.applicationType, state.newTask.applicationSubtype);
-  state.newTask.applicationPurpose = normalizeApplicationPurpose(state.newTask.applicationType, state.newTask.applicationSubtype, state.newTask.applicationPurpose);
+  if (state.newTask.applicationType) state.newTask.applicationType = normalizeApplicationType(state.newTask.applicationType);
+  if (state.newTask.applicationSubtype && state.newTask.applicationType) {
+    state.newTask.applicationSubtype = normalizeApplicationSubtype(state.newTask.applicationType, state.newTask.applicationSubtype);
+  }
+  if (state.newTask.applicationPurpose && state.newTask.applicationType) {
+    state.newTask.applicationPurpose = normalizeApplicationPurpose(state.newTask.applicationType, state.newTask.applicationSubtype, state.newTask.applicationPurpose);
+  }
   state.newTask.initiator = state.newTask.initiator || getRole().user;
   ensureApplicationDealRowsFromSelectedCollaterals();
   const selectedIds = state.newTask.selectedCollateralIds;
@@ -18323,13 +18448,15 @@ function renderApplicationCreate(query, options = {}) {
   const draftContext = getNewTaskDraftContext(activeCollateral);
   const contractOptions = state.data.contracts.map((item) => `<option value="${escapeHtml(item.number)}">${escapeHtml(item.clientName)}</option>`).join("");
   const productOptions = APPLICATION_DEAL_PRODUCT_TYPES.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("");
-  const segmentOptions = uniqueItems(["МСБ", "Корпоративный бизнес", "Розничный бизнес", "Автоматическое создание", state.newTask.initiatorSegment])
-    .filter(Boolean)
-    .map((item) => `<option value="${escapeHtml(item)}" ${item === state.newTask.initiatorSegment ? "selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
+  const segmentOptions = [
+    `<option value="" ${state.newTask.initiatorSegment ? "" : "selected"}></option>`,
+    ...uniqueItems(["МСБ", "Корпоративный бизнес", "Розничный бизнес", "Автоматическое создание", state.newTask.initiatorSegment])
+      .filter(Boolean)
+      .map((item) => `<option value="${escapeHtml(item)}" ${item === state.newTask.initiatorSegment ? "selected" : ""}>${escapeHtml(item)}</option>`)
+  ].join("");
   const dealRows = getDraftApplicationDeals();
-  const title = isCard ? `Карточка заявки ${state.newTask.applicationNumber}` : "Создание заявки";
   const editableDraftCard = isCard && isDraftApplication(application);
+  const title = getApplicationPageTitle(isCard, application, state.newTask.applicationNumber);
   const submitAttrs = isCard ? ` data-application="${escapeHtml(application.id || application.number)}"` : "";
   const headerActions = `
     <button class="btn btn-secondary" data-route="/app/applications">Назад</button>
@@ -18337,11 +18464,13 @@ function renderApplicationCreate(query, options = {}) {
       ? `<button class="btn btn-primary" data-action="save-application-submit"${submitAttrs}>Сохранить</button>`
       : `<button class="btn btn-secondary" data-action="save-application-draft"${submitAttrs}>Сохранить</button><button class="btn btn-primary" data-action="create-application-submit"${submitAttrs}>Отправить заявку</button>`}
   `;
-  const applicationStatus = state.newTask.applicationStatus || "Новая";
-  const statusField = `<label>Статус заявки<input id="newTaskApplicationStatus" value="${escapeHtml(applicationStatus)}" readonly></label>`;
+  const applicationStatus = state.newTask.applicationStatus || (isCard ? "Новая" : "Черновик");
+  const statusField = `<label class="application-parameter-span-3">Статус заявки<input id="newTaskApplicationStatus" value="${escapeHtml(applicationStatus)}" readonly></label>`;
   const parameterReadonlyAttr = isCard && !editableDraftCard ? " readonly" : "";
   const parameterDisabledAttr = isCard && !editableDraftCard ? " disabled" : "";
   const parameterGridClass = isCard && !editableDraftCard ? " application-parameters-readonly" : "";
+  const bankOptions = renderApplicationReferenceOptions(APPLICATION_BANK_OPTIONS, state.newTask.bank || "");
+  const financialGroupOptions = renderApplicationReferenceOptions(APPLICATION_FINANCIAL_GROUP_OPTIONS, state.newTask.financialGroupParticipant || "");
   const draftTask = {
     id: draftTaskId,
     type: getApplicationDocumentTaskType(state.newTask.applicationType, state.newTask.applicationSubtype),
@@ -18364,20 +18493,21 @@ function renderApplicationCreate(query, options = {}) {
         <div class="panel-title">
           <h2 class="shared-component-title">Параметры заявки</h2>
         </div>
-        <div class="form-grid task-context-grid${parameterGridClass}">
-          <label>Номер заявки<input id="newTaskApplicationNumber" data-new-task-field="applicationNumber" value="${escapeHtml(state.newTask.applicationNumber)}" readonly></label>
-          <label>Тип заявки<select id="newTaskApplicationType" data-new-task-field="applicationType"${parameterDisabledAttr}>${renderApplicationTypeOptions(state.newTask.applicationType)}</select></label>
-          <label>Подтип заявки<select id="newTaskApplicationSubtype" data-new-task-field="applicationSubtype"${parameterDisabledAttr}>${renderApplicationSubtypeOptions(state.newTask.applicationType, state.newTask.applicationSubtype)}</select></label>
-          <label>Цель<select id="newTaskApplicationPurpose" data-new-task-field="applicationPurpose"${parameterDisabledAttr}>${renderApplicationPurposeOptions(state.newTask.applicationPurpose)}</select></label>
-          <label>Инициатор<input id="newTaskInitiator" value="${escapeHtml(state.newTask.initiator)}" readonly></label>
-          <label>Сегмент инициатора<select id="newTaskInitiatorSegment" data-new-task-field="initiatorSegment"${parameterDisabledAttr}>${segmentOptions}</select></label>
-          <label>Клиент<input id="newTaskDealClientName" data-new-task-field="dealClientName" value="${escapeHtml(state.newTask.dealClientName)}" placeholder="Наименование / ФИО"${parameterReadonlyAttr}></label>
-          <label>ИНН клиента<input id="newTaskDealClientInn" data-new-task-field="dealClientInn" value="${escapeHtml(state.newTask.dealClientInn)}" inputmode="numeric" placeholder="ИНН"${parameterReadonlyAttr}></label>
+        <div class="form-grid task-context-grid application-parameter-grid${parameterGridClass}">
+          <label class="application-parameter-span-3">Тип заявки<select id="newTaskApplicationType" data-new-task-field="applicationType"${parameterDisabledAttr}>${renderApplicationTypeOptions(state.newTask.applicationType)}</select></label>
+          <label class="application-parameter-span-3">Подтип заявки<select id="newTaskApplicationSubtype" data-new-task-field="applicationSubtype"${parameterDisabledAttr}>${renderApplicationSubtypeOptions(state.newTask.applicationType, state.newTask.applicationSubtype)}</select></label>
+          <label class="application-parameter-span-3">Цель заявки<select id="newTaskApplicationPurpose" data-new-task-field="applicationPurpose"${parameterDisabledAttr}>${renderApplicationPurposeOptions(state.newTask.applicationPurpose)}</select></label>
           ${statusField}
+          <label class="application-parameter-span-3">Инициатор<input id="newTaskInitiator" value="${escapeHtml(state.newTask.initiator)}" readonly></label>
+          <label class="application-parameter-span-3">Сегмент инициатора<select id="newTaskInitiatorSegment" data-new-task-field="initiatorSegment"${parameterDisabledAttr}>${segmentOptions}</select></label>
+          <label class="application-parameter-span-3">Банк<select id="newTaskBank" data-new-task-field="bank"${parameterDisabledAttr}>${bankOptions}</select></label>
+          <label class="application-parameter-span-3">Участник финансовой группы<select id="newTaskFinancialGroupParticipant" data-new-task-field="financialGroupParticipant"${parameterDisabledAttr}>${financialGroupOptions}</select></label>
+          <label class="application-parameter-span-6">Клиент<input id="newTaskDealClientName" data-new-task-field="dealClientName" value="${escapeHtml(state.newTask.dealClientName)}" placeholder="Наименование / ФИО"${parameterReadonlyAttr}></label>
+          <label class="application-parameter-span-6">ИНН клиента<input id="newTaskDealClientInn" data-new-task-field="dealClientInn" value="${escapeHtml(state.newTask.dealClientInn)}" inputmode="numeric" placeholder="ИНН"${parameterReadonlyAttr}></label>
+          <label class="application-parameter-span-full">Суть обращения / комментарий<textarea id="newTaskComment" data-new-task-field="applicationComment"${parameterReadonlyAttr}>${escapeHtml(state.newTask.applicationComment || "")}</textarea></label>
         </div>
-        <label>Суть обращения / комментарий<textarea id="newTaskComment" data-new-task-field="applicationComment"${parameterReadonlyAttr}>${escapeHtml(state.newTask.applicationComment || "Новая заявка для рассмотрения залоговой службой.")}</textarea></label>
         </section>
-        ${isCard ? renderApplicationLinkedTasksTable(application) : ""}
+        ${shouldShowApplicationLinkedTasks(application, isCard) ? renderApplicationLinkedTasksTable(application) : ""}
         <section class="panel application-form-group application-form-group-collateral-deals">
         ${renderApplicationCollateralObjectsInfo(draftTask, collaterals, activeCollateral, isCard ? application : null)}
         ${renderApplicationDealsTable(dealRows, collaterals, contractOptions, productOptions)}
@@ -20594,7 +20724,7 @@ function createTask(payload) {
   const dealClientInn = payload.dealClientInn || payload.participantInn || application?.participantInn || contract?.inn || collateral?.clientId || "";
   const dealProduct = normalizeApplicationDealProduct(payload.dealProduct || application?.product, contract?.product);
   const dealLimit = parseNumericInput(payload.dealLimit ?? application?.limit ?? contract?.limit ?? 0);
-  const dealCurrency = payload.dealCurrency || application?.currency || contract?.currency || "RUB";
+  const dealCurrency = payload.dealCurrency ?? application?.currency ?? contract?.currency ?? "RUB";
   const createdFromApplicationAutomatically = payload.createdFromApplicationAutomatically === true;
   const assignmentComment = createdFromApplicationAutomatically
     ? getApplicationRequestComment(application)
@@ -20682,6 +20812,12 @@ document.addEventListener("click", (event) => {
   if (!actionEl) return;
   const action = actionEl.dataset.action;
   if (action === "change-role") return;
+  if (action === "start-new-application") {
+    state.newTask = { key: "" };
+    state.taskActiveCollateral["new-task-draft"] = "";
+    window.location.hash = "/app/applications/new";
+    return;
+  }
   if (action === "toggle-registry-column-settings") {
     const key = getRegistryColumnPreferenceKey(actionEl.dataset.scope || "", actionEl.dataset.partition || "");
     state.registryColumnSettingsOpen = state.registryColumnSettingsOpen === key ? "" : key;
@@ -20869,6 +21005,7 @@ document.addEventListener("click", (event) => {
   if (action === "submit-new-collateral") submitNewCollateral();
   if (action === "add-application-deal") addApplicationDealRow();
   if (action === "remove-application-deal") removeApplicationDealRow(Number(actionEl.dataset.index));
+  if (action === "remove-application-collateral") removeApplicationCollateralFromDraft(actionEl.dataset.collateral || "");
   if (action === "generate-task-conclusion") generateConclusion(actionEl.dataset.task);
   if (action === "send-abs") addToast("Передано в АБС", "Статус обмена: успешно.", "ok");
   if (action === "search-analogs") addToast("Аналоги обновлены", "Найдены 3 сопоставимых объекта.", "ok");
@@ -22705,6 +22842,8 @@ function resetNewTaskDraft() {
     applicationType: "Оценка залога",
     applicationSubtype: "Первоначальная оценка",
     applicationPurpose: "Новый кредит / новая сделка",
+    bank: "",
+    financialGroupParticipant: "",
     initiator: "",
     initiatorSegment: "",
     applicationSource: "Ручное создание",
@@ -22777,7 +22916,9 @@ function createInitialTaskForApplication(application, collateralIds, contracts =
     dealClientInn: application.participantInn || application.inn,
     dealProduct: normalizeApplicationDealProduct(primaryDeal.product || application.product, contract?.product),
     dealLimit: primaryDeal.limit || application.limit || contract?.limit || "",
-    dealCurrency: primaryDeal.currency || application.currency || contract?.currency || "RUB",
+    dealCurrency: Object.hasOwn(primaryDeal, "currency")
+      ? primaryDeal.currency
+      : application.currency || contract?.currency || "RUB",
     participantName: application.participantName || application.clientName,
     participantInn: application.participantInn || application.inn,
     applicationSource: application.source || "Ручное создание",
@@ -22812,21 +22953,28 @@ function buildApplicationFromForm(status, existingApplication = null) {
     return null;
   }
   const initiator = existingApplication?.initiator || state.newTask.initiator || getRole().user;
-  const initiatorSegment = document.getElementById("newTaskInitiatorSegment")?.value || state.newTask.initiatorSegment || "МСБ";
+  const initiatorSegment = document.getElementById("newTaskInitiatorSegment")?.value ?? state.newTask.initiatorSegment ?? "";
   const clientName = document.getElementById("newTaskDealClientName")?.value.trim() || state.newTask.dealClientName || "";
   const clientInn = document.getElementById("newTaskDealClientInn")?.value.trim() || state.newTask.dealClientInn || "";
-  const applicationType = normalizeApplicationType(document.getElementById("newTaskApplicationType")?.value || state.newTask.applicationType);
-  const applicationSubtype = normalizeApplicationSubtype(applicationType, document.getElementById("newTaskApplicationSubtype")?.value || state.newTask.applicationSubtype);
-  const applicationPurpose = normalizeApplicationPurpose(applicationType, applicationSubtype, document.getElementById("newTaskApplicationPurpose")?.value || state.newTask.applicationPurpose);
+  const typeValue = document.getElementById("newTaskApplicationType")?.value ?? state.newTask.applicationType ?? "";
+  const subtypeValue = document.getElementById("newTaskApplicationSubtype")?.value ?? state.newTask.applicationSubtype ?? "";
+  const purposeValue = document.getElementById("newTaskApplicationPurpose")?.value ?? state.newTask.applicationPurpose ?? "";
+  const applicationType = typeValue ? normalizeApplicationType(typeValue) : "";
+  const applicationSubtype = applicationType && subtypeValue ? normalizeApplicationSubtype(applicationType, subtypeValue) : "";
+  const applicationPurpose = applicationType && subtypeValue && purposeValue ? normalizeApplicationPurpose(applicationType, subtypeValue, purposeValue) : "";
+  const bankField = document.getElementById("newTaskBank");
+  const financialGroupField = document.getElementById("newTaskFinancialGroupParticipant");
+  const bank = bankField ? bankField.value : state.newTask.bank || "";
+  const financialGroupParticipant = financialGroupField ? financialGroupField.value : state.newTask.financialGroupParticipant || "";
   const comment = document.getElementById("newTaskComment")?.value.trim() || "";
   const selected = uniqueItems((state.newTask.selectedCollateralIds || []).filter((id) => getCollateral(id)));
   const pledgeContractOptions = getApplicationPledgeContractOptions(selected.map(getCollateral).filter(Boolean));
   const deals = normalizeApplicationDealsForSave(getDraftApplicationDeals(), clientName, clientInn, pledgeContractOptions);
-  if (showApplicationValidationToast(getApplicationParameterValidation({ applicationNumber, applicationType, applicationSubtype, applicationPurpose, initiator, initiatorSegment, clientName, clientInn, status, comment }, selected))) return null;
+  if (status !== "Черновик" && showApplicationValidationToast(getApplicationParameterValidation({ applicationNumber, applicationType, applicationSubtype, applicationPurpose, initiator, initiatorSegment, clientName, clientInn, status, comment }, selected))) return null;
   const contracts = uniqueItems(deals.map((row) => row.contractId).filter(Boolean)).map(getContract).filter(Boolean);
   const products = uniqueItems(deals.map((row) => row.product));
   const contractNumbers = uniqueItems(deals.map((row) => row.contractNumber).filter(Boolean)).join(", ");
-  const currencies = uniqueItems(deals.map((row) => row.currency || "RUB"));
+  const currencies = uniqueItems(deals.map((row) => row.currency).filter(Boolean));
   const collateralIds = uniqueItems(selected);
   const limit = deals.reduce((sum, row) => sum + parseNumericInput(row.limit), 0);
   const contacts = getSerializableApplicationContacts();
@@ -22841,6 +22989,8 @@ function buildApplicationFromForm(status, existingApplication = null) {
       applicationType,
       applicationSubtype,
       applicationPurpose,
+      bank,
+      financialGroupParticipant,
       initiator,
       initiatorSegment,
       clientName,
@@ -22851,7 +23001,7 @@ function buildApplicationFromForm(status, existingApplication = null) {
       product: products[0] || "",
       products,
       limit,
-      currency: currencies[0] || state.newTask.dealCurrency || "RUB",
+      currency: currencies[0] || state.newTask.dealCurrency || "",
       status,
       decisionStatus: status === "Черновик" ? "Черновик сохранен" : "Заявка зарегистрирована",
       contractId: contracts[0]?.id || "",

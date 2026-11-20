@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { hydrateApplicationDemoData } from "../src/application-demo-data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 const stylesSource = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
@@ -132,6 +133,7 @@ test("deleted application IDs are excluded when fixture data is restored", () =>
     enrichTaskApplications: (value) => value,
     sanitizeMvp1Data: (value) => value,
     ensureTaskSetterComments: (value) => value,
+    hydrateApplicationDemoData,
     TASK_STATE_STORAGE_KEY: "test-state",
     legacyObjectNumberAliases: {}
   };

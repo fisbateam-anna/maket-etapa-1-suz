@@ -80,6 +80,14 @@ test("the parent application is split into five automatically created pledgor/ty
     return [owners[0], types[0], cities[0]].join(" | ");
   });
   assert.equal(new Set(signatures).size, 5, "each task must represent a distinct complete group");
+  const taskCollateralIds = tasks.flatMap((task) => task.collateralIds);
+  assert.equal(new Set(taskCollateralIds).size, taskCollateralIds.length, "no collateral may be assigned to multiple tasks");
+  assert.equal(new Set(application.collateralIds).size, application.collateralIds.length, "the application must not repeat collateral IDs");
+  assert.deepEqual(
+    [...new Set(taskCollateralIds)].sort(),
+    [...new Set(application.collateralIds)].sort(),
+    "the task groups must cover every application collateral exactly once"
+  );
   const collaterals = application.collateralIds.map((id) => initialData.collaterals.find((item) => item.id === id));
   assert.ok(new Set(collaterals.map((item) => item.type)).size > 1);
   assert.ok(new Set(collaterals.map((item) => item.addressFields?.["Город"])).size > 1);

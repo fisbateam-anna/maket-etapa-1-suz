@@ -23265,7 +23265,7 @@ function formatDealLimit(value) {
   const source = String(value ?? "").trim();
   if (!source) return "-";
   const amount = parseNumericInput(source);
-  return Number.isFinite(amount) ? amount.toLocaleString("ru-RU") : source;
+  return Number.isFinite(amount) ? formatFullMoney(amount) : source;
 }
 
 function badge(text, tone = "") {
@@ -37507,7 +37507,7 @@ function formatCollateralContractAmount(value) {
   if (value === null || value === undefined || String(value).trim() === "") return "-";
   const normalized = String(value).trim().replace(/\s/g, "").replace(",", ".");
   const amount = Number(normalized);
-  return Number.isFinite(amount) ? amount.toLocaleString("ru-RU") : String(value);
+  return Number.isFinite(amount) ? formatFullMoney(amount) : String(value);
 }
 
 function normalizeCollateralContractProduct(value) {

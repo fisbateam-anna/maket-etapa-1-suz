@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 import { initialData, normalizeCollateralCreationDates } from "../src/data.js";
+import { hydrateApplicationDemoData } from "../src/application-demo-data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 
@@ -31,6 +32,7 @@ function buildRuntimeDataWithSavedCollaterals(savedCollaterals) {
     enrichTaskApplications: (data) => data,
     sanitizeMvp1Data: (data) => data,
     ensureTaskSetterComments: (data) => data,
+    hydrateApplicationDemoData,
     TASK_STATE_STORAGE_KEY: "test-state",
     legacyObjectNumberAliases: {}
   };

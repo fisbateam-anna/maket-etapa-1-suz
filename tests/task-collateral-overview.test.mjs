@@ -42,8 +42,9 @@ test("task collateral table uses pledge number, required columns and exclusion a
     previous = position;
   }
   assert.doesNotMatch(tableSource, /<th>Залогодатель<\/th>/);
-  assert.match(tableSource, /\$\{showExclusionColumn \? "<th>Исключен<\/th>" : ""\}<\/tr>/);
-  assert.match(tableSource, /showExclusionColumn \? 13 : 12/);
+  assert.match(tableSource, /showExclusionColumn \? "<th>Исключен<\/th>" : ""/);
+  assert.match(tableSource, /allowApplicationRemove \? '<th><span class="visually-hidden">Действия<\/span><\/th>' : ""/);
+  assert.match(tableSource, /\(showExclusionColumn \? 13 : 12\) \+ \(allowApplicationRemove \? 1 : 0\)/);
 
   const rowContext = {
     escapeHtml,
@@ -109,9 +110,15 @@ test("task collateral columns keep their content readable and active marker is s
     appSource.indexOf("function renderTaskCollateralObjectsInfo"),
     appSource.indexOf("\nfunction getLatestCollateralEvaluation", appSource.indexOf("function renderTaskCollateralObjectsInfo"))
   );
+  const collateralRowRenderer = appSource.slice(
+    appSource.indexOf("function renderTaskCollateralRow"),
+    appSource.indexOf("\nfunction canMarkTaskCollateralExcluded", appSource.indexOf("function renderTaskCollateralRow"))
+  );
   assert.doesNotMatch(documentsRenderer, /Активный залог/);
   assert.match(collateralRenderer, /task-active-collateral-badge/);
+  assert.match(collateralRowRenderer, /class="link task-collateral-cell task-collateral-number"/);
   assert.match(styles, /\.task-collateral-info \.task-collateral-cell\s*\{[^}]*overflow:\s*visible;[^}]*overflow-wrap:\s*anywhere;/s);
+  assert.match(styles, /\.task-collateral-info \.task-collateral-number\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*box-sizing:\s*border-box;/s);
   assert.match(styles, /\.task-active-collateral-badge\s*\{/);
 });
 

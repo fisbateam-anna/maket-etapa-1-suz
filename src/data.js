@@ -5141,6 +5141,219 @@ function addGroupedPhysicalInspectionShowcase() {
 
 addGroupedPhysicalInspectionShowcase();
 
+function addMultiReturnApplicationDemo() {
+  const applicationId = "app-18112026-001";
+  const taskIds = ["tsk-18112026-001", "tsk-18112026-002", "tsk-18112026-003"];
+  const collateralIds = ["COL-DEMO-RETURN-001", "COL-DEMO-RETURN-002", "COL-DEMO-RETURN-003"];
+  const allIds = new Set([
+    ...initialData.applications.map((item) => item.id),
+    ...initialData.tasks.map((item) => item.id),
+    ...initialData.collaterals.map((item) => item.id)
+  ]);
+  if ([applicationId, ...taskIds, ...collateralIds].some((id) => allIds.has(id))) {
+    throw new Error("The multi-return application demo IDs must be unique.");
+  }
+
+  const pledgor = { name: "ООО СибТрансСервис", idn: "540 812 3456", role: "Залогодатель", share: "100%", subjectType: "ЮЛ" };
+  const pledgeContract = { number: "ZL-26/206-001", date: "2026-11-17", linkedContract: "CR-26/206" };
+  const collateralSpecs = [
+    {
+      id: collateralIds[0], type: "Объекты недвижимости", name: "Складской корпус № 2, 2 850 кв. м",
+      identifier: "54:35:074010:6201", identifierType: "Кадастровый номер", subtype: "Здания",
+      address: "Новосибирская область, г. Новосибирск, ул. Петухова, 18", marketValue: 135000000, pledgeValue: 102600000,
+      fields: { "Подвид залога": "Здания", "Кадастровый номер": "54:35:074010:6201", "Площадь": "2 850 кв. м", "Назначение": "Складской корпус" }
+    },
+    {
+      id: collateralIds[1], type: "Автотранспорт", name: "ГАЗель NEXT, 2023 г., гос. номер О 235 КМ 154",
+      identifier: "X96A21R20P0006202", identifierType: "VIN", subtype: "Залог автотранспортного средства категории В",
+      address: "Новосибирская область, г. Новосибирск, ул. Петухова, 18", marketValue: 4200000, pledgeValue: 3192000,
+      fields: { "Подвид залога": "Залог автотранспортного средства категории В", "VIN": "X96A21R20P0006202", "Идентификационный номер транспортного средства (VIN)": "X96A21R20P0006202", "Марка/модель": "ГАЗель NEXT", "Год выпуска": "2023", "Госномер": "О 235 КМ 154" }
+    },
+    {
+      id: collateralIds[2], type: "Оборудование", name: "Автоматическая фасовочная линия Krones",
+      identifier: "SIB-PACK-2024-017", identifierType: "Инвентарный номер", subtype: "Машины и оборудование",
+      address: "Новосибирская область, г. Новосибирск, ул. Петухова, 18", marketValue: 52000000, pledgeValue: 39520000,
+      fields: { "Подвид залога": "Машины и оборудование", "Инвентарный номер": "SIB-PACK-2024-017", "Производитель": "Krones", "Год выпуска": "2021", "Техническое состояние": "Рабочее" }
+    }
+  ];
+
+  initialData.collaterals.push(...collateralSpecs.map((spec) => ({
+    id: spec.id,
+    suzNumber: `ZLG-2026-206-${spec.id.slice(-3)}`,
+    createdAt: "2026-11-17",
+    type: spec.type,
+    name: spec.name,
+    description: spec.name,
+    profileIdentifierType: spec.identifierType,
+    profileIdentifier: spec.identifier,
+    clientName: pledgor.name,
+    clientId: pledgor.idn,
+    clientType: "ЮЛ",
+    region: "Новосибирская область",
+    address: spec.address,
+    contractNumber: pledgeContract.number,
+    contractDate: pledgeContract.date,
+    marketValue: spec.marketValue,
+    pledgeValue: spec.pledgeValue,
+    allocatedValue: spec.pledgeValue,
+    status: "В залоге",
+    source: "Ручной ввод",
+    fields: spec.fields,
+    pledgors: [{ ...pledgor }],
+    pledgeContracts: [{ ...pledgeContract }],
+    evaluations: [{ date: "2026-11-17", appraiser: "Сибирь-Оценка", market: spec.marketValue, pledge: spec.pledgeValue, method: "Сравнительный", status: "Действует" }],
+    documents: [{ name: `Документы ${spec.identifier}.pdf`, type: "Право", required: true, status: "Получен", date: "2026-11-17" }],
+    history: []
+  })));
+
+  const applicationComment = "Провести физический осмотр склада, автомобиля и производственного оборудования в Новосибирске. По каждому объекту сверить идентификаторы, фактическое наличие и состояние.";
+  const application = {
+    id: applicationId,
+    number: applicationId,
+    createdAt: "2026-11-18 09:15",
+    source: "Ручное создание",
+    applicationType: "Осмотр имущества",
+    applicationSubtype: "Первоначальный осмотр",
+    applicationPurpose: "Проверка предмета залога",
+    initiator: "Анна Кузнецова",
+    initiatorSegment: "Корпоративный бизнес",
+    clientName: pledgor.name,
+    participantName: pledgor.name,
+    participantInn: pledgor.idn,
+    product: "Кредит",
+    limit: 150000000,
+    currency: "RUB",
+    status: "Требуется доработка",
+    decisionStatus: "Ожидается заключение залоговой службы",
+    comment: applicationComment,
+    contractId: "",
+    contractIds: [],
+    deals: [{
+      clientName: pledgor.name,
+      inn: pledgor.idn,
+      contractId: "",
+      contractNumber: "CR-26/206",
+      contractDate: "2026-11-17",
+      product: "Кредит",
+      limit: 150000000,
+      currency: "RUB",
+      collateralIds,
+      pledgeContractLinks: [{ number: pledgeContract.number, date: pledgeContract.date, collateralIds: [...collateralIds] }]
+    }],
+    collateralIds: [...collateralIds],
+    taskIds,
+    documents: [
+      { name: "Договор залога ZL-26-206-001.pdf", target: "application", date: "2026-11-17", author: "Анна Кузнецова" },
+      { name: "Перечень объектов к осмотру.xlsx", target: "application", date: "2026-11-18", author: "Анна Кузнецова" }
+    ]
+  };
+  initialData.applications.push(application);
+
+  const returnTasks = [
+    {
+      id: taskIds[0],
+      collateralId: collateralIds[0],
+      title: "Осмотреть складской корпус в Новосибирске",
+      assignee: "Анна Кузнецова",
+      previousAssignee: "Павел Смирнов",
+      returnDate: "2026-11-19 11:20",
+      returnUser: "Павел Смирнов",
+      reason: "Недостаточно документов по заявке",
+      comment: "Приложите актуальную выписку ЕГРН на складской корпус: в текущем документе не отражены сведения об ипотеке."
+    },
+    {
+      id: taskIds[1],
+      collateralId: collateralIds[1],
+      title: "Осмотреть автомобиль ГАЗель NEXT в Новосибирске",
+      assignee: "Анна Кузнецова",
+      previousAssignee: "Мария Петрова",
+      returnDate: "2026-11-20 09:40",
+      returnUser: "Мария Петрова",
+      reason: "Выявлены расхождения по объекту залога",
+      comment: "Уточните VIN автомобиля: в заявке он отличается от значения в приложенной копии ПТС."
+    }
+  ];
+
+  returnTasks.forEach((item, index) => {
+    const createdAt = index === 0 ? "2026-11-18 09:20" : "2026-11-18 09:25";
+    const returnRequest = {
+      date: item.returnDate,
+      user: item.returnUser,
+      initiator: application.initiator,
+      reason: item.reason,
+      comment: item.comment,
+      previousAssignee: item.previousAssignee,
+      previousTaskStatus: "В работе",
+      previousApplicationStatus: "В работе",
+      status: "Ожидает доработки"
+    };
+    initialData.tasks.push({
+      id: item.id,
+      type: "Первичный осмотр",
+      inspectionFormat: "Физический осмотр",
+      title: item.title,
+      collateralId: item.collateralId,
+      collateralIds: [item.collateralId],
+      applicationId,
+      applicationNumber: applicationId,
+      contractId: "",
+      contractNumber: "CR-26/206",
+      contractDate: "2026-11-17",
+      client: pledgor.name,
+      clientInn: pledgor.idn,
+      author: application.initiator,
+      assignee: item.assignee,
+      status: "Ожидание",
+      dueDate: "2026-11-24",
+      createdAt,
+      source: "Заявка",
+      applicationSource: application.source,
+      createdFromApplicationAutomatically: true,
+      assignmentComment: applicationComment,
+      route: ["Заявка", "Исполнитель", "Руководитель", "Инициатор"],
+      returnToInitiator: returnRequest,
+      returnToInitiatorHistory: [{ ...returnRequest }],
+      history: [
+        { date: createdAt, user: application.initiator, action: "Создание задачи", status: "Назначена", oldValue: "-", newValue: "Назначена", comment: `Первая задача создана автоматически из заявки ${applicationId}.` },
+        { date: "2026-11-18 10:00", user: item.previousAssignee, action: "Принятие в работу", status: "В работе", oldValue: "Назначена", newValue: "В работе", comment: "Начата проверка объекта и документов." },
+        { date: item.returnDate, user: item.returnUser, action: "Возврат заявки на инициатора", status: "Ожидание", oldValue: "В работе", newValue: "Ожидание", comment: `${item.reason}. ${item.comment}` }
+      ]
+    });
+  });
+
+  initialData.tasks.push({
+    id: taskIds[2],
+    type: "Первичный осмотр",
+    inspectionFormat: "Физический осмотр",
+    title: "Осмотреть фасовочную линию Krones в Новосибирске",
+    collateralId: collateralIds[2],
+    collateralIds: [collateralIds[2]],
+    applicationId,
+    applicationNumber: applicationId,
+    contractId: "",
+    contractNumber: "CR-26/206",
+    contractDate: "2026-11-17",
+    client: pledgor.name,
+    clientInn: pledgor.idn,
+    author: application.initiator,
+    assignee: "Павел Смирнов",
+    status: "В работе",
+    dueDate: "2026-11-24",
+    createdAt: "2026-11-18 09:30",
+    source: "Заявка",
+    applicationSource: application.source,
+    createdFromApplicationAutomatically: true,
+    assignmentComment: applicationComment,
+    route: ["Заявка", "Исполнитель", "Руководитель"],
+    history: [
+      { date: "2026-11-18 09:30", user: application.initiator, action: "Создание задачи", status: "Назначена", oldValue: "-", newValue: "Назначена", comment: `Первая задача создана автоматически из заявки ${applicationId}.` },
+      { date: "2026-11-18 10:15", user: "Павел Смирнов", action: "Принятие в работу", status: "В работе", oldValue: "Назначена", newValue: "В работе", comment: "Начат осмотр объекта на производственной площадке." }
+    ]
+  });
+}
+
+addMultiReturnApplicationDemo();
+
 export function resolveCollateralSubtype(collateral) {
   collateral ||= {};
   const typeAliases = {
