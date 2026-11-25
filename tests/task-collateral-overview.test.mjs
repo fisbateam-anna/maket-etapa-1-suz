@@ -30,6 +30,13 @@ test("task collateral table uses pledge number, required columns and exclusion a
   );
   assert.doesNotMatch(tableSource, /Раскройте группу вида залога|<p class="hint">/);
   assert.match(tableSource, /<h2 class="shared-component-title">Информация по объектам залога<\/h2>/);
+  assert.match(tableSource, /renderTaskCollateralColumnSettings\(\{ showExclusionColumn, allowApplicationRemove \}\)/);
+  assert.match(tableSource, /tableColumns\.map\(\(column\) => `<th data-task-collateral-column=/);
+  assert.match(tableSource, /colspan="\$\{columnCount\}"/);
+  const columnDefinitions = appSource.slice(
+    appSource.indexOf("const TASK_COLLATERAL_COLUMNS ="),
+    appSource.indexOf("\nfunction getTaskCollateralColumns", appSource.indexOf("const TASK_COLLATERAL_COLUMNS ="))
+  );
   const labels = [
     "Номер залога", "Идентификатор залога", "Подвид залога", "Наименование залога", "Адрес объекта",
     "Договор залога", "Дата последнего осмотра", "Дата последней оценки", "Ликвидность",
@@ -37,15 +44,18 @@ test("task collateral table uses pledge number, required columns and exclusion a
   ];
   let previous = -1;
   for (const label of labels) {
-    const position = tableSource.indexOf(`<th>${label}</th>`);
+    const position = columnDefinitions.indexOf(`label: "${label}"`);
     assert.ok(position > previous, `${label} is present in the required order`);
     previous = position;
   }
-  assert.doesNotMatch(tableSource, /<th>Залогодатель<\/th>/);
-  assert.match(tableSource, /showExclusionColumn \? "<th>Исключен<\/th>" : ""/);
-  assert.match(tableSource, /allowApplicationRemove \? '<th><span class="visually-hidden">Действия<\/span><\/th>' : ""/);
-  assert.match(tableSource, /\(showExclusionColumn \? 13 : 12\) \+ \(allowApplicationRemove \? 1 : 0\)/);
+  assert.doesNotMatch(columnDefinitions, /Залогодатель/);
+  assert.match(appSource, /excluded: \{ key: "excluded", label: "Исключен"/);
+  assert.match(appSource, /remove: \{ key: "remove", label: "Действия"/);
 
+  const baseColumns = [
+    ["number", 85], ["identifier", 130], ["subtype", 145], ["name", 175], ["address", 155], ["pledgeContract", 135],
+    ["lastInspection", 105], ["lastEvaluation", 105], ["liquidity", 85], ["pledgeValue", 118], ["marketValue", 118], ["fairValue", 118]
+  ].map(([key, width]) => ({ key, width }));
   const rowContext = {
     escapeHtml,
     getContract: () => null,
@@ -65,7 +75,10 @@ test("task collateral table uses pledge number, required columns and exclusion a
     getCollateralLiquidity: () => "Высокая",
     formatShortMoney: (value) => String(value),
     formatRegistryDateTime: (value) => value,
-    isTaskCollateralExcluded: () => false
+    isTaskCollateralExcluded: () => false,
+    getTaskCollateralColumns: ({ showExclusionColumn } = {}) => [...baseColumns, ...(showExclusionColumn ? [{ key: "excluded", width: 68 }] : [])],
+    getTaskCollateralVisibleColumns: (options) => rowContext.getTaskCollateralColumns(options),
+    renderTaskCollateralVisibleCells: (columns, cells) => columns.map(({ key }) => cells[key]).join("")
   };
   const renderRow = extractFunction("function renderTaskCollateralRow", "\nfunction canMarkTaskCollateralExcluded", rowContext, "renderTaskCollateralRow");
   const html = renderRow({ id: "TSK-1" }, { id: "COL-1" }, null, { canMarkExcluded: true, showExclusionColumn: true, selectable: false });
@@ -79,7 +92,7 @@ test("task collateral table uses pledge number, required columns and exclusion a
   assert.ok(html.includes("12,00"));
   assert.ok(html.indexOf("2026-10-10") < html.indexOf("2026-10-12"));
   assert.ok(html.indexOf("2026-10-12") < html.indexOf("Высокая"));
-  assert.ok(html.lastIndexOf("task-collateral-excluded-cell") > html.lastIndexOf("task-collateral-money"));
+  assert.ok(html.lastIndexOf('data-task-collateral-column="excluded"') > html.lastIndexOf("task-collateral-money"));
   assert.doesNotMatch(html, /COL-1<\/button>|Имущество залогодателя|Залогодатель/);
 
   const singleObjectHtml = renderRow({ id: "TSK-1" }, { id: "COL-1" }, null, { canMarkExcluded: false, showExclusionColumn: true });
@@ -219,9 +232,13 @@ test("without an active collateral the task contacts block shows only applicatio
   const context = {
     escapeHtml,
     getTaskApplication: () => application,
+    getTaskCollaterals: () => [{ id: "COL-1" }],
     getApplicationCollaterals: () => [{ id: "COL-1" }],
     getApplicationContactRows: () => contacts,
-    normalizeApplicationContactRow: (contact) => contact,
+    getInspectionApplicableApplicationContacts: () => contacts.filter((contact) => contact.applyScope === "application" || (contact.applyScope === "task" && contact.applyValue === "TSK-1")),
+    getApplicationContactExecutorCommentSummary: () => "",
+    getAdditionalInspectionContactRows: () => [],
+    getTaskContactApplicabilityLabel: (contact) => contact.applyScope === "application" ? "Вся заявка" : "Текущая задача",
     formatContactCallDateValue: (value) => value
   };
   context.doesApplicationContactApplyToTarget = extractFunction(
@@ -247,6 +264,8 @@ test("without an active collateral the task contacts block shows only applicatio
   assert.match(html, /Контактные лица/);
   assert.match(html, /Анна Иванова/);
   assert.match(html, /Петр Петров/);
+  assert.match(html, /<th>Применяется к<\/th>/);
+  assert.match(html, /Вся заявка/);
   assert.doesNotMatch(html, /Не показывать COL-1|Не показывать TSK-2/);
   assert.doesNotMatch(html, /<input|<textarea|<button/);
 });

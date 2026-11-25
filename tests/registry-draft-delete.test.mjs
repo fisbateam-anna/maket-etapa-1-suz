@@ -120,6 +120,7 @@ test("deleted application IDs are excluded when fixture data is restored", () =>
     clone: (value) => JSON.parse(JSON.stringify(value)),
     readSavedStateSnapshot: () => ({ state: { deletedApplicationIds: [application.id, application.number] } }),
     migrateSavedObjectNumbers: (snapshot) => ({ state: snapshot.state, aliases: {}, changed: false }),
+    seedTaskNumberAliases: {},
     remapScreenshotFixtureIdsForSavedState: (value) => value,
     normalizeCollateralCreationDates: (items) => items,
     normalizeCollateralRecordsForFtV7: (items) => items,
@@ -151,4 +152,3 @@ test("collateral registry waits for a search criterion and treats application co
   assert.equal(context.hasCriteria({ status: ["Новый", "В залоге"], name: "квартира" }), true);
   assert.equal(context.hasCriteria({}, "app-30102026-001"), true);
 });
-

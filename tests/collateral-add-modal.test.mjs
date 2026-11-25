@@ -155,7 +155,7 @@ function loadCollateralMutation(draft, collaterals = [], modal = { context: "app
     getNewCollateralFieldMaxLength: () => 0,
     getCollateral: (id) => data.collaterals.find((item) => item.id === id) || null,
     getCollateralSuzNumber: (item) => item?.suzNumber || item?.collateralNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     getCollateralUnitDefault: () => "Штука (шт.)",
     isAffirmativeValue: (value) => ["Да", true, 1].includes(value),
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-",
@@ -241,7 +241,7 @@ test("edit dialog does not expose legacy group linkage as a form field", () => {
     getCollateralTypeSpecificFields: (item) => item.fields,
     getCollateralClientType: (item) => item?.clientType || "",
     getCollateralSuzNumber: (item) => item?.suzNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     formatNewCollateralDateInput: (value) => String(value || "").replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$3.$2.$1"),
     getNewCollateralProfileIdentifierType: () => "",
     getCollateralBasisDocument: () => ({ type: "", date: "", series: "", number: "" }),
@@ -344,7 +344,7 @@ test("profile identifier follows the explicitly selected FT source field", () =>
   assert.equal(sandbox.profile({ typeLabel: "Оборудование", profileIdentifierType: "Заводской номер", typeFields: { "Заводской номер": "EQ-12", "Инвентарный номер": "INV-12" } }), "EQ-12");
   assert.equal(sandbox.profile({ typeLabel: "Оборудование", profileIdentifierType: "Инвентарный номер", typeFields: { "Заводской номер": "EQ-12", "Инвентарный номер": "INV-12" } }), "INV-12");
   assert.equal(sandbox.profile({ typeLabel: "Транспортные средства (самоходная техника)", profileIdentifierType: "Идентификационный номер ТС или СМ (VIN, PIN, заводской)", typeFields: { "Идентификационный номер ТС или СМ (VIN, PIN, заводской)": "SM-12" } }), "SM-12");
-  assert.equal(sandbox.profile({ typeLabel: "Объекты недвижимости", profileIdentifierType: "Кадастровый номер", suzNumber: "col-102026-012", typeFields: { "Кадастровый номер": "54:35:000000:12" } }), "54:35:000000:12");
+  assert.equal(sandbox.profile({ typeLabel: "Объекты недвижимости", profileIdentifierType: "Кадастровый номер", suzNumber: "col-1026-012", typeFields: { "Кадастровый номер": "54:35:000000:12" } }), "54:35:000000:12");
   assert.equal(sandbox.profile({ typeLabel: "Транспортные средства, прицепы (полуприцепы)", profileIdentifierType: "VIN", typeFields: { "Идентификационный номер транспортного средства (VIN)": "VIN-12" } }), "VIN-12");
   assert.equal(sandbox.profile({ typeLabel: "Воздушные суда", profileIdentifierType: "Опознавательные знаки воздушного судна", typeFields: { "Опознавательные знаки воздушного судна": "RA-12" } }), "RA-12");
   assert.equal(sandbox.profile({ typeLabel: "Плавучие сооружения", profileIdentifierType: "Регистровый номер", typeFields: { "Регистровый номер": "REG-12" } }), "REG-12");
@@ -353,11 +353,11 @@ test("profile identifier follows the explicitly selected FT source field", () =>
   assert.equal(sandbox.profile({ typeLabel: "Имущественные права (требования)", profileIdentifierType: "Номер договора вместе с датой заключения договора", typeFields: { "Номер договора": "CON-12", "Дата заключения договора": "19.09.2026" } }), "CON-12 от 19.09.2026");
   assert.equal(sandbox.profile({ typeLabel: "Товары в обороте", profileIdentifierType: "Инвентарный номер", typeFields: { "Инвентарный номер": "INV-12" } }), "INV-12");
   assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (однородные группы)", profileIdentifierType: "Инвентарный номер", typeFields: { "Инвентарный номер": "INV-12" }, collateralId: "COL-12" }), "INV-12");
-  assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (однородные группы)", profileIdentifierType: "Номер карточки залога", suzNumber: "col-102026-012", typeFields: { "Инвентарный номер": "INV-12" }, collateralId: "COL-12" }), "col-102026-012");
-  assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (однородные группы)", profileIdentifierType: "Номер карточки залога", subtype: "Животные", suzNumber: "col-102026-014", collateralId: "COL-014" }), "col-102026-014");
+  assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (однородные группы)", profileIdentifierType: "Номер карточки залога", suzNumber: "col-1026-012", typeFields: { "Инвентарный номер": "INV-12" }, collateralId: "COL-12" }), "col-1026-012");
+  assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (однородные группы)", profileIdentifierType: "Номер карточки залога", subtype: "Животные", suzNumber: "col-1026-014", collateralId: "COL-014" }), "col-1026-014");
   assert.equal(sandbox.profile({ typeLabel: "Прочие движимые вещи (объекты)", profileIdentifierType: "Идентификационный признак (значение)", typeFields: { "Идентификационный признак (значение)": "SN-12" } }), "SN-12");
   assert.equal(sandbox.options("Животные").length, 2);
-  assert.equal(sandbox.profile({ typeLabel: "Животные", profileIdentifierType: "Номер карточки залога", suzNumber: "col-102026-013", collateralId: "COL-12" }), "col-102026-013");
+  assert.equal(sandbox.profile({ typeLabel: "Животные", profileIdentifierType: "Номер карточки залога", suzNumber: "col-1026-013", collateralId: "COL-12" }), "col-1026-013");
 });
 
 test("profile identifier option priority and labels match FT table 2.6", () => {
@@ -499,16 +499,16 @@ test("existing profile identifiers include rights contract date and preserve ind
     COLLATERAL_GROUP_ATTRIBUTE: "Признак группы залога",
     LEGACY_COLLATERAL_GROUP_ATTRIBUTE: "Идентификационный код группы",
     getCollateralTypeLabel: (item) => item.type,
-    getCollateralSuzNumber: (item) => item?.suzNumber || "col-102026-001",
+    getCollateralSuzNumber: (item) => item?.suzNumber || "col-1026-001",
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-"
   };
   vm.runInNewContext(`${dateHelper}\n${profileFieldValueSource}\n${objectIdentifier}\n${profileSource}\nglobalThis.identifier = getCollateralObjectIdentifier;`, sandbox);
   assert.equal(sandbox.identifier({ type: "Имущественные права (требования)", fields: { "Номер договора": "PR-410/26", "Дата заключения договора": "2026-02-14" } }), "PR-410/26 от 14.02.2026");
   assert.equal(sandbox.identifier({ id: "COL-058", type: "Имущественные права (требования)", fields: { "Номер договора": "PR-410/26", "Дата заключения договора": "2026-02-14" } }), "PR-410/26 от 14.02.2026");
-  assert.equal(sandbox.identifier({ id: "COL-100", suzNumber: "col-102026-010", type: "Товары в обороте", fields: { "Инвентарный номер": "" } }), "col-102026-010");
-  assert.equal(sandbox.identifier({ id: "COL-101", suzNumber: "col-102026-011", type: "Товары в обороте", groupIdentificationCode: "GRP-GRAIN-1" }), "col-102026-011");
+  assert.equal(sandbox.identifier({ id: "COL-100", suzNumber: "col-1026-010", type: "Товары в обороте", fields: { "Инвентарный номер": "" } }), "col-1026-010");
+  assert.equal(sandbox.identifier({ id: "COL-101", suzNumber: "col-1026-011", type: "Товары в обороте", groupIdentificationCode: "GRP-GRAIN-1" }), "col-1026-011");
   assert.equal(sandbox.identifier({ id: "COL-201", type: "Железнодорожный подвижной состав", groupIdentificationCode: "CONSIST-1", fields: { "Номер вагона": "W-201" } }), "W-201");
-  assert.equal(sandbox.identifier({ id: "COL-202", type: "Прочие движимые вещи (однородные группы)", subtype: "Монеты, содержащие драгоценные металлы", profileIdentifierType: "Вид движимой вещи" }), "col-102026-001");
+  assert.equal(sandbox.identifier({ id: "COL-202", type: "Прочие движимые вещи (однородные группы)", subtype: "Монеты, содержащие драгоценные металлы", profileIdentifierType: "Вид движимой вещи" }), "col-1026-001");
 });
 
 test("homogeneous-group profile identifier uses inventory number and falls back to SUZ number", () => {
@@ -526,7 +526,7 @@ test("homogeneous-group profile identifier uses inventory number and falls back 
     id: "COL-202",
     type: "Прочие движимые вещи (однородные группы)",
     subtype: "Монеты, содержащие драгоценные металлы",
-    suzNumber: "col-112026-014",
+    suzNumber: "col-1126-014",
     profileIdentifierType: "Вид движимой вещи",
     profileIdentifier: "Монеты, содержащие драгоценные металлы",
     fields: { "Инвентарный номер": "INV-GRP-202", "Вид движимой вещи": "Монеты, содержащие драгоценные металлы" }
@@ -534,7 +534,7 @@ test("homogeneous-group profile identifier uses inventory number and falls back 
     id: "COL-203",
     type: "Прочие движимые вещи (однородные группы)",
     subtype: "Запасные части",
-    suzNumber: "col-112026-015",
+    suzNumber: "col-1126-015",
     profileIdentifierType: "Вид движимой вещи",
     profileIdentifier: "Запасные части",
     fields: { "Вид движимой вещи": "Запасные части" }
@@ -543,7 +543,7 @@ test("homogeneous-group profile identifier uses inventory number and falls back 
   assert.equal(withInventory.profileIdentifier, "INV-GRP-202");
   assert.equal(withInventory.fields["Инвентарный номер"], "INV-GRP-202");
   assert.equal(withoutInventory.profileIdentifierType, "Номер карточки залога");
-  assert.equal(withoutInventory.profileIdentifier, "col-112026-015");
+  assert.equal(withoutInventory.profileIdentifier, "col-1126-015");
 });
 
 test("duplicate rights are detected by contract number and normalized date", () => {
@@ -870,7 +870,7 @@ test("application context pre-fills first pledgor while registry context starts 
     LEGACY_COLLATERAL_GROUP_ATTRIBUTE: "Идентификационный код группы",
     COLLATERAL_ADDRESS_FIELDS: schemas.address,
     getCollateralSuzNumber: (item) => item?.suzNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-"
   };
   const dateHelper = extractBetween("function formatProfileIdentifierDate(value)", "function getInspectionWorkabilityValue(collateral)");
@@ -904,7 +904,7 @@ test("optional type-specific fields start collapsed for edits, including composi
     LEGACY_COLLATERAL_GROUP_ATTRIBUTE: "Идентификационный код группы",
     COLLATERAL_ADDRESS_FIELDS: schemas.address,
     getCollateralSuzNumber: (item) => item?.suzNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-",
     getCollateralTypeLabel: (item) => item.type,
     getCollateralClientType: (item) => item?.clientType || "",
@@ -952,7 +952,7 @@ test("optional type-specific fields start collapsed for edits, including composi
     type: "Объекты недвижимости",
     name: "Помещение",
     profileIdentifierType: "Кадастровый номер",
-    profileIdentifier: "col-102026-001",
+    profileIdentifier: "col-1026-001",
     fields: { "Кадастровый номер": "54:35:000000:15", "Условный номер": "УС-15" }
   });
   assert.equal(propertyDraft.typeFieldsExpanded, false);
@@ -1110,7 +1110,7 @@ test("saving the add form maps every group into the new collateral record", () =
     COLLATERAL_ADDRESS_FIELDS: schemas.address,
     getNextCollateralId: () => "COL-999",
     getCollateralSuzNumber: (item) => item?.suzNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     getNewCollateralSubtypeField: () => "Подвид залога",
     getCollateralTypeCodeFromLabel: (label) => label,
     getCollateralTypeLabel: (item) => item.type,
@@ -1220,7 +1220,7 @@ test("duplicate checks use the selected profile ID independently of group marker
     getCollateralClientType: (item) => item?.clientType || "",
     getCollateralTypeDisplayFieldLabels: (typeLabel) => schemas.typeFields[typeLabel] || [],
     getNextCollateralId: () => "COL-002",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     getCollateralSuzNumber: (item) => item?.suzNumber || item?.collateralNumber || "",
     isAffirmativeValue: (value) => ["Да", true, 1].includes(value),
     isBlankFieldValue: (value) => value == null || String(value).trim() === "" || String(value).trim() === "-",
@@ -1281,7 +1281,7 @@ test("goods in circulation without a group code use the generated card ID", () =
     COLLATERAL_ADDRESS_FIELDS: schemas.address,
     getNextCollateralId: () => "COL-GOODS-01",
     getCollateralSuzNumber: (item) => item?.suzNumber || "",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     getNewCollateralSubtypeField: (typeLabel) => (schemas.typeFields[typeLabel] || []).find((field) => ["Подвид залога", "Подвид", "Подтип"].includes(field)) || "",
     getCollateralTypeCodeFromLabel: (label) => label,
     getCollateralTypeLabel: (item) => item.type,
@@ -1302,7 +1302,7 @@ test("goods in circulation without a group code use the generated card ID", () =
   vm.runInNewContext(`${v6FieldApplicabilitySource}\n${dateHelper}\n${profileSource}\n${dateNormalizerSource}\n${createFunction}\nglobalThis.create = createDraftCollateralFromForm;`, sandbox);
   const result = sandbox.create();
   assert.equal(result.id, "COL-GOODS-01");
-  assert.equal(result.profileIdentifier, "col-102026-001");
+  assert.equal(result.profileIdentifier, "col-1026-001");
 });
 
 test("editing updates one collateral and retains links, workflow data, hidden fields and documents", () => {

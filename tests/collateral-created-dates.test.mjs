@@ -19,6 +19,7 @@ function buildRuntimeDataWithSavedCollaterals(savedCollaterals) {
     clone: (value) => JSON.parse(JSON.stringify(value)),
     readSavedStateSnapshot: () => ({ state: { collaterals: savedCollaterals } }),
     migrateSavedObjectNumbers: (snapshot) => ({ state: snapshot.state, aliases: {}, changed: false }),
+    seedTaskNumberAliases: {},
     remapScreenshotFixtureIdsForSavedState: (data) => data,
     normalizeCollateralCreationDates,
     normalizeCollateralRecordsForFtV7: (collaterals) => collaterals,

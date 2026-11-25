@@ -1,3 +1,7 @@
+import { getNextMonthlyApplicationNumber, normalizeCollateralSuzNumbers, normalizeSeedTaskNumbers } from "./object-numbering.js";
+
+export let seedTaskNumberAliases = {};
+
 export const FT_COLLATERAL_SUBTYPE_OPTIONS = {
   "Объекты недвижимости": [
     "Здания",
@@ -4684,8 +4688,8 @@ function addScreenshotTaskScenario(spec, taskIndex) {
   if (collaterals.some((item) => !item)) throw new Error(`Missing collateral in screenshot scenario ${taskId}`);
   let application = null;
   if (spec.application) {
-    const applicationIndex = initialData.applications.filter((item) => item.number?.startsWith("app-09112026-")).length;
-    const applicationId = `app-09112026-${String(applicationIndex + 1).padStart(3, "0")}`;
+    const applicationIndex = initialData.applications.filter((item) => item.screenshotFixtureKey?.startsWith("screenshot-application-")).length;
+    const applicationId = getNextMonthlyApplicationNumber(initialData.applications, createdAt);
     const initiator = ["Анна Кузнецова", "Дмитрий Орлов", "Мария Петрова"][applicationIndex % 3];
     const clientName = collaterals[0].clientName;
     const clientInn = collaterals[0].clientId || collaterals[0].pledgors?.[0]?.idn || "";
@@ -5461,6 +5465,7 @@ export function normalizeCollateralCreationDates(collaterals = []) {
 }
 
 initialData.collaterals = normalizeCollateralCreationDates(initialData.collaterals);
+normalizeCollateralSuzNumbers(initialData.collaterals);
 
 for (const collateral of initialData.collaterals || []) {
   const subtype = resolveCollateralSubtype(collateral);
@@ -5469,6 +5474,8 @@ for (const collateral of initialData.collaterals || []) {
     collateral.fields["Подвид залога"] = subtype;
   }
 }
+
+seedTaskNumberAliases = normalizeSeedTaskNumbers(initialData);
 
 export const reportCatalog = [
   {

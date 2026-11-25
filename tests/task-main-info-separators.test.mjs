@@ -51,7 +51,8 @@ test("blue accent stripes appear only over task collateral and inspection sectio
   assert.match(inspectionRenderer, /task-main-inspection-contacts-group/);
 
   const emptyCollateral = app.slice(app.indexOf("function renderTaskCollateralContext(task, collaterals, activeCollateral)"), app.indexOf("function renderTaskCollateralObjectsInfo", app.indexOf("function renderTaskCollateralContext(task, collaterals, activeCollateral)")));
-  assert.match(emptyCollateral, /task-collateral-panel task-main-section-stripe/);
+  assert.match(emptyCollateral, /sourceTask:\s*task/);
+  assert.match(emptyCollateral, /headerActions:\s*renderTaskCollateralActions/);
   const collateralRenderer = app.slice(app.indexOf("function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, options = {})"), app.indexOf("\nfunction getLatestCollateralEvaluation", app.indexOf("function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, options = {})")));
   assert.match(collateralRenderer, /options\.sourceTask \? "task-main-section-stripe" : ""/);
 
@@ -71,6 +72,8 @@ test("collateral stripe is rendered for task cards with zero or many objects, bu
   const rendererSource = app.slice(contextStart, contextEnd);
   const context = {
     escapeHtml: (value) => String(value ?? ""),
+    getVisibleRegistryColumns: (columns) => columns,
+    renderRegistryColumnSettings: () => "",
     isTaskCollateralExcluded: () => false,
     canMarkTaskCollateralExcluded: () => false,
     buildTaskCollateralGroups: () => [],
@@ -94,7 +97,7 @@ test("collateral stripe is rendered for task cards with zero or many objects, bu
     { selectable: false }
   );
 
-  assert.match(emptyTaskPanel, /task-collateral-panel task-main-section-stripe/);
+  assert.match(emptyTaskPanel, /task-collateral-panel[^\"]*task-main-section-stripe/);
   assert.match(populatedTaskPanel, /task-collateral-info task-main-section-stripe/);
   assert.doesNotMatch(applicationPanel, /task-main-section-stripe/);
 });

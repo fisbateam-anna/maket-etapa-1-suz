@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { initialData } from "../src/data.js";
+import { initialData, seedTaskNumberAliases } from "../src/data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 const start = appSource.indexOf("function getTaskApplicationDealRows(");
@@ -17,8 +17,8 @@ const context = {
 };
 vm.runInNewContext(`${appSource.slice(start, end)}\nglobalThis.getRows = getTaskApplicationDealRows;`, context);
 
-test("each task from app-16112026-001 displays only pledge contracts linked to its collateral", () => {
-  const application = initialData.applications.find((item) => item.id === "app-16112026-001");
+test("each task from the 150-collateral application displays pledge contracts linked to its collateral", () => {
+  const application = initialData.applications.find((item) => item.id === "app-1126-013");
   assert.ok(application, "showcase application must exist");
   const collateralById = new Map(initialData.collaterals.map((item) => [item.id, item]));
   const tasks = initialData.tasks.filter((task) => task.applicationId === application.id);
@@ -50,7 +50,7 @@ test("each task from app-16112026-001 displays only pledge contracts linked to i
 });
 
 test("the 150-property inspection task shares one pledge contract across its objects", () => {
-  const task = initialData.tasks.find((item) => item.id === "tsk-16112026-001");
+  const task = initialData.tasks.find((item) => item.id === seedTaskNumberAliases["tsk-16112026-001"]);
   const contracts = new Set(task.collateralIds.flatMap((id) => {
     const collateral = initialData.collaterals.find((item) => item.id === id);
     return (collateral?.encumbrances || []).map((record) => `${record.number}|${record.date}`);

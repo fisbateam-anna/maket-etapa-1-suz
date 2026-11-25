@@ -36,7 +36,7 @@ test("all seeded applications have demo bank, financial group, and pledge-contra
     }
   }
 
-  const showcase = data.applications.find((application) => application.id === "app-27102026-001");
+  const showcase = data.applications.find((application) => application.id === "app-1026-002");
   assert.equal(showcase.deals[0].pledgeContractLinks.length, 9);
   assert.equal(new Set(showcase.deals[0].pledgeContractLinks.map((link) => link.number)).size, 9);
 });

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { initialData } from "../src/data.js";
+import { initialData, seedTaskNumberAliases } from "../src/data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
-const applicationId = "app-18112026-001";
+const applicationId = "app-1126-014";
 
 function extractBetween(startMarker, endMarker) {
   const start = appSource.indexOf(startMarker);
@@ -33,9 +33,9 @@ test("returned-work demo has three linked tasks and two active initiator returns
   const tasks = initialData.tasks.filter((task) => task.applicationId === applicationId);
   assert.equal(tasks.length, 3);
   assert.deepEqual(tasks.map((task) => task.id).sort(), [
-    "tsk-18112026-001",
-    "tsk-18112026-002",
-    "tsk-18112026-003"
+    seedTaskNumberAliases["tsk-18112026-001"],
+    seedTaskNumberAliases["tsk-18112026-002"],
+    seedTaskNumberAliases["tsk-18112026-003"]
   ]);
   assert.ok(tasks.every((task) => application.taskIds.includes(task.id)));
   assert.ok(tasks.every((task) => task.collateralIds.every((id) => application.collateralIds.includes(id))));
@@ -70,9 +70,9 @@ test("application return panel renders exactly the two active returns from the d
 
   const html = sandbox.renderNotice(application);
   assert.equal((html.match(/data-action="submit-application-return-response"/g) || []).length, 2);
-  assert.match(html, /tsk-18112026-001/);
-  assert.match(html, /tsk-18112026-002/);
-  assert.doesNotMatch(html, /tsk-18112026-003/);
+  assert.match(html, new RegExp(seedTaskNumberAliases["tsk-18112026-001"]));
+  assert.match(html, new RegExp(seedTaskNumberAliases["tsk-18112026-002"]));
+  assert.doesNotMatch(html, new RegExp(seedTaskNumberAliases["tsk-18112026-003"]));
   assert.match(html, /актуальную выписку ЕГРН/);
   assert.match(html, /Уточните VIN автомобиля/);
 });

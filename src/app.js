@@ -1,11 +1,11 @@
-import { navItems, roles, employees, taskTypes, initialData, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=application-multi-return-demo-20261120-r1";
-import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextDailyObjectNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=application-multi-return-resume-20261026-r1";
+import { navItems, roles, employees, taskTypes, initialData, seedTaskNumberAliases, reportCatalog, marketAnalogs, taskSourceChannels, printFormCatalog, migrationBatches, FT_COLLATERAL_SUBTYPE_OPTIONS, resolveCollateralSubtype, normalizeCollateralCreationDates } from "./data.js?v=monthly-application-collateral-numbers-20261124";
+import { LEGACY_OBJECT_NUMBER_ALIASES, migrateSavedObjectNumbers, getNextMonthlyApplicationNumber, getNextMonthlyTaskNumber, getNextMonthlyCollateralNumber, normalizeCollateralSuzNumbers } from "./object-numbering.js?v=monthly-application-collateral-numbers-20261124-r3";
 import { resolveTaskAuthorName } from "./task-author.js?v=application-multi-return-resume-20261026-r1";
 import { hydrateApplicationDemoData } from "./application-demo-data.js?v=application-demo-data-20261120-r3";
 
 const app = document.getElementById("app");
 let registryFilterRenderTimer = null;
-let legacyObjectNumberAliases = { ...LEGACY_OBJECT_NUMBER_ALIASES };
+let legacyObjectNumberAliases = { ...LEGACY_OBJECT_NUMBER_ALIASES, ...seedTaskNumberAliases };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const isTruthyFlag = (value) => value === true || ["true", "да", "on", "1"].includes(String(value ?? "").trim().toLocaleLowerCase("ru-RU"));
@@ -46,8 +46,15 @@ const INSPECTION_VISIT_METHOD_OPTIONS = [
   "Сюрвейер (СК)",
   "Мобильный оценщик (МО)",
   "Сотрудник банка (регионы)",
-  INSPECTION_VISIT_METHOD_WHITE_LIST,
   "Сотрудник залоговой службы"
+];
+const INSPECTION_PROBLEM_MARKER_OPTIONS = [
+  "перепланировка",
+  "обременение",
+  "присутствие третьих лиц",
+  "несоответствие площади/адреса",
+  "ограничение по транспортному средству",
+  "другие признаки"
 ];
 const PLEDGE_CHECK_STATUS_OPTIONS = ["Не проверено", "Пройдена", "Требует контроля", "Не пройдена", "Не применимо"];
 const COLLATERAL_CONTROL_EVENT_TYPES = [
@@ -1406,42 +1413,43 @@ function remapScreenshotFixtureIdsForSavedState(data, savedState) {
 
   const restorePersistedFixtureIds = (records, savedRecords, prefix) => {
     const savedFixtures = new Map(savedRecords
-      .filter((record) => record?.screenshotFixtureKey && record?.id && record?.number)
+      .filter((record) => record?.screenshotFixtureKey && record?.id)
       .map((record) => [record.screenshotFixtureKey, record]));
     for (const record of records) {
-      if (!String(record?.id || "").startsWith(prefix)) continue;
+      if (!record?.screenshotFixtureKey || (prefix && !String(record?.id || "").startsWith(prefix))) continue;
       const savedFixture = savedFixtures.get(record.screenshotFixtureKey);
       if (!savedFixture) continue;
       if (record.id !== savedFixture.id) idMappings.set(record.id, savedFixture.id);
-      if (record.number !== savedFixture.number) idMappings.set(record.number, savedFixture.number);
       record.id = savedFixture.id;
-      record.number = savedFixture.number;
+      if (record.number !== undefined || savedFixture.number !== undefined) {
+        if (record.number && record.number !== savedFixture.number) idMappings.set(record.number, savedFixture.number || savedFixture.id);
+        record.number = savedFixture.number || savedFixture.id;
+      }
     }
   };
 
-  const remapConflictingRecords = (records, savedRecords, prefix, numberPrefix) => {
+  const remapConflictingApplications = (records, savedRecords) => {
     const savedIdentifiers = new Set(savedRecords.filter((record) => !record?.screenshotFixtureKey)
       .flatMap((record) => [record?.id, record?.number]
       .map((value) => String(value || "").trim())
       .filter(Boolean)));
     for (const record of records) {
-      if (!String(record?.id || "").startsWith(prefix) || !record?.screenshotFixtureKey) continue;
+      if (!record?.screenshotFixtureKey) continue;
       const identifiers = [record.id, record.number].map((value) => String(value || "").trim()).filter(Boolean);
       if (!identifiers.some((value) => savedIdentifiers.has(value))) continue;
-      const nextNumber = getNextDailyObjectNumber(numberPrefix, [...records, ...savedRecords], record.createdAt);
+      const nextNumber = getNextMonthlyApplicationNumber([...records, ...savedRecords], record.createdAt);
       identifiers.forEach((value) => idMappings.set(value, nextNumber));
       record.id = nextNumber;
-      record.number = nextNumber;
+      if (record.number !== undefined) record.number = nextNumber;
       savedIdentifiers.add(nextNumber);
     }
   };
 
-  restorePersistedFixtureIds(data.tasks || [], savedTasks, "tsk-09112026-");
-  restorePersistedFixtureIds(data.applications || [], savedApplications, "app-09112026-");
+  restorePersistedFixtureIds(data.tasks || [], savedTasks, "");
+  restorePersistedFixtureIds(data.applications || [], savedApplications, "");
   applyReferenceMappings();
 
-  remapConflictingRecords(data.tasks || [], savedTasks, "tsk-09112026-", "tsk");
-  remapConflictingRecords(data.applications || [], savedApplications, "app-09112026-", "app");
+  remapConflictingApplications(data.applications || [], savedApplications);
   applyReferenceMappings();
   return data;
 }
@@ -1449,7 +1457,7 @@ function remapScreenshotFixtureIdsForSavedState(data, savedState) {
 function buildRuntimeData() {
   const data = clone(initialData);
   const savedSnapshot = readSavedStateSnapshot();
-  const migratedSnapshot = migrateSavedObjectNumbers(savedSnapshot, data);
+  const migratedSnapshot = migrateSavedObjectNumbers(savedSnapshot, data, seedTaskNumberAliases);
   const savedState = migratedSnapshot.state;
   remapScreenshotFixtureIdsForSavedState(data, savedState);
   deletedApplicationIds = [...new Set((Array.isArray(savedState.deletedApplicationIds) ? savedState.deletedApplicationIds : [])
@@ -1552,8 +1560,9 @@ function ensureTaskSetterComments(data) {
 }
 
 function ensureDocumentFollowupExamples(data) {
-  const application = (data.applications || []).find((item) => item.id === "app-19062026-001");
-  const task = (data.tasks || []).find((item) => item.id === "tsk-19062026-001");
+  const application = (data.applications || []).find((item) => item.id === "app-0626-004");
+  const taskId = resolveTaskNumber("tsk-19062026-001");
+  const task = (data.tasks || []).find((item) => item.id === taskId);
   if (!application || !task) return data;
   const followupDocs = [
     {
@@ -1572,7 +1581,7 @@ function ensureDocumentFollowupExamples(data) {
       author: "Анна Кузнецова",
       source: "Инициатор заявки",
       addedByInitiatorAfterReturn: true,
-      requestTaskId: "tsk-19062026-001",
+      requestTaskId: taskId,
       requestReason: "Подтверждение отсутствия регистрационного ограничения по ТС",
       requestComment: "Документ приложен в карточке заявки после возврата задачи на инициатора."
     },
@@ -1592,7 +1601,7 @@ function ensureDocumentFollowupExamples(data) {
       author: "Анна Кузнецова",
       source: "Инициатор заявки",
       addedByInitiatorAfterReturn: true,
-      requestTaskId: "tsk-19062026-001",
+      requestTaskId: taskId,
       requestReason: "Сверка площади и планировки по квартире",
       requestComment: "Документ приложен в карточке заявки после возврата задачи на инициатора."
     }
@@ -1614,7 +1623,7 @@ function ensureDocumentFollowupExamples(data) {
   }
   task.history = task.history || [];
   const followupHistory = [
-    { date: "2026-06-20 14:42", user: "Анна Кузнецова", action: "Документы приложены инициатором", status: "В работе", comment: "В карточку заявки добавлены документы по запросу исполнителя задачи tsk-19062026-001." },
+    { date: "2026-06-20 14:42", user: "Анна Кузнецова", action: "Документы приложены инициатором", status: "В работе", comment: `В карточку заявки добавлены документы по запросу исполнителя задачи ${taskId}.` },
     { date: "2026-06-19 15:10", user: "Дмитрий Орлов", action: "Возврат на инициатора", status: "Ожидание", comment: "Запрошены подтверждающие документы по COL-040 и COL-045." }
   ];
   followupHistory.reverse().forEach((event) => {
@@ -1639,8 +1648,11 @@ function ensureTaskRegistryExamples(data) {
     { id: "tsk-10062026-002", assignee: "Елена Морозова", status: "В работе" }
   ];
   assignments.forEach((patch) => {
-    const task = tasks.find((item) => item.id === patch.id);
-    if (task) Object.assign(task, patch);
+    const task = tasks.find((item) => item.id === resolveTaskNumber(patch.id));
+    if (task) {
+      const { id, ...updates } = patch;
+      Object.assign(task, updates);
+    }
   });
   ensureExampleTask(data, "tsk-20082026-001", "tsk-25082026-004", {
     title: "Завершить оценку смешанного пула залогов Столичный Девелопмент",
@@ -1677,12 +1689,20 @@ function ensureTaskRegistryExamples(data) {
 }
 
 function ensureExampleTask(data, id, templateId, overrides = {}) {
+  const requestedId = id;
+  id = resolveTaskNumber(id);
+  templateId = resolveTaskNumber(templateId);
   if ((data.tasks || []).some((task) => task.id === id)) return;
   const template = (data.tasks || []).find((task) => task.id === templateId);
   if (!template) return;
+  const normalizedOverrides = remapTaskIdReferences(overrides);
+  if (!/^[csrm]-\d{4}-\d{4}$/.test(id)) {
+    id = getNextMonthlyTaskNumber(normalizedOverrides.type || template.type, data.tasks, normalizedOverrides.createdAt || new Date());
+    legacyObjectNumberAliases[requestedId] = id;
+  }
   data.tasks.push(normalizeTaskRecord({
     ...clone(template),
-    ...overrides,
+    ...normalizedOverrides,
     id,
     createdFromApplicationAutomatically: overrides.createdFromApplicationAutomatically === true,
     documents: clone(overrides.documents || template.documents || []),
@@ -1690,6 +1710,27 @@ function ensureExampleTask(data, id, templateId, overrides = {}) {
     registrationStatuses: clone(overrides.registrationStatuses || template.registrationStatuses || {}),
     history: clone(overrides.history || template.history || [])
   }));
+}
+
+function resolveTaskNumber(id) {
+  return legacyObjectNumberAliases[id] || id;
+}
+
+function remapTaskIdReferences(value) {
+  if (typeof value === "string") {
+    return Object.entries(legacyObjectNumberAliases)
+      .filter(([oldId, newId]) => oldId.startsWith("tsk-") && oldId !== newId)
+      .sort((left, right) => right[0].length - left[0].length)
+      .reduce((result, [oldId, newId]) => {
+        const escaped = oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return result.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, "giu"), newId);
+      }, value);
+  }
+  if (Array.isArray(value)) return value.map(remapTaskIdReferences);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [remapTaskIdReferences(key), remapTaskIdReferences(item)]));
+  }
+  return value;
 }
 
 function sanitizeMvp1Data(data) {
@@ -1700,9 +1741,10 @@ function sanitizeMvp1Data(data) {
   data.integrations = (data.integrations || [])
     .filter((item) => MVP1_INTEGRATION_IDS.has(item.id))
     .map(sanitizeMvp1Integration);
+  const excludedTaskIds = ["tsk-01062026-001", "tsk-11062026-003"].map(resolveTaskNumber);
   data.audit = (data.audit || []).filter((item) => {
     const text = `${item.object || ""} ${item.action || ""} ${item.source || ""}`;
-    return !/мониторинг|tsk-01062026-001|tsk-11062026-003/i.test(text);
+    return !/мониторинг/i.test(text) && !excludedTaskIds.some((id) => id && text.includes(id));
   });
   return data;
 }
@@ -1781,7 +1823,7 @@ function buildDataInitialTaskForApplication(data, application) {
   const limit = parseNumericInput(application.limit ?? contract?.limit ?? 0);
   const currency = application.currency || contract?.currency || "RUB";
   const task = normalizeTaskRecord({
-    id: getNextDataTaskId(data, application),
+    id: getNextDataTaskId(data, application, taskType),
     type: taskType,
     title: `${taskType} по заявке ${application.number || application.id}`,
     collateralId: primaryCollateralId,
@@ -1851,8 +1893,8 @@ function getDataApplicationPrimaryContract(data, application, primaryCollateral)
   return findDataContract(data, contractNumber);
 }
 
-function getNextDataTaskId(data, application) {
-  return getNextDailyObjectNumber("tsk", data.tasks || [], application?.createdAt || new Date());
+function getNextDataTaskId(data, application, taskType) {
+  return getNextMonthlyTaskNumber(taskType, data.tasks || [], application?.createdAt || new Date());
 }
 
 function getDataTaskCollateralIds(task) {
@@ -1938,7 +1980,7 @@ function ensureDataApplicationForTask(data, task, contract, collaterals) {
 }
 
 function getNextDataApplicationIdentity(data, createdAt = new Date()) {
-  const number = getNextDailyObjectNumber("app", data.applications || [], createdAt);
+  const number = getNextMonthlyApplicationNumber(data.applications || [], createdAt);
   return { id: number, number };
 }
 
@@ -2245,7 +2287,7 @@ const state = {
 function persistTaskState() {
   try {
     localStorage.setItem(TASK_STATE_STORAGE_KEY, JSON.stringify({
-      numberingVersion: 1,
+      numberingVersion: 4,
       legacyObjectAliases: legacyObjectNumberAliases,
       savedAt: new Date().toISOString(),
       tasks: state.data.tasks,
@@ -2253,8 +2295,10 @@ function persistTaskState() {
       collaterals: state.data.collaterals || [],
       deletedApplicationIds
     }));
+    return true;
   } catch (error) {
     console.warn("Не удалось сохранить состояние задач", error);
+    return false;
   }
 }
 
@@ -3504,6 +3548,10 @@ function isInspectionTaskType(type) {
   return normalized.includes("осмотр") && !isMobileInspectionTaskType(type);
 }
 
+function isPhysicalInspectionVisitTask(task) {
+  return isInspectionTaskType(task?.type) && !isDocumentaryInspectionTask(task);
+}
+
 function isInspectionCardTaskType(type) {
   return isInspectionTaskType(type) || isMonitoringTaskType(type);
 }
@@ -3538,6 +3586,10 @@ function isMonitoringTaskType(type) {
 
 function isRevaluationTaskType(type) {
   return normalizeTaskType(type).includes("переоценк");
+}
+
+function isValuationTaskType(type) {
+  return normalizeTaskType(type).includes("оцен");
 }
 
 function isListRevaluationTaskType(type) {
@@ -4754,7 +4806,8 @@ function getTaskRegistryInspectionPurpose(task, application) {
 }
 
 function getTaskRegistryInspectionMethod(task) {
-  return task?.inspectionVisitMethod || task?.inspectionMethod || (isDocumentaryInspectionTask(task) ? "Документарная проверка" : "Сотрудник банка (регионы)");
+  if (isDocumentaryInspectionTask(task)) return "Документарная проверка";
+  return getInspectionVisitMethod(task) || "[уточнить способ]";
 }
 
 function getTaskRegistrationStatus(task, collaterals) {
@@ -4941,13 +4994,15 @@ function renderRegistryColumnSettings(columns, scope, partition = "") {
   const menuId = `registry-columns-${scope}${partition ? `-${partition}` : ""}`;
   return `
     <div class="registry-column-settings" data-registry-column-settings>
-      <button type="button" class="btn btn-secondary registry-column-settings-toggle" data-action="toggle-registry-column-settings" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" aria-expanded="${open}" aria-controls="${escapeHtml(menuId)}">Столбцы</button>
+      <button type="button" class="btn btn-secondary registry-column-settings-toggle" data-action="toggle-registry-column-settings" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" aria-label="Настроить отображение столбцов" title="Настроить отображение столбцов" aria-expanded="${open}" aria-controls="${escapeHtml(menuId)}"><span class="registry-column-settings-chevron" aria-hidden="true"></span></button>
       <div class="registry-column-settings-menu" id="${escapeHtml(menuId)}"${open ? "" : " hidden"}>
         <strong>Отображаемые столбцы</strong>
-        ${ordered.map((column) => {
-          const checked = !hidden.has(column.key);
-          return `<label><input type="checkbox" data-registry-column-visibility data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" data-column-key="${escapeHtml(column.key)}" ${checked ? "checked" : ""} ${checked && visibleCount === 1 ? "disabled" : ""} /><span>${escapeHtml(column.label)}</span></label>`;
-        }).join("")}
+        <div class="registry-column-settings-options">
+          ${ordered.map((column) => {
+            const checked = !hidden.has(column.key);
+            return `<label><input type="checkbox" data-registry-column-visibility data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}" data-column-key="${escapeHtml(column.key)}" ${checked ? "checked" : ""} ${checked && visibleCount === 1 ? "disabled" : ""} /><span>${escapeHtml(column.label)}</span></label>`;
+          }).join("")}
+        </div>
         <button type="button" class="registry-column-settings-reset" data-action="reset-registry-column-settings" data-scope="${escapeHtml(scope)}" data-partition="${escapeHtml(partition)}">Сбросить настройки</button>
       </div>
     </div>
@@ -4971,6 +5026,12 @@ function getRegistryColumnsForSettings(scope, partition = "") {
   if (scope === "tasks") return getTaskRegistryColumns(partition, state.taskRegistryTab || "mine");
   if (scope === "applications") return getApplicationRegistryColumns();
   if (scope === "collaterals") return getCollateralRegistryColumns();
+  if (scope === "taskCollateralObjects") {
+    return getTaskCollateralColumns({
+      showExclusionColumn: partition.includes("excluded"),
+      allowApplicationRemove: partition.includes("remove")
+    });
+  }
   return [];
 }
 
@@ -6796,6 +6857,32 @@ function canUseRouteAction(task) {
   return task?.status === "В работе" && !isTaskClosed(task);
 }
 
+function hasTaskEnteredWork(task) {
+  if (!["Новая", "Назначена"].includes(normalizeTaskStatus(task?.status))) return true;
+  const startedActions = new Set(["Принятие в работу", "Автоматическое возобновление", "Ручное возобновление"]);
+  return (task?.history || []).some((event) => {
+    const normalized = normalizeTaskHistoryEvent(event);
+    const statusValues = [normalized.status, normalized.oldValue, normalized.newValue];
+    return statusValues.some((value) => normalizeTaskStatus(String(value ?? "").trim()) === "В работе")
+      || startedActions.has(normalized.action);
+  });
+}
+
+function getTaskSplitEligibleCollaterals(task) {
+  return getTaskCollaterals(task).filter((item) => !isTaskCollateralExcluded(task, item.id));
+}
+
+function hasTaskApplicationRecord(task) {
+  const application = getTaskApplication(task);
+  const applicationNumber = application?.number || getTaskApplicationNumber(task);
+  return Boolean(application && applicationNumber && getApplicationByNumber(applicationNumber) === application);
+}
+
+function canSplitTaskByCollateral(task) {
+  return Boolean(task && !isTaskClosed(task) && !hasTaskEnteredWork(task)
+    && hasTaskApplicationRecord(task) && getTaskSplitEligibleCollaterals(task).length > 1);
+}
+
 function renderTaskHeaderActions(task, role) {
   const closed = isTaskClosed(task);
   const disabled = closed ? "disabled" : "";
@@ -6824,7 +6911,10 @@ function renderTaskHeaderActions(task, role) {
 }
 
 function getTaskHeaderTitle(task) {
-  return [task.id, getTaskDisplayType(task)]
+  const displayType = isPhysicalInspectionVisitTask(task)
+    ? `${getTaskDisplayType(task)}: ${getInspectionVisitMethodHeadingValue(task) || "[уточнить способ]"}`
+    : getTaskDisplayType(task);
+  return [task.id, displayType]
     .filter((value) => value && value !== "-")
     .join(" - ");
 }
@@ -6958,21 +7048,30 @@ function renderTaskMainAdditionalBlocks(task, collateral, collaterals) {
 
 function renderTaskContactsWithoutActiveCollateral(task) {
   const application = getTaskApplication(task);
-  const contacts = getApplicationContactRows(application, getApplicationCollaterals(application))
-    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, null));
+  const contacts = [
+    ...getInspectionApplicableApplicationContacts(task, null).map((contact) => ({
+      ...contact,
+      executorComment: getApplicationContactExecutorCommentSummary(contact, application, [task])
+    })),
+    ...getAdditionalInspectionContactRows(task, null)
+  ];
+  const collaterals = getTaskCollaterals(task);
   return renderContactPersonsBlock({
     contacts,
     panelClass: "task-form-panel inspection-contacts-panel is-readonly",
     tableClass: "inspection-contacts-table-wrap",
+    showCollateralBinding: true,
+    bindingLabel: "Применяется к",
     phoneLabel: "Телефон контактного лица",
-    commentLabel: "Комментарий",
     showCallDate: true,
     renderRow: (contact) => `
       <tr>
         <td>${escapeHtml(contact.role || "-")}</td>
         <td>${escapeHtml(contact.name || "-")}</td>
         <td>${escapeHtml(contact.phone || "-")}</td>
-        <td>${escapeHtml(contact.comment || "-")}</td>
+        <td>${escapeHtml(getTaskContactApplicabilityLabel(contact, task, collaterals))}</td>
+        <td>${escapeHtml(contact.initiatorComment || contact.comment || "-")}</td>
+        <td>${escapeHtml(contact.executorComment || "-")}</td>
         <td>${escapeHtml(formatContactCallDateValue(contact.callDate || "") || "-")}</td>
         <td></td>
       </tr>
@@ -7655,16 +7754,17 @@ function renderTaskClientContractInfo(task, activeCollateral, activeContracts = 
       || "-"
     : "-";
   const availableCollaterals = taskCollaterals.filter((collateral) => !isTaskCollateralExcluded(task, collateral.id));
+  const activeCollateralListId = `active-collateral-options-${task.id}`;
   const activeCollateralSelector = availableCollaterals.length
-    ? `<select class="selected-object-collateral-select" data-task-active-collateral data-task="${escapeHtml(task.id)}" aria-label="Активный залог">
-        ${availableCollaterals.map((collateral) => {
-          const identifier = getCollateralObjectIdentifier(collateral) || collateral.id;
-          const label = `${identifier} · ${collateral.type || "Вид залога не указан"}`;
-          return `<option value="${escapeHtml(collateral.id)}" ${collateral.id === activeCollateral?.id ? "selected" : ""}>${escapeHtml(label)}</option>`;
-        }).join("")}
-      </select>`
+    ? `<input class="selected-object-collateral-select" type="text" list="${escapeHtml(activeCollateralListId)}"
+        data-task-active-collateral-search data-task="${escapeHtml(task.id)}"
+        value="${escapeHtml(activeCollateral ? getCollateralChoiceLabel(activeCollateral) : "")}"
+        autocomplete="off" aria-label="Активный залог">
+      <datalist id="${escapeHtml(activeCollateralListId)}">
+        ${availableCollaterals.map((collateral) => `<option value="${escapeHtml(getCollateralChoiceLabel(collateral))}"></option>`).join("")}
+      </datalist>`
     : taskCollaterals.length
-    ? `<select class="selected-object-collateral-select" aria-label="Активный залог" disabled><option value="" selected>Нет объектов, не исключенных из задачи</option></select>`
+    ? `<input class="selected-object-collateral-select" type="text" aria-label="Активный залог" value="Нет объектов, не исключенных из задачи" disabled>`
     : "-";
   return `
     <section class="panel task-client-contract-panel">
@@ -7691,11 +7791,80 @@ function renderTaskClientContractInfo(task, activeCollateral, activeContracts = 
   `;
 }
 
+function getCollateralChoiceLabel(collateral) {
+  return uniqueItems([
+    getCollateralObjectIdentifier(collateral) || collateral?.id,
+    getCollateralName(collateral),
+    collateral?.type
+  ].filter(Boolean)).join(" · ");
+}
+
 function renderTaskCollateralContext(task, collaterals, activeCollateral) {
-  if (!collaterals.length) {
-    return `<section class="panel task-collateral-panel task-main-section-stripe"><h2 class="shared-component-title">Информация по объектам залога</h2><p class="hint shared-component-hint">Объект залога не привязан к задаче.</p></section>`;
-  }
-  return renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, { sourceTask: task });
+  return renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, {
+    sourceTask: task,
+    headerActions: renderTaskCollateralActions(task, collaterals, activeCollateral),
+    emptyRowText: "Объекты залога не выбраны. Выберите существующий объект залога."
+  });
+}
+
+function renderTaskCollateralActions(task, collaterals = [], activeCollateral = null) {
+  const selectedCollateralId = activeCollateral && !isTaskCollateralExcluded(task, activeCollateral.id)
+    ? activeCollateral.id
+    : "";
+  return `
+    <div class="inline-actions application-collateral-actions task-collateral-actions">
+      <button class="btn btn-secondary" data-action="open-collateral-registry-picker" data-context="taskCard" data-task="${escapeHtml(task.id)}">Выбрать объект залога</button>
+      <button class="btn btn-secondary" data-action="edit-task-collateral" data-task="${escapeHtml(task.id)}" ${selectedCollateralId ? `data-collateral="${escapeHtml(selectedCollateralId)}"` : "disabled"}>Редактировать объект залога</button>
+    </div>
+  `;
+}
+
+const TASK_COLLATERAL_COLUMNS = [
+  { key: "number", label: "Номер залога", width: 85 },
+  { key: "identifier", label: "Идентификатор залога", width: 130 },
+  { key: "subtype", label: "Подвид залога", width: 145 },
+  { key: "name", label: "Наименование залога", width: 175 },
+  { key: "address", label: "Адрес объекта", width: 155 },
+  { key: "pledgeContract", label: "Договор залога", width: 135 },
+  { key: "lastInspection", label: "Дата последнего осмотра", width: 105 },
+  { key: "lastEvaluation", label: "Дата последней оценки", width: 105 },
+  { key: "liquidity", label: "Ликвидность", width: 85 },
+  { key: "pledgeValue", label: "Залоговая стоимость", width: 118 },
+  { key: "marketValue", label: "Рыночная стоимость", width: 118 },
+  { key: "fairValue", label: "Справедливая стоимость", width: 118 }
+];
+const TASK_COLLATERAL_OPTIONAL_COLUMNS = {
+  excluded: { key: "excluded", label: "Исключен", width: 68 },
+  remove: { key: "remove", label: "Действия", width: 48 }
+};
+
+function getTaskCollateralColumns(options = {}) {
+  return [
+    ...TASK_COLLATERAL_COLUMNS,
+    ...(options.showExclusionColumn ? [TASK_COLLATERAL_OPTIONAL_COLUMNS.excluded] : []),
+    ...(options.allowApplicationRemove ? [TASK_COLLATERAL_OPTIONAL_COLUMNS.remove] : [])
+  ];
+}
+
+function getTaskCollateralColumnSettingsPartition(options = {}) {
+  if (options.showExclusionColumn && options.allowApplicationRemove) return "excluded-remove";
+  if (options.showExclusionColumn) return "excluded";
+  if (options.allowApplicationRemove) return "remove";
+  return "base";
+}
+
+function getTaskCollateralVisibleColumns(options = {}) {
+  const partition = getTaskCollateralColumnSettingsPartition(options);
+  return getVisibleRegistryColumns(getTaskCollateralColumns(options), "taskCollateralObjects", partition);
+}
+
+function renderTaskCollateralColumnSettings(options = {}) {
+  const partition = getTaskCollateralColumnSettingsPartition(options);
+  return `<div class="task-collateral-column-settings">${renderRegistryColumnSettings(getTaskCollateralColumns(options), "taskCollateralObjects", partition)}</div>`;
+}
+
+function renderTaskCollateralVisibleCells(columns, cells) {
+  return columns.map((column) => cells[column.key]).join("");
 }
 
 function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, options = {}) {
@@ -7704,9 +7873,12 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
   const availableCollaterals = collaterals.filter((item) => !isTaskCollateralExcluded(task, item.id));
   const hasMultipleCollaterals = collaterals.length > 1;
   const canMarkExcluded = hasMultipleCollaterals && canMarkTaskCollateralExcluded(task, selectable);
-  const showExclusionColumn = canMarkTaskCollateralExcluded(task, selectable);
+  const showApplicationExclusionColumn = Boolean(options.sourceApplication && !isDraftApplication(options.sourceApplication));
+  const showExclusionColumn = canMarkTaskCollateralExcluded(task, selectable) || showApplicationExclusionColumn;
   const allowApplicationRemove = options.allowApplicationRemove === true;
-  const columnCount = (showExclusionColumn ? 13 : 12) + (allowApplicationRemove ? 1 : 0);
+  const tableColumns = getTaskCollateralVisibleColumns({ showExclusionColumn, allowApplicationRemove });
+  const columnCount = tableColumns.length;
+  const tableMinWidth = tableColumns.reduce((total, column) => total + column.width, 0);
   const scrollClass = collaterals.length > 10 ? "is-scrollable" : "";
   const isSingleCollateral = collaterals.length === 1;
   const note = options.note || (!hasCollaterals
@@ -7718,7 +7890,7 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
     : isSingleCollateral
     ? "1 объект"
     : `Активен: ${activeCollateral?.id || availableCollaterals[0]?.id || "-"}`);
-  const rowOptions = { ...options, selectable, canMarkExcluded, showExclusionColumn, columnCount };
+  const rowOptions = { ...options, selectable, canMarkExcluded, showExclusionColumn, columnCount, visibleColumns: tableColumns };
   const collateralGroups = hasCollaterals ? buildTaskCollateralGroups(collaterals) : [];
   const groupStateId = options.sourceTask?.id || task?.id || "";
   const hasExpandedObjects = collateralGroups.some((pledgorGroup) =>
@@ -7736,11 +7908,12 @@ function renderTaskCollateralObjectsInfo(task, collaterals, activeCollateral, op
         <div class="task-collateral-title-side">
           <span class="panel-note${selectable && note.startsWith("Активен:") ? " task-active-collateral-badge" : ""}">${escapeHtml(note)}</span>
           ${headerActions}
+          ${renderTaskCollateralColumnSettings({ showExclusionColumn, allowApplicationRemove })}
         </div>
       </div>
       <div class="table-wrap compact-table task-collateral-table-wrap ${scrollClass}">
-        <table>
-          ${hasExpandedObjects ? `<thead><tr><th>Номер залога</th><th>Идентификатор залога</th><th>Подвид залога</th><th>Наименование залога</th><th>Адрес объекта</th><th>Договор залога</th><th>Дата последнего осмотра</th><th>Дата последней оценки</th><th>Ликвидность</th><th>Залоговая стоимость</th><th>Рыночная стоимость</th><th>Справедливая стоимость</th>${showExclusionColumn ? "<th>Исключен</th>" : ""}${allowApplicationRemove ? '<th><span class="visually-hidden">Действия</span></th>' : ""}</tr></thead>` : ""}
+        <table style="min-width:${tableMinWidth}px">
+          ${hasExpandedObjects ? `<thead><tr>${tableColumns.map((column) => `<th data-task-collateral-column="${column.key}" style="width:${column.width}px">${column.key === "remove" ? '<span class="visually-hidden">Действия</span>' : escapeHtml(column.label)}</th>`).join("")}</tr></thead>` : ""}
           <tbody>${groupedRows}</tbody>
         </table>
       </div>
@@ -7907,7 +8080,9 @@ function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
   const showExclusionColumn = options.showExclusionColumn === true;
   const active = (selectable && item.id === activeCollateral?.id)
     || (options.rowSelectable === true && item.id === options.selectedCollateralId);
-  const excluded = canMarkExcluded && isTaskCollateralExcluded(task, item.id);
+  const excluded = options.sourceApplication && !isDraftApplication(options.sourceApplication)
+    ? isCollateralExcludedInApplicationTasks(options.sourceApplication, item.id)
+    : canMarkExcluded && isTaskCollateralExcluded(task, item.id);
   const latest = getLatestCollateralEvaluation(item);
   const marketValue = latest.market || item.marketValue || 0;
   const pledgeValue = latest.pledge || item.pledgeValue || 0;
@@ -7925,36 +8100,53 @@ function renderTaskCollateralRow(task, item, activeCollateral, options = {}) {
     : options.rowSelectable === true
       ? ` data-action="select-application-collateral" data-collateral="${escapeHtml(item.id)}"`
     : "";
+  const visibleColumns = options.visibleColumns || getTaskCollateralVisibleColumns({
+    showExclusionColumn,
+    allowApplicationRemove: options.allowApplicationRemove === true
+  });
+  const availableColumns = getTaskCollateralColumns({
+    showExclusionColumn,
+    allowApplicationRemove: options.allowApplicationRemove === true
+  });
+  const cell = (key, contents, className = "") => {
+    const column = availableColumns.find((candidate) => candidate.key === key);
+    if (!column) return "";
+    return `<td data-task-collateral-column="${key}"${className ? ` class="${className}"` : ""} style="width:${column.width}px">${contents}</td>`;
+  };
+  const cells = {
+    number: cell("number", `<button class="link task-collateral-cell task-collateral-number" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(pledgeNumber)}</button>`),
+    identifier: cell("identifier", `<span class="task-collateral-cell task-collateral-identifier">${escapeHtml(getCollateralObjectIdentifier(item))}</span>`),
+    subtype: cell("subtype", `<span class="task-collateral-cell">${escapeHtml(getCollateralSubtype(item))}</span>`),
+    name: cell("name", `<strong class="task-collateral-cell is-object">${escapeHtml(getCollateralName(item))}</strong>`),
+    address: cell("address", `<span class="task-collateral-cell is-address">${escapeHtml(getCollateralRegistryAddress(item) || "-")}</span>`),
+    pledgeContract: cell("pledgeContract", `<span class="task-collateral-cell">${escapeHtml(getTaskCollateralPledgeContractText(item))}</span>`),
+    lastInspection: cell("lastInspection", escapeHtml(formatRegistryDateTime(lastInspectionDate))),
+    lastEvaluation: cell("lastEvaluation", escapeHtml(formatRegistryDateTime(lastEvaluationDate))),
+    liquidity: cell("liquidity", `<span class="task-collateral-cell">${escapeHtml(getCollateralLiquidity(item))}</span>`),
+    pledgeValue: cell("pledgeValue", escapeHtml(formatFullMoney(pledgeValue)), "task-collateral-money"),
+    marketValue: cell("marketValue", escapeHtml(formatFullMoney(marketValue)), "task-collateral-money"),
+    fairValue: cell("fairValue", escapeHtml(formatFullMoney(fairValue)), "task-collateral-money"),
+    excluded: cell("excluded", `
+      <label class="task-collateral-excluded-control${canMarkExcluded ? "" : " is-disabled"}" title="${options.sourceApplication ? "Исключение отображается по связанным задачам; изменить его можно в карточке задачи" : canMarkExcluded ? "Исключить объект из рассмотрения по задаче" : "Единственный объект нельзя исключить из задачи"}">
+        <input type="checkbox" data-task-collateral-excluded data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}" ${excluded ? "checked" : ""} ${canMarkExcluded ? "" : "disabled"}>
+      </label>
+    `, "task-collateral-excluded-cell"),
+    remove: cell("remove", `
+      <button type="button" class="icon-btn task-collateral-remove-button" data-action="remove-application-collateral"
+        data-collateral="${escapeHtml(item.id)}" title="Удалить залог из заявки"
+        aria-label="Удалить залог ${escapeHtml(pledgeNumber)} из заявки">×</button>
+    `, "task-collateral-remove-cell")
+  };
   return `
     <tr class="${[active ? "is-active" : "", options.rowSelectable === true && active ? "is-selected" : "", excluded ? "is-excluded-row" : "", hasNegativeCheck ? "has-negative-check-result" : ""].filter(Boolean).join(" ")}"${rowAction}>
-      <td><button class="link task-collateral-cell task-collateral-number" data-route="${escapeHtml(getTaskCollateralCardRoute(task, item.id, options))}">${escapeHtml(pledgeNumber)}</button></td>
-      <td><span class="task-collateral-cell task-collateral-identifier">${escapeHtml(getCollateralObjectIdentifier(item))}</span></td>
-      <td><span class="task-collateral-cell">${escapeHtml(getCollateralSubtype(item))}</span></td>
-      <td><strong class="task-collateral-cell is-object">${escapeHtml(getCollateralName(item))}</strong></td>
-      <td><span class="task-collateral-cell is-address">${escapeHtml(getCollateralRegistryAddress(item) || "-")}</span></td>
-      <td><span class="task-collateral-cell">${escapeHtml(getTaskCollateralPledgeContractText(item))}</span></td>
-      <td>${escapeHtml(formatRegistryDateTime(lastInspectionDate))}</td>
-      <td>${escapeHtml(formatRegistryDateTime(lastEvaluationDate))}</td>
-      <td><span class="task-collateral-cell">${escapeHtml(getCollateralLiquidity(item))}</span></td>
-      <td class="task-collateral-money">${escapeHtml(formatFullMoney(pledgeValue))}</td>
-      <td class="task-collateral-money">${escapeHtml(formatFullMoney(marketValue))}</td>
-      <td class="task-collateral-money">${escapeHtml(formatFullMoney(fairValue))}</td>
-      ${showExclusionColumn ? `
-        <td class="task-collateral-excluded-cell">
-          <label class="task-collateral-excluded-control${canMarkExcluded ? "" : " is-disabled"}" title="${canMarkExcluded ? "Исключить объект из рассмотрения по задаче" : "Единственный объект нельзя исключить из задачи"}">
-            <input type="checkbox" data-task-collateral-excluded data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(item.id)}" ${excluded ? "checked" : ""} ${canMarkExcluded ? "" : "disabled"}>
-          </label>
-        </td>
-      ` : ""}
-      ${options.allowApplicationRemove ? `
-        <td class="task-collateral-remove-cell">
-          <button type="button" class="icon-btn task-collateral-remove-button" data-action="remove-application-collateral"
-            data-collateral="${escapeHtml(item.id)}" title="Удалить залог из заявки"
-            aria-label="Удалить залог ${escapeHtml(pledgeNumber)} из заявки">×</button>
-        </td>
-      ` : ""}
+      ${renderTaskCollateralVisibleCells(visibleColumns, cells)}
     </tr>
   `;
+}
+
+function isCollateralExcludedInApplicationTasks(application, collateralId) {
+  return getApplicationTasks(application)
+    .some((task) => getTaskCollateralIds(task).includes(collateralId) && isTaskCollateralExcluded(task, collateralId));
 }
 
 function canMarkTaskCollateralExcluded(task, selectable = true) {
@@ -8083,21 +8275,6 @@ function renderInspectionTaskGeneralBlock(task, collateral) {
   `;
 }
 
-function renderInspectionInfoPanel(task, collateral) {
-  const reportFields = getInspectionReportFields(task, collateral);
-  const documentary = isDocumentaryInspectionTask(task);
-  return `
-    <section class="panel task-form-panel inspection-object-info-panel">
-      <div class="panel-title">
-        <div><h2>Информационный блок осмотра</h2></div>
-        ${badge(getInspectionFormat(task), "info")}
-      </div>
-      ${renderTaskFormGrid(reportFields, "task-form-grid compact")}
-      ${documentary ? "" : renderInspectionVisitDispatchActions(task, collateral)}
-    </section>
-  `;
-}
-
 function renderInspectionTaskSelectedObjectBlock(task, collateral) {
   const result = getInspectionResult(task, collateral);
   const documentary = isDocumentaryInspectionTask(task);
@@ -8115,7 +8292,7 @@ function renderInspectionTaskSelectedObjectBlock(task, collateral) {
     `;
   return `
     <section class="task-specific-form inspection-task-form task-selected-object-form">
-      ${renderInspectionInfoPanel(task, collateral)}
+      ${isPhysicalInspectionVisitTask(task) ? renderInspectionActualParametersPanel(task, getTaskCollaterals(task), { scope: "collateral", collateral }) : ""}
       ${specificBlocks}
     </section>
   `;
@@ -8229,63 +8406,101 @@ function updateLeaseAnalysisField(fieldEl) {
   persistTaskState();
 }
 
+function getInspectionVisitMethod(task, collateral) {
+  const saved = task?.inspectionVisitMethod || task?.visitMethod || Object.values(task?.inspectionVisitMethods || {}).find((value) => INSPECTION_VISIT_METHOD_OPTIONS.includes(value));
+  if (isDocumentaryInspectionTask(task)) return INSPECTION_VISIT_METHOD_WHITE_LIST;
+  if (INSPECTION_VISIT_METHOD_OPTIONS.includes(saved)) return saved;
+  return "";
+}
+
+function getInspectionVisitMethodHeadingValue(task) {
+  return getInspectionVisitMethod(task).replace(/\s+\((?:МО|СК)\)$/, "");
+}
+
+function getInspectionPlan(task, collateral = null, useIndividual = false) {
+  const saved = task?.inspectionPlan || {};
+  const legacyDate = String(task?.inspectionVisitDate || task?.dueDate || "").slice(0, 10);
+  const legacyTime = String(task?.inspectionVisitTime || "10:00").slice(0, 5);
+  const legacyDateTime = legacyDate ? `${legacyDate}T${legacyTime}` : "";
+  const collaterals = getTaskCollaterals(task);
+  const addresses = [...new Set(collaterals.map((item) => String(item?.address || "").trim()).filter(Boolean))];
+  const defaultAddress = task?.inspectionVisitAddress || (addresses.length === 1 ? addresses[0] : "");
+  const savedIndividual = collateral ? task?.inspectionPlanByCollateral?.[collateral.id] || {} : {};
+  const individual = useIndividual && savedIndividual.enabled ? savedIndividual : {};
+  return {
+    dateTime: individual.dateTime ?? saved.dateTime ?? legacyDateTime,
+    address: individual.address ?? saved.address ?? defaultAddress ?? (useIndividual ? collateral?.address || "" : ""),
+    method: getInspectionVisitMethod(task),
+        executor: individual.executor ?? saved.executor ?? task?.inspectionVisitExecutor ?? ""
+  };
+}
+
 function getInspectionReportFields(task, collateral) {
-  const contract = getTaskActiveContract(task, collateral);
-  const documentary = isDocumentaryInspectionTask(task);
-  if (documentary) {
-    return [
-      { label: "Дата проверки документов", value: task.documentCheckDate || task.dueDate || "2026-06-17", type: "date" },
-      { label: "Адрес объекта", value: collateral?.address || "Адрес объекта залога", wide: true },
-      { label: "Наименование имущества", value: collateral?.description || "Объект залога", wide: true },
-      { label: "Залогодатель / собственник имущества", value: collateral?.clientName || contract?.clientName || "Залогодатель" },
-      { label: "Профильный идентификатор объекта", value: getCollateralObjectIdentifier(collateral) }
-    ];
-  }
+  const plan = getInspectionPlan(task, collateral, true);
   return [
-    { label: "Дата посещения", value: task.inspectionVisitDate || task.dueDate || "2026-06-17", type: "date" },
-    { label: "Время посещения", value: task.inspectionVisitTime || "10:00", type: "time" },
-    { label: "Адрес проведения осмотра", value: collateral?.address || "Адрес объекта залога", wide: true },
-    { label: "Наименование имущества", value: collateral?.description || "Объект залога", wide: true },
-    { label: "Залогодатель / собственник имущества", value: collateral?.clientName || contract?.clientName || "Залогодатель" },
-    { label: "Профильный идентификатор объекта", value: getCollateralObjectIdentifier(collateral) },
-    { label: "Способ проведения осмотра", value: getInspectionVisitMethod(task, collateral), type: "select", options: INSPECTION_VISIT_METHOD_OPTIONS, attrs: getInspectionVisitMethodFieldAttrs(task, collateral), wide: true }
+    { label: "Дата и время посещения", value: plan.dateTime || "-" },
+    { label: "Адрес проведения осмотра", value: plan.address || collateral?.address || "-" },
+    { label: "Способ проведения осмотра", value: plan.method || "-" }
   ];
 }
 
-function renderInspectionVisitDispatchActions(task, collateral) {
-  const collateralId = collateral?.id || task?.collateralId || "";
-  const method = getInspectionVisitMethod(task, collateral);
-  const result = getFieldInspectionResult(task, collateral);
-  const statusText = method === INSPECTION_VISIT_METHOD_WHITE_LIST
-    ? "Выездник не требуется"
-    : (result ? `Результат получен: ${formatRegistryDateTime(result.completedAt)}` : "Готов к запуску");
-  return `
-    <div class="inspection-visit-actions">
-      <button class="btn btn-primary" data-action="launch-field-inspection" data-task="${escapeHtml(task?.id || "")}" data-collateral="${escapeHtml(collateralId)}">Запустить выездной осмотр</button>
-      <span>${escapeHtml(statusText)}</span>
-    </div>
-  `;
+function updateInspectionPlanField(fieldEl) {
+  const task = getTask(fieldEl.dataset.task);
+  const field = fieldEl.dataset.inspectionPlanField;
+  const scope = fieldEl.dataset.inspectionPlanScope;
+  if (!task || !["dateTime", "address", "method", "executor"].includes(field)) return;
+  if (scope === "collateral") {
+    const collateralId = fieldEl.dataset.collateral;
+    if (!collateralId || field === "method") return;
+    const override = task.inspectionPlanByCollateral?.[collateralId];
+    if (!override?.enabled) return;
+    task.inspectionPlanByCollateral[collateralId][field] = fieldEl.value;
+  } else {
+    task.inspectionPlan = task.inspectionPlan || {};
+    if (field === "method") {
+      task.inspectionVisitMethod = INSPECTION_VISIT_METHOD_OPTIONS.includes(fieldEl.value) ? fieldEl.value : "";
+      if (!task.inspectionVisitMethod) {
+        task.inspectionVisitMethods = {};
+        task.visitMethod = "";
+      }
+    } else if (field === "executor") {
+      task.inspectionPlan.executor = fieldEl.value;
+      task.inspectionVisitExecutor = fieldEl.value;
+    } else {
+      task.inspectionPlan[field] = fieldEl.value;
+      if (field === "dateTime") {
+        const [date, time = ""] = String(fieldEl.value || "").split("T");
+        task.inspectionVisitDate = date || "";
+        task.inspectionVisitTime = time.slice(0, 5);
+      } else {
+        task.inspectionVisitAddress = fieldEl.value;
+      }
+    }
+  }
+  persistTaskState();
 }
 
-function getInspectionVisitMethod(task, collateral) {
-  const collateralId = collateral?.id || task?.collateralId || "";
-  const saved = task?.inspectionVisitMethods?.[collateralId] || task?.inspectionVisitMethod;
-  if (INSPECTION_VISIT_METHOD_OPTIONS.includes(saved)) return saved;
-  if (isDocumentaryInspectionTask(task)) return INSPECTION_VISIT_METHOD_WHITE_LIST;
-  if (collateral?.type === "Недвижимость") return "Сюрвейер (СК)";
-  if (["Автотранспорт", "Оборудование"].includes(collateral?.type) || /самоход/i.test(String(collateral?.type || ""))) return "Мобильный оценщик (МО)";
-  return "Сотрудник банка (регионы)";
-}
-
-function getInspectionVisitMethodFieldAttrs(task, collateral) {
-  const collateralId = collateral?.id || task?.collateralId || "";
-  return `data-inspection-visit-method data-task="${escapeHtml(task?.id || "")}" data-collateral="${escapeHtml(collateralId)}"`;
+function toggleInspectionPlanIndividual(taskId, collateralId, enabled) {
+  const task = getTask(taskId);
+  const collateral = getCollateral(collateralId);
+  if (!task || !collateral || !getTaskCollaterals(task).some((item) => item.id === collateralId)) return;
+  task.inspectionPlanByCollateral = task.inspectionPlanByCollateral || {};
+  const common = getInspectionPlan(task, collateral, false);
+  const current = task.inspectionPlanByCollateral[collateralId] || {};
+  task.inspectionPlanByCollateral[collateralId] = {
+    ...current,
+    enabled: Boolean(enabled),
+    dateTime: current.dateTime || common.dateTime,
+    address: current.address || collateral.address || common.address,
+    executor: current.executor ?? common.executor
+  };
+  persistTaskState();
 }
 
 function renderFieldInspectionResultBlock(task, collateral) {
   const method = getInspectionVisitMethod(task, collateral);
-  if (method === INSPECTION_VISIT_METHOD_WHITE_LIST) return "";
   const result = getFieldInspectionResult(task, collateral) || {};
+  if (method !== "Мобильный оценщик (МО)" && !result.status) return "";
   const status = result.status || "Ожидается";
   return `
     <section class="panel task-form-panel field-inspection-result-panel">
@@ -8294,7 +8509,7 @@ function renderFieldInspectionResultBlock(task, collateral) {
         <div class="status-stack">${badge(status, result.status ? "ok" : "warn")}</div>
       </div>
       ${renderTaskFormGrid([
-        { label: "Исполнитель", value: result.executor || getFieldInspectionExecutor(method, collateral) || "Ожидается назначение", readonly: true },
+        { label: "Фактический исполнитель выезда", value: result.executor || "Ожидается получение результата выезда", readonly: true },
         { label: "Геолокация", value: result.geolocation || "Ожидается получение", readonly: true },
         { label: "Фактический адрес", value: result.address || collateral?.address || "Ожидается получение", readonly: true, wide: true },
         { label: "Акт выездного исполнителя", value: result.actFile || "Не приложен", readonly: true, wide: true },
@@ -8310,60 +8525,82 @@ function getFieldInspectionResult(task, collateral) {
   return task?.fieldInspectionResults?.[collateralId] || null;
 }
 
-function updateInspectionVisitMethod(fieldEl) {
-  const task = getTask(fieldEl.dataset.task);
-  const collateralId = fieldEl.dataset.collateral;
-  if (!task || !collateralId) return;
-  task.inspectionVisitMethods = task.inspectionVisitMethods || {};
-  task.inspectionVisitMethods[collateralId] = normalizeInspectionVisitMethod(fieldEl.value);
-  if (task.inspectionVisitMethods[collateralId] === INSPECTION_VISIT_METHOD_WHITE_LIST && task.fieldInspectionResults?.[collateralId]) {
-    delete task.fieldInspectionResults[collateralId];
-  }
-  persistTaskState();
-}
-
 function normalizeInspectionVisitMethod(value) {
-  return INSPECTION_VISIT_METHOD_OPTIONS.includes(value) ? value : INSPECTION_VISIT_METHOD_OPTIONS[0];
+  return INSPECTION_VISIT_METHOD_OPTIONS.includes(value) ? value : "";
 }
 
-function launchFieldInspection(taskId, collateralId) {
-  const task = getTask(taskId);
-  const collateral = getCollateral(collateralId || task?.collateralId);
-  if (!task || !collateral) return;
-  const method = normalizeInspectionVisitMethod(getSelectedInspectionVisitMethod(task.id, collateral.id) || getInspectionVisitMethod(task, collateral));
-  task.inspectionVisitMethods = task.inspectionVisitMethods || {};
-  task.inspectionVisitMethods[collateral.id] = method;
+function normalizeInspectionVisitMethodForTask(task, value) {
+  if (isDocumentaryInspectionTask(task)) return value === INSPECTION_VISIT_METHOD_WHITE_LIST ? value : "";
+  return normalizeInspectionVisitMethod(value);
+}
 
-  if (method === INSPECTION_VISIT_METHOD_WHITE_LIST) {
-    if (task.fieldInspectionResults?.[collateral.id]) delete task.fieldInspectionResults[collateral.id];
-    addToast("Выездник не требуется", `${collateral.id}: выбран белый список.`, "info");
-    persistTaskState();
+function launchTaskFieldInspection(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+  if (getInspectionVisitMethod(task) !== "Мобильный оценщик (МО)") {
+    addToast("Запуск недоступен", "Выберите способ «Мобильный оценщик».", "warn");
     return;
   }
-
+  const collaterals = getTaskCollaterals(task).filter((item) => !isTaskCollateralExcluded(task, item.id));
+  if (!collaterals.length) {
+    addToast("Нет объектов для осмотра", "В задаче нет объектов, доступных для выезда.", "warn");
+    return;
+  }
   addTaskHistoryEvent(task, {
     action: "Запуск выездного осмотра",
-    comment: `${collateral.id}: способ проведения — ${method}.`
+    comment: `Сформирован выездной осмотр для ${collaterals.length} объектов.`
   });
-  const result = buildFieldInspectionResult(task, collateral, method);
-  task.fieldInspectionResults = task.fieldInspectionResults || {};
-  task.fieldInspectionResults[collateral.id] = result;
-  fillFieldInspectionPhotos(task, collateral, result);
-  upsertFieldInspectionActDocument(task, collateral, result);
+  collaterals.forEach((collateral) => launchFieldInspection(taskId, collateral.id, { silent: true, recordHistory: false }));
   addTaskHistoryEvent(task, {
     action: "Получен результат выездного осмотра",
     status: task.status,
-    comment: `${collateral.id}: акт ${result.actFile}, фото ${result.photoCount}/${result.photoCount}.`
+    comment: `Получены результаты выездного осмотра по ${collaterals.length} объектам.`
   });
-  addToast("Выездной осмотр завершен", `${collateral.id}: акт и фотофиксация получены.`, "ok");
+  addToast("Выездной осмотр запущен", `Задание сформировано для ${collaterals.length} объектов.`, "ok");
   persistTaskState();
 }
 
-function getSelectedInspectionVisitMethod(taskId, collateralId) {
-  return document.querySelector(`[data-inspection-visit-method][data-task="${CSS.escape(taskId)}"][data-collateral="${CSS.escape(collateralId)}"]`)?.value || "";
+function launchFieldInspection(taskId, collateralId, { silent = false, recordHistory = true } = {}) {
+  const task = getTask(taskId);
+  const collateral = getCollateral(collateralId || task?.collateralId);
+  if (!task || !collateral) return;
+  const method = normalizeInspectionVisitMethod(getInspectionVisitMethod(task));
+  if (method !== "Мобильный оценщик (МО)" || isTaskCollateralExcluded(task, collateral.id)) {
+    if (!silent) addToast("Запуск недоступен", "Выберите способ «Мобильный оценщик».", "warn");
+    return;
+  }
+
+  const plan = getInspectionPlan(task, collateral, true);
+  if (recordHistory) {
+    addTaskHistoryEvent(task, {
+      action: "Запуск выездного осмотра",
+      comment: `${collateral.id}: способ проведения — ${method}.`
+    });
+  }
+  const result = buildFieldInspectionResult(task, collateral, method, plan);
+  task.fieldInspectionResults = task.fieldInspectionResults || {};
+  task.fieldInspectionResults[collateral.id] = result;
+  ensureInspectionActualOverrideModel(task, getTaskCollaterals(task));
+  task.inspectionActual = task.inspectionActual || {};
+  const actual = getInspectionActualParameters(task, getTaskCollaterals(task));
+  for (const field of ["dateTime", "address", "method", "executor"]) {
+    if (!task.inspectionActualOverrides[field]) task.inspectionActual[field] = actual[field];
+  }
+  task.inspectionActualSource = "automatic";
+  fillFieldInspectionPhotos(task, collateral, result);
+  upsertFieldInspectionActDocument(task, collateral, result);
+  if (recordHistory) {
+    addTaskHistoryEvent(task, {
+      action: "Получен результат выездного осмотра",
+      status: task.status,
+      comment: `${collateral.id}: акт ${result.actFile}, фото ${result.photoCount}/${result.photoCount}.`
+    });
+  }
+  if (!silent) addToast("Выездной осмотр завершен", `${collateral.id}: акт и фотофиксация получены.`, "ok");
+  persistTaskState();
 }
 
-function buildFieldInspectionResult(task, collateral, method) {
+function buildFieldInspectionResult(task, collateral, method, plan = getInspectionPlan(task, collateral, true)) {
   const completedAt = formatTaskHistoryDate();
   const angles = getCollateralPhotoAngles(collateral);
   return {
@@ -8372,9 +8609,9 @@ function buildFieldInspectionResult(task, collateral, method) {
     requestId: getFieldInspectionRequestId(task, collateral),
     requestedAt: completedAt,
     completedAt,
-    executor: getFieldInspectionExecutor(method, collateral),
+    executor: plan.executor || getFieldInspectionExecutor(method, collateral),
     geolocation: getFieldInspectionGeolocation(collateral),
-    address: collateral?.address || collateral?.region || "-",
+    address: plan.address || collateral?.address || collateral?.region || "-",
     actFile: `Акт выездного осмотра ${collateral.id}.pdf`,
     technicalPlanFile: isRealEstateCollateralType(collateral?.type) ? `Технический план ${collateral.id}.pdf` : "",
     resolution: "Объект осмотрен, идентификаторы и состояние зафиксированы, критичные расхождения не выявлены.",
@@ -8453,34 +8690,58 @@ function getTaskApplicationPurposeValue(task) {
 function renderInspectionContactsBlock(task, collateral) {
   const contacts = getInspectionContactRows(task, collateral);
   const collateralId = collateral?.id || task?.collateralId || "";
+  const collaterals = getTaskCollaterals(task);
   return renderContactPersonsBlock({
     contacts,
     panelClass: "task-form-panel inspection-contacts-panel",
     tableClass: "inspection-contacts-table-wrap",
     addButton: `<button class="btn btn-secondary btn-small" data-action="add-inspection-contact-row" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}">Добавить строку</button>`,
     phoneLabel: "Телефон контактного лица",
-    commentLabel: "Комментарий",
+    showCollateralBinding: true,
+    bindingLabel: "Применяется к",
     showCallDate: true,
-    renderRow: (contact) => renderInspectionContactRow(task, collateralId, contact)
+    renderRow: (contact) => renderInspectionContactRow(task, collateralId, contact, collaterals)
   });
 }
 
-function renderInspectionContactRow(task, collateralId, contact) {
-  const attrs = contact.contactKey
-    ? `data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-contact-key="${escapeHtml(contact.contactKey)}"`
-    : `data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-index="${escapeHtml(contact.index)}"`;
+function renderInspectionContactRow(task, collateralId, contact, collaterals = getTaskCollaterals(task)) {
+  const attrs = contact.taskContactId
+    ? `data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-contact-id="${escapeHtml(contact.taskContactId)}" data-contact-scope="task"`
+    : contact.contactKey
+      ? `data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-contact-key="${escapeHtml(contact.contactKey)}"`
+      : `data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-index="${escapeHtml(contact.index)}" data-contact-scope="collateral"`;
   const removeButton = contact.editable
-    ? `<button class="icon-btn" title="Удалить строку" data-action="remove-inspection-contact-row" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" data-index="${escapeHtml(contact.index)}">x</button>`
+    ? `<button class="icon-btn" title="Удалить строку" data-action="remove-inspection-contact-row" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" ${contact.taskContactId ? `data-contact-id="${escapeHtml(contact.taskContactId)}" data-contact-scope="task"` : `data-index="${escapeHtml(contact.index)}" data-contact-scope="collateral"`}>x</button>`
     : "";
   return `
     <tr>
-      ${renderContactPersonEditableCells(contact, "inspection-contact-field", attrs)}
+      ${renderContactPersonEditableCells(contact, "inspection-contact-field", attrs, `<td>${renderTaskContactApplySelect(contact, task, collateralId, collaterals)}</td>`, { initiatorCommentReadOnly: true })}
       <td>${removeButton}</td>
     </tr>
   `;
 }
 
-function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "inspection-contacts-table-wrap", addButton = "", renderRow, showCollateralBinding = false, bindingLabel = "Объекты залога", phoneLabel = "Телефон", commentLabel = "Комментарий инициатора", showCallDate = false }) {
+function renderTaskContactApplySelect(contact, task, collateralId, collaterals = getTaskCollaterals(task)) {
+  const options = getApplicabilityOptions("task", { task, collaterals });
+  const value = contact.contactKey && task?.inspectionContactBindings?.[contact.contactKey]
+    ? task.inspectionContactBindings[contact.contactKey]
+    : getApplicationContactBindingValue(contact);
+  return `
+    <select class="application-contact-apply-select" data-inspection-contact-field="applyBinding" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" ${contact.taskContactId ? `data-contact-id="${escapeHtml(contact.taskContactId)}" data-contact-scope="task"` : contact.contactKey ? `data-contact-key="${escapeHtml(contact.contactKey)}"` : `data-index="${escapeHtml(contact.index)}" data-contact-scope="collateral"`} ${contact.applicabilityReadOnly ? "disabled" : ""} aria-label="Применяется к">
+      ${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+    </select>
+  `;
+}
+
+function getTaskContactApplicabilityLabel(contact, task, collaterals = getTaskCollaterals(task)) {
+  const options = getApplicabilityOptions("task", { task, collaterals });
+  const value = contact.contactKey && task?.inspectionContactBindings?.[contact.contactKey]
+    ? task.inspectionContactBindings[contact.contactKey]
+    : getApplicationContactBindingValue(contact);
+  return options.find((option) => option.value === value)?.label || "Вся заявка";
+}
+
+function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "inspection-contacts-table-wrap", addButton = "", renderRow, showCollateralBinding = false, bindingLabel = "Объекты залога", phoneLabel = "Телефон контактного лица", showCallDate = false }) {
   const bindingHead = showCollateralBinding ? `<th>${escapeHtml(bindingLabel)}</th>` : "";
   const callDateHead = showCallDate ? "<th>Дата звонка</th>" : "";
   const colgroup = `
@@ -8489,7 +8750,8 @@ function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "in
             <col class="contact-person-col-name">
             <col class="contact-person-col-phone">
             ${showCollateralBinding ? `<col class="contact-person-col-binding">` : ""}
-            <col class="contact-person-col-comment">
+            <col class="contact-person-col-initiator-comment">
+            <col class="contact-person-col-executor-comment">
             ${showCallDate ? `<col class="contact-person-col-call-date">` : ""}
             <col class="contact-person-col-action">
           </colgroup>`;
@@ -8503,7 +8765,7 @@ function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "in
       <div class="table-wrap compact-table contact-persons-table-wrap ${tableClass}">
         <table>
           ${colgroup}
-          <thead><tr><th>Роль</th><th>ФИО / наименование</th><th>${escapeHtml(phoneLabel)}</th>${bindingHead}<th>${escapeHtml(commentLabel)}</th>${callDateHead}<th></th></tr></thead>
+          <thead><tr><th>Роль</th><th>ФИО / наименование</th><th>${escapeHtml(phoneLabel)}</th>${bindingHead}<th>Комментарий инициатора</th><th>Комментарий исполнителя</th>${callDateHead}<th></th></tr></thead>
           <tbody>${contacts.map(renderRow).join("")}</tbody>
         </table>
       </div>
@@ -8511,25 +8773,31 @@ function renderContactPersonsBlock({ contacts, panelClass = "", tableClass = "in
   `;
 }
 
-function renderContactPersonEditableCells(contact, fieldDatasetName, attrs, extraCells = "") {
+function renderContactPersonEditableCells(contact, fieldDatasetName, attrs, extraCells = "", { initiatorCommentReadOnly = false, executorCommentReadOnly = false } = {}) {
   const fieldAttr = (field) => `data-${fieldDatasetName}="${field}"`;
+  const initiatorComment = contact.initiatorComment ?? contact.comment ?? "";
+  const executorComment = contact.executorComment || "";
   return `
     <td><input value="${escapeHtml(contact.role)}" placeholder="Роль" required ${fieldAttr("role")} ${attrs} aria-label="Роль контактного лица"></td>
     <td><input value="${escapeHtml(contact.name)}" placeholder="ФИО физического лица или наименование организации" required ${fieldAttr("name")} ${attrs} aria-label="ФИО или наименование контактного лица"></td>
     <td><input value="${escapeHtml(contact.phone)}" placeholder="+7 ___ ___-__-__" required ${fieldAttr("phone")} ${attrs} aria-label="Телефон контактного лица"></td>
     ${extraCells}
-    <td><textarea ${fieldAttr("comment")} ${attrs} aria-label="Комментарий по контактному лицу" placeholder="Дополнительная информация">${escapeHtml(contact.comment)}</textarea></td>
+    <td><textarea ${fieldAttr("initiatorComment")} ${attrs} ${initiatorCommentReadOnly ? "readonly" : ""} aria-label="Комментарий инициатора" placeholder="Комментарий инициатора">${escapeHtml(initiatorComment)}</textarea></td>
+    <td><textarea ${fieldAttr("executorComment")} ${attrs} ${executorCommentReadOnly ? "readonly" : ""} aria-label="Комментарий исполнителя" placeholder="Комментарий исполнителя">${escapeHtml(executorComment)}</textarea></td>
     <td><input class="contact-person-call-date-input" value="${escapeHtml(formatContactCallDateValue(contact.callDate || ""))}" placeholder="ДД.ММ.ГГГГ ЧЧ:ММ:СС" ${fieldAttr("callDate")} ${attrs} aria-label="Дата звонка контактному лицу"></td>
   `;
 }
 
 function createApplicationContactRow(overrides = {}) {
+  const initiatorComment = overrides.initiatorComment ?? overrides.comment ?? "";
   return {
     id: overrides.id || `contact-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
     role: overrides.role || "Представитель залогодателя",
     name: overrides.name || "",
     phone: overrides.phone || "",
-    comment: overrides.comment || "",
+    comment: initiatorComment,
+    initiatorComment,
+    executorComment: overrides.executorComment || "",
     callDate: overrides.callDate || "",
     applyScope: overrides.applyScope || overrides.appliesToScope || "application",
     applyValue: overrides.applyValue || overrides.appliesToValue || "",
@@ -8540,12 +8808,15 @@ function createApplicationContactRow(overrides = {}) {
 function normalizeApplicationContactRow(row = {}, index = 0) {
   const collateralIds = uniqueItems([...(row.collateralIds || []), ...parseListValue(row.collateralId)].filter(Boolean));
   const binding = getNormalizedApplicationContactBinding(row, collateralIds);
+  const initiatorComment = row.initiatorComment ?? row.comment ?? "";
   return {
     id: row.id || `contact-${index + 1}`,
     role: row.role || "Представитель залогодателя",
     name: row.name || row.fullName || row.title || "",
     phone: row.phone || row.mobile || "",
-    comment: row.comment || row.initiatorComment || "",
+    comment: initiatorComment,
+    initiatorComment,
+    executorComment: row.executorComment || "",
     callDate: row.callDate || row.lastCallAt || "",
     applyScope: binding.scope,
     applyValue: binding.value,
@@ -8569,7 +8840,7 @@ function getSerializableApplicationContacts() {
       ...row,
       collateralIds: getApplicationContactStorageCollateralIds(row, collaterals)
     }))
-    .filter((row) => row.name || row.phone || row.comment || row.callDate);
+    .filter((row) => row.name || row.phone || row.initiatorComment || row.executorComment || row.callDate);
 }
 
 function syncApplicationContactCollateralLinks() {
@@ -8676,7 +8947,6 @@ function renderApplicationContactsBlock(collaterals, application = null) {
     showCollateralBinding: true,
     bindingLabel: "Применяется к",
     phoneLabel: "Телефон контактного лица",
-    commentLabel: "Комментарий",
     showCallDate: true,
     renderRow: (contact) => renderApplicationContactRow(contact, collaterals, application, relatedTasks)
   });
@@ -8685,12 +8955,38 @@ function renderApplicationContactsBlock(collaterals, application = null) {
 function renderApplicationContactRow(contact, collaterals, application = null, relatedTasks = []) {
   const attrs = `data-index="${escapeHtml(contact.index)}"`;
   const applyCell = `<td>${renderApplicationContactApplySelect(contact, collaterals, application, relatedTasks)}</td>`;
+  const rowForRender = {
+    ...contact,
+    executorComment: getApplicationContactExecutorCommentSummary(contact, application, relatedTasks)
+  };
   return `
     <tr>
-      ${renderContactPersonEditableCells(contact, "application-contact-field", attrs, applyCell)}
+      ${renderContactPersonEditableCells(rowForRender, "application-contact-field", attrs, applyCell, { executorCommentReadOnly: true })}
       <td><button class="icon-btn" title="Удалить строку" data-action="remove-application-contact-row" data-index="${escapeHtml(contact.index)}">x</button></td>
     </tr>
   `;
+}
+
+function getApplicationContactExecutorCommentSummary(contact, application, relatedTasks = []) {
+  const entries = [];
+  const existing = String(contact?.executorComment || "").trim();
+  if (existing) entries.push(existing);
+  const contactKey = getInspectionContactKey(contact, contact?.index || 0);
+  relatedTasks.forEach((task) => {
+    const savedBinding = task?.inspectionContactBindings?.[contactKey];
+    const effectiveBinding = savedBinding
+      ? parseApplicationContactBinding(savedBinding)
+      : { scope: contact.applyScope || "application", value: contact.applyValue || "" };
+    const taskContact = { ...contact, applyScope: effectiveBinding.scope, applyValue: effectiveBinding.value };
+    getTaskCollaterals(task).forEach((collateral) => {
+      if (!doesApplicationContactApplyToTarget(taskContact, application, task, collateral)) return;
+      const saved = task?.inspectionContactResults?.[collateral.id]?.[contactKey];
+      const comment = String(saved?.executorComment ?? saved?.comment ?? "").trim();
+      if (!comment) return;
+      entries.push(`Задача ${task.number || task.id}, ${getCollateralObjectIdentifier(collateral)}: ${comment}`);
+    });
+  });
+  return entries.join("\n");
 }
 
 function renderApplicationContactApplySelect(contact, collaterals, application = null, relatedTasks = []) {
@@ -8819,8 +9115,9 @@ function updateApplicationContactField(fieldEl) {
     row.applyScope = binding.scope;
     row.applyValue = binding.value;
     row.collateralIds = getApplicationContactStorageCollateralIds(row, (state.newTask.selectedCollateralIds || []).map(getCollateral).filter(Boolean));
-  } else {
+  } else if (["role", "name", "phone", "initiatorComment", "callDate"].includes(field)) {
     row[field] = fieldEl.value;
+    if (field === "initiatorComment") row.comment = fieldEl.value;
   }
 }
 
@@ -8896,13 +9193,36 @@ function getAlternateContactPhone(collateral, offset = 1) {
 }
 
 function getInspectionContactRows(task, collateral) {
-  const applicationContacts = getApplicationContactsForCollateral(getTaskApplication(task), collateral, task);
-  const baseRows = applicationContacts.length ? applicationContacts : getDefaultInspectionContactRows(collateral);
+  const application = getTaskApplication(task);
+  const applicationContacts = getInspectionApplicableApplicationContacts(task, collateral);
+  const hasApplicationContacts = getApplicationStoredContactRows(application).length > 0;
+  const fallbackRows = hasApplicationContacts ? [] : getDefaultInspectionContactRows(collateral).map((contact) => ({
+    ...contact,
+    applyScope: "collateral",
+    applyValue: collateral?.id || task?.collateralId || ""
+  }));
+  const baseRows = applicationContacts.length ? applicationContacts : fallbackRows;
   const collateralId = collateral?.id || task?.collateralId || "";
   return [
     ...baseRows.map((contact, index) => applyInspectionContactResult(contact, task, collateralId, index)),
-    ...getAdditionalInspectionContactRows(task, collateral).map((contact, index) => ({ ...contact, editable: true, index }))
+    ...getAdditionalInspectionContactRows(task, collateral)
   ];
+}
+
+function getInspectionApplicableApplicationContacts(task, collateral) {
+  const application = getTaskApplication(task);
+  const collaterals = getApplicationCollaterals(application);
+  return getApplicationContactRows(application, collaterals)
+    .map((contact, index) => {
+      const contactKey = getInspectionContactKey(contact, index);
+      const savedBinding = task?.inspectionContactBindings?.[contactKey];
+      const binding = savedBinding ? parseApplicationContactBinding(savedBinding) : {
+        scope: contact.applyScope || "application",
+        value: contact.applyValue || ""
+      };
+      return { ...contact, contactKey, applyScope: binding.scope, applyValue: binding.value };
+    })
+    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, collateral));
 }
 
 function getInspectionContactKey(contact, index = 0) {
@@ -8925,13 +9245,17 @@ function getInspectionContactResultStore(task, collateralId) {
 function applyInspectionContactResult(contact, task, collateralId, index = 0) {
   const contactKey = getInspectionContactKey(contact, index);
   const saved = task?.inspectionContactResults?.[collateralId]?.[contactKey] || {};
+  const initiatorComment = contact.initiatorComment ?? contact.comment ?? "";
+  const executorComment = saved.executorComment ?? saved.comment ?? contact.executorComment ?? "";
   return {
     ...contact,
     contactKey,
     role: saved.role ?? contact.role ?? "",
     name: saved.name ?? contact.name ?? "",
     phone: saved.phone ?? contact.phone ?? "",
-    comment: saved.comment ?? "",
+    comment: initiatorComment,
+    initiatorComment,
+    executorComment,
     callDate: saved.callDate ?? contact.callDate ?? ""
   };
 }
@@ -8956,8 +9280,30 @@ function getDefaultInspectionContactRows(collateral) {
 
 function getAdditionalInspectionContactRows(task, collateral) {
   const collateralId = collateral?.id || task?.collateralId || "";
-  const rows = task?.inspectionContacts?.[collateralId];
-  return Array.isArray(rows) ? rows : [];
+  const application = getTaskApplication(task);
+  const taskRows = (Array.isArray(task?.inspectionTaskContacts) ? task.inspectionTaskContacts : [])
+    .map((contact, index) => ({
+      ...contact,
+      initiatorComment: contact.initiatorComment || "",
+      executorComment: contact.executorComment ?? contact.comment ?? "",
+      taskContactId: contact.id || `task-contact-${index + 1}`,
+      editable: true
+    }))
+    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, collateral));
+  const collateralRows = task?.inspectionContacts?.[collateralId];
+  const localRows = (Array.isArray(collateralRows) ? collateralRows : [])
+    .map((contact, index) => ({
+      ...contact,
+      initiatorComment: contact.initiatorComment || "",
+      executorComment: contact.executorComment ?? contact.comment ?? "",
+      applyScope: contact.applyScope || "collateral",
+      applyValue: contact.applyValue || collateralId,
+      editable: true,
+      index,
+      applicabilityReadOnly: true
+    }))
+    .filter((contact) => doesApplicationContactApplyToTarget(contact, application, task, collateral));
+  return [...taskRows, ...localRows];
 }
 
 function getInspectionRightsFields(collateral) {
@@ -8995,30 +9341,37 @@ function getOwnershipBasis(collateral) {
 }
 
 function renderInspectionResultPanel(task, collateral, result) {
+  const hasIndividualResult = hasIndividualInspectionResult(task, collateral);
   const resolutionResult = getInspectionResolutionResultValue(result, task, collateral);
   const conditionAssessment = getInspectionConditionAssessmentValue(result, task, collateral);
   const physicalWearPercent = getInspectionPhysicalWearPercentValue(result, task, collateral);
   const comment = getInspectionResolutionCommentValue(result, task, collateral);
+  const overrides = getInspectionResolutionOverrides(task, collateral);
   const mismatchRows = getInspectionProblemChecklistRows(result, task, collateral);
+  const resolutionFields = [
+    { label: "Результат осмотра", value: resolutionResult, type: "select", options: getInspectionResolutionResultOptions(), placeholder: hasIndividualResult ? "Выберите результат" : "Общий результат не задан", readonly: !hasIndividualResult, attrs: getInspectionResolutionFieldAttrs(task, collateral, "resolutionResult") },
+    { label: "Оценка состояния", value: conditionAssessment, type: "select", options: getInspectionConditionAssessmentOptions(), attrs: getInspectionResolutionFieldAttrs(task, collateral, "conditionAssessment") },
+    { label: "Процент физического износа", value: physicalWearPercent, type: "number", attrs: `${getInspectionResolutionFieldAttrs(task, collateral, "physicalWearPercent")} min="0" max="100" step="1"` },
+    { label: "Комментарий сотрудника при проведении осмотра", value: comment, textarea: true, wide: true, readonly: !hasIndividualResult, attrs: getInspectionResolutionFieldAttrs(task, collateral, "resultComment") },
+    { label: "Индивидуальные наблюдения по объекту", value: overrides.observationComment || "", textarea: true, wide: true, attrs: getInspectionResolutionFieldAttrs(task, collateral, "observationComment") }
+  ];
   return `
     <section class="panel task-form-panel inspection-result-panel">
       <div class="panel-title">
         <div><h2>Резолюция по объекту</h2></div>
-        <div class="status-stack">${badge(resolutionResult, getInspectionResolutionTone(resolutionResult))}</div>
+        <label class="inspection-individual-toggle"><input type="checkbox" data-inspection-individual-result-toggle data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateral.id)}" ${hasIndividualResult ? "checked" : ""}><span>Задать индивидуальный результат</span></label>
       </div>
-      ${renderTaskFormGrid([
-        { label: "Результат осмотра", value: resolutionResult, type: "select", options: getInspectionResolutionResultOptions(), attrs: getInspectionResolutionFieldAttrs(task, collateral, "resolutionResult") },
-        { label: "Оценка состояния", value: conditionAssessment, type: "select", options: getInspectionConditionAssessmentOptions(), attrs: getInspectionResolutionFieldAttrs(task, collateral, "conditionAssessment") },
-        { label: "Процент физического износа", value: physicalWearPercent, type: "number", attrs: `${getInspectionResolutionFieldAttrs(task, collateral, "physicalWearPercent")} min="0" max="100" step="1"` },
-        { label: "Комментарий сотрудника при проведении осмотра", value: comment, textarea: true, wide: true, attrs: getInspectionResolutionFieldAttrs(task, collateral, "comment") }
-      ], "task-form-grid compact")}
+      ${renderTaskFormGrid(resolutionFields, "task-form-grid compact inspection-object-resolution-grid")}
+      ${hasIndividualResult ? renderTaskFormGrid([
+        { label: "Маркер проблемности", value: overrides.markers || [], type: "multiselect", options: INSPECTION_PROBLEM_MARKER_OPTIONS, placeholder: "Выберите маркеры", attrs: getInspectionResolutionFieldAttrs(task, collateral, "markers") }
+      ], "task-form-grid compact") : ""}
       ${renderInspectionMismatchTable(mismatchRows)}
     </section>
   `;
 }
 
 function getInspectionResolutionResultOptions() {
-  return ["Положительный", "Условно-положительный", "Отрицательный"];
+  return ["Положительный", "Условно-положительный", "Отрицательный", "Осмотр не проведен"];
 }
 
 function getInspectionResolutionTone(value) {
@@ -9030,6 +9383,7 @@ function getInspectionResolutionTone(value) {
 
 function getInspectionResolutionOverrides(task, collateral) {
   const collateralId = collateral?.id || task?.collateralId || "";
+  ensureInspectionResultModel(task);
   return task?.inspectionResolutions?.[collateralId] || {};
 }
 
@@ -9039,11 +9393,10 @@ function getInspectionResolutionFieldAttrs(task, collateral, field) {
 }
 
 function getInspectionResolutionResultValue(result, task, collateral) {
-  const saved = getInspectionResolutionOverrides(task, collateral).resolutionResult;
-  if (saved) return saved;
-  if (result?.criticalCount > 0 || result?.canAccept === "НЕТ" || result?.state === "Не подтвержден") return "Отрицательный";
-  if (result?.warningCount > 0 || result?.tone === "warn") return "Условно-положительный";
-  return "Положительный";
+  const overrides = getInspectionResolutionOverrides(task, collateral);
+  return overrides.individualResult
+    ? overrides.resolutionResult || ""
+    : task?.inspectionGeneralResult?.result || "";
 }
 
 function getInspectionConditionAssessmentOptions() {
@@ -9090,8 +9443,10 @@ function estimateInspectionPhysicalWearPercent(result) {
 }
 
 function getInspectionResolutionCommentValue(result, task, collateral) {
-  const saved = getInspectionResolutionOverrides(task, collateral).comment;
-  return saved !== undefined ? saved : result.comment;
+  const overrides = getInspectionResolutionOverrides(task, collateral);
+  return overrides.individualResult
+    ? overrides.resultComment || ""
+    : task?.inspectionGeneralResult?.comment || "";
 }
 
 function getInspectionProblemChecklistRows(result, task = null, collateral = null) {
@@ -9127,7 +9482,6 @@ function renderInspectionMismatchTable(rows = []) {
     <div class="inspection-mismatch-table">
       <div class="valuation-inspection-problems-head">
         <strong>Выявленные несоответствия</strong>
-        ${badge(rows.length ? `${rows.length} пункт(ов)` : "Не выявлены", rows.some((row) => row.tone === "danger") ? "danger" : rows.length ? "warn" : "ok")}
       </div>
       ${rows.length ? `
         <div class="table-wrap compact-table">
@@ -9136,7 +9490,7 @@ function renderInspectionMismatchTable(rows = []) {
             <tbody>${rows.map((row) => `
               <tr>
                 <td>${escapeHtml(row.name)}</td>
-                <td>${badge(row.status, row.tone)}<small>${escapeHtml(row.value)}</small></td>
+                <td><span class="inspection-mismatch-status">${escapeHtml(row.status)}</span><small>${escapeHtml(row.value)}</small></td>
                 <td>${escapeHtml(row.marker || "другие признаки")}</td>
                 <td>${escapeHtml(row.comment)}</td>
               </tr>
@@ -9151,7 +9505,7 @@ function renderInspectionMismatchTable(rows = []) {
 function getInspectionProblemChecklistComment(task, collateral, item) {
   const collateralId = collateral?.id || task?.collateralId || "";
   const saved = task?.inspectionChecklistComments?.[collateralId]?.[item.code];
-  return saved || item.selected?.comment || item.comment || item.selected?.label || "Комментарий по пункту не указан";
+  return saved || item.selected?.comment || item.comment || "";
 }
 
 function getInspectionResult(task, collateral) {
@@ -9254,17 +9608,19 @@ function updateTaskInspectionFactor(fieldEl) {
   task.inspectionAnswers = task.inspectionAnswers || {};
   task.inspectionAnswers[fieldEl.dataset.collateral] = task.inspectionAnswers[fieldEl.dataset.collateral] || {};
   task.inspectionAnswers[fieldEl.dataset.collateral][fieldEl.dataset.factor] = fieldEl.value;
+  persistTaskState();
 }
 
 function renderInspectionChecklistBlock(task, collateral, result) {
   const groups = result.groups;
+  const hasItems = (groups || []).some((group) => (group.items || []).length);
   return `
     <section class="panel task-form-panel inspection-checklist-panel">
       <div class="panel-title">
         <div><h2>Чек-лист осмотра</h2></div>
         <div class="status-stack">${badge(collateral?.type || "Тип не указан", "info")}</div>
       </div>
-      <div class="inspection-checklist-grid">
+      ${hasItems ? `<div class="inspection-checklist-grid">
         ${groups.map((group) => `
           <article class="inspection-checklist-group">
             <div class="inspection-factor-group-head">
@@ -9281,14 +9637,41 @@ function renderInspectionChecklistBlock(task, collateral, result) {
                   <select data-inspection-factor data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateral?.id || "")}" data-factor="${escapeHtml(item.code)}" aria-label="${escapeHtml(item.name)}">
                     ${item.values.map((option) => `<option value="${escapeHtml(option.code)}" ${option.code === item.selected.code ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
                   </select>
+                  <label class="inspection-check-comment">Комментарий${isInspectionChecklistNegative(item) ? " *" : ""}<textarea data-inspection-checklist-comment data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateral?.id || "")}" data-factor="${escapeHtml(item.code)}" ${isInspectionChecklistNegative(item) ? 'required aria-required="true"' : ""} placeholder="Комментарий по контрольному пункту">${escapeHtml(getInspectionChecklistCommentValue(task, collateral, item))}</textarea></label>
                 </div>
               `).join("")}
             </div>
           </article>
         `).join("")}
-      </div>
+      </div>` : `<div class="empty-state compact inspection-checklist-empty">Для выбранного вида залога чек-лист осмотра не предусмотрен</div>`}
     </section>
   `;
+}
+
+function isInspectionChecklistNegative(item) {
+  const selected = item?.selected || {};
+  const status = String(selected.status || item?.status || "").toLowerCase();
+  const code = String(selected.code || "").toLowerCase();
+  const score = Number(selected.score);
+  return status === "bad"
+    || ["bad", "mismatch", "missing", "expired", "blocked", "critical", "inconsistent", "not-confirmed"].includes(code)
+    || (Number.isFinite(score) && score <= 20);
+}
+
+function getInspectionChecklistCommentValue(task, collateral, item) {
+  const collateralId = collateral?.id || task?.collateralId || "";
+  return task?.inspectionChecklistComments?.[collateralId]?.[item.code] || item.comment || "";
+}
+
+function updateTaskInspectionChecklistComment(fieldEl) {
+  const task = getTask(fieldEl.dataset.task);
+  const collateralId = fieldEl.dataset.collateral;
+  const factorCode = fieldEl.dataset.factor;
+  if (!task || !collateralId || !factorCode) return;
+  task.inspectionChecklistComments = task.inspectionChecklistComments || {};
+  task.inspectionChecklistComments[collateralId] = task.inspectionChecklistComments[collateralId] || {};
+  task.inspectionChecklistComments[collateralId][factorCode] = fieldEl.value;
+  persistTaskState();
 }
 
 function getInspectionFactorGroups(collateral, task = null) {
@@ -9821,7 +10204,13 @@ function renderTaskField(field) {
   }
   if (field.type === "select") {
     const options = getTaskFieldSelectOptions(field.options || [], value);
-    return `<label class="${classes}">${escapeHtml(field.label)}<select${extraAttrs}>${options.map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>`;
+    const placeholder = field.placeholder
+      ? `<option value="" ${String(value) === "" ? "selected" : ""}>${escapeHtml(field.placeholder)}</option>`
+      : "";
+    const emptyOption = field.emptyOption
+      ? `<option value="" ${String(value) === "" ? "selected" : ""}></option>`
+      : "";
+    return `<label class="${classes}">${escapeHtml(field.label)}<select${field.readonly ? " disabled" : ""}${extraAttrs}>${placeholder}${emptyOption}${options.map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>`;
   }
   if (field.type === "multiselect") {
     return renderTaskMultiSelectField(field, classes, extraAttrs);
@@ -10990,18 +11379,25 @@ function renderTaskExpertConclusion(task, collaterals = getTaskCollaterals(task)
   const canGenerate = canGenerateTaskExpertConclusion(task, template, collaterals);
   const expertAttachment = getTaskExpertAttachment(task);
   const expertAttrs = (field) => `data-task-expert="${field}" data-task="${escapeHtml(task.id)}"`;
-  const expertOutcome = task.expertOutcome || getTaskExpertConclusionOutcome(defaults.result);
+  const inspectionTask = isInspectionTaskType(task.type);
+  const expertOutcome = inspectionTask
+    ? getInspectionTaskExpertConclusionOutcome(task, collaterals)
+    : task.expertOutcome || getTaskExpertConclusionOutcome(defaults.result);
   const showTemplateField = !isPledgeOperationTaskType(task.type);
   const conclusionFields = [
     ...(showTemplateField ? [{ label: "Шаблон печатной формы", value: template.name, readonly: true, wide: true }] : []),
     { label: "Дата документа", value: task.expertDocumentDate || task.dueDate || "2026-06-19", type: "date", attrs: expertAttrs("expertDocumentDate") },
     { label: "Ответственный", value: task.assignee || getRole().user, readonly: true },
-    { label: "Итог заключения", value: expertOutcome, type: "select", options: getTaskPrintResultOptions(task), attrs: expertAttrs("expertOutcome") }
+    { label: "Итог заключения", value: expertOutcome, type: "select", options: getTaskPrintResultOptions(task), readonly: inspectionTask, attrs: expertAttrs("expertOutcome") }
   ];
   const negativeReasonField = expertOutcome === "Отрицательное"
     ? `<label class="expert-negative-reason">Причина отрицательного заключения<textarea data-task-expert="negativeConclusionReason" data-task="${task.id}">${escapeHtml(task.negativeConclusionReason || "")}</textarea></label>`
     : "";
+  const inspectionBlocks = isInspectionTaskType(task.type)
+    ? `${renderInspectionActualParametersPanel(task, collaterals)}${renderInspectionGeneralResultPanel(task, collaterals)}${renderInspectionExceptionsPanel(task, collaterals)}`
+    : "";
   return `
+    ${inspectionBlocks}
     <section class="panel expert-conclusion-panel">
       <div class="panel-title">
         <div><h2>Экспертное заключение по задаче</h2></div>
@@ -11018,6 +11414,435 @@ function renderTaskExpertConclusion(task, collaterals = getTaskCollaterals(task)
       </div>
     </section>
   `;
+}
+
+function renderInspectionActualParametersPanel(task, collaterals = getTaskCollaterals(task), { scope = "task", collateral = null } = {}) {
+  if (scope === "collateral") ensureInspectionActualIndividualModel(task, collaterals);
+  const common = getInspectionActualParameters(task, collaterals);
+  const collateralId = collateral?.id || "";
+  const individual = scope === "collateral" && hasIndividualInspectionParameters(task, collateral);
+  const actual = scope === "collateral"
+    ? getInspectionActualParametersForCollateral(task, collateral, common)
+    : common;
+  const readonly = scope === "collateral" && !individual;
+  const attrs = (field) => `data-inspection-actual-field="${field}" data-inspection-actual-scope="${scope}" data-task="${escapeHtml(task.id)}"${collateralId ? ` data-collateral="${escapeHtml(collateralId)}"` : ""}`;
+  return `
+    <section class="panel task-form-panel inspection-actual-parameters-panel ${scope === "collateral" ? "is-object-scope" : "is-task-scope"}">
+      <div class="panel-title">
+        <div><h2>Фактические параметры осмотра</h2></div>
+        ${scope === "collateral" ? `<label class="inspection-individual-toggle"><input type="checkbox" data-inspection-actual-individual-toggle data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(collateralId)}" ${individual ? "checked" : ""}><span>Задать индивидуальные параметры</span></label>` : ""}
+      </div>
+      ${renderTaskFormGrid([
+        { label: "Дата и время посещения", value: actual.dateTime, type: "datetime-local", readonly, attrs: attrs("dateTime") },
+        { label: "Адрес проведения осмотра", value: actual.address, readonly, attrs: attrs("address") },
+        { label: "Исполнитель выезда", value: actual.executor, readonly, attrs: attrs("executor") }
+      ], "task-form-grid compact inspection-actual-parameters-grid")}
+    </section>
+  `;
+}
+
+function ensureInspectionActualIndividualModel(task, collaterals = getTaskCollaterals(task)) {
+  if (!task) return;
+  task.inspectionActualByCollateral = task.inspectionActualByCollateral || {};
+  let changed = false;
+  for (const collateral of collaterals) {
+    const collateralId = collateral?.id || "";
+    const legacyPlan = task.inspectionPlanByCollateral?.[collateralId];
+    if (!collateralId || !legacyPlan?.enabled || task.inspectionActualByCollateral[collateralId]?.enabled) continue;
+    task.inspectionActualByCollateral[collateralId] = {
+      enabled: true,
+      dateTime: legacyPlan.dateTime ?? "",
+      address: legacyPlan.address ?? "",
+      executor: legacyPlan.executor ?? ""
+    };
+    changed = true;
+  }
+  if (changed) persistTaskState();
+}
+
+function hasIndividualInspectionParameters(task, collateral) {
+  return Boolean(collateral?.id && task?.inspectionActualByCollateral?.[collateral.id]?.enabled);
+}
+
+function getInspectionActualParametersForCollateral(task, collateral, common = getInspectionActualParameters(task)) {
+  const saved = task?.inspectionActualByCollateral?.[collateral?.id] || {};
+  return {
+    dateTime: saved.dateTime ?? common.dateTime ?? "",
+    address: saved.address ?? common.address ?? "",
+    executor: saved.executor ?? common.executor ?? ""
+  };
+}
+
+function getInspectionActualParameters(task, collaterals = getTaskCollaterals(task)) {
+  ensureInspectionActualOverrideModel(task, collaterals);
+  const actual = task?.inspectionActual || {};
+  const plan = getInspectionPlan(task, null, false);
+  const visitEntries = collaterals
+    .filter((collateral) => !isTaskCollateralExcluded(task, collateral.id))
+    .map((collateral) => ({ collateral, visit: task?.fieldInspectionResults?.[collateral.id] }))
+    .filter((entry) => entry.visit);
+  const fields = [
+    { key: "dateTime", label: "Дата и время посещения", get: (visit) => formatInspectionDateTimeInput(visit.completedAt) },
+    { key: "address", label: "Адрес проведения осмотра", get: (visit) => String(visit.address || "").trim() },
+    { key: "method", label: "Способ проведения осмотра", get: (visit) => String(visit.method || "").trim() },
+    { key: "executor", label: "Фактический исполнитель выезда", get: (visit) => String(visit.executor || "").trim() }
+  ];
+  const overrides = task?.inspectionActualOverrides || {};
+  const legacyFirstVisit = visitEntries[0]?.visit;
+  const values = {};
+  const differences = [];
+  for (const field of fields) {
+    const hasStoredValue = Object.prototype.hasOwnProperty.call(actual, field.key);
+    const storedValueIsLegacyAuto = hasStoredValue
+      && !task?.inspectionActualSource
+      && legacyFirstVisit
+      && actual[field.key] === field.get(legacyFirstVisit);
+    const groups = new Map();
+    for (const entry of visitEntries) {
+      const value = field.get(entry.visit);
+      if (!value) continue;
+      const group = groups.get(value) || [];
+      group.push(getCollateralObjectIdentifier(entry.collateral) || entry.collateral.id);
+      groups.set(value, group);
+    }
+    if (groups.size > 1) differences.push({
+      label: field.label,
+      groups: [...groups.entries()].map(([value, collateralIds]) => ({ value, collaterals: collateralIds }))
+    });
+    const storedOverride = hasStoredValue && (
+      overrides[field.key]
+      || (task?.inspectionActualSource === "manual" && !overrides[field.key])
+      || (!task?.inspectionActualSource && !storedValueIsLegacyAuto)
+    );
+    if (storedOverride) values[field.key] = actual[field.key];
+    else if (groups.size === 1) values[field.key] = [...groups.keys()][0];
+    else values[field.key] = groups.size > 1 ? "" : (plan[field.key] || "");
+  }
+  return { ...values, differences };
+}
+
+function ensureInspectionActualOverrideModel(task, collaterals = getTaskCollaterals(task)) {
+  if (!task) return;
+  const hadOverrideMap = task.inspectionActualOverrides && typeof task.inspectionActualOverrides === "object";
+  task.inspectionActualOverrides = task.inspectionActualOverrides || {};
+  if (task.inspectionActualSource === "automatic" && hadOverrideMap) return;
+  const actual = task.inspectionActual || {};
+  const firstVisit = collaterals
+    .filter((collateral) => !isTaskCollateralExcluded(task, collateral.id))
+    .map((collateral) => task?.fieldInspectionResults?.[collateral.id])
+    .find(Boolean);
+  const firstValues = firstVisit ? {
+    dateTime: formatInspectionDateTimeInput(firstVisit.completedAt),
+    address: String(firstVisit.address || "").trim(),
+    method: String(firstVisit.method || "").trim(),
+    executor: String(firstVisit.executor || "").trim()
+  } : {};
+  for (const field of ["dateTime", "address", "method", "executor"]) {
+    if (Object.prototype.hasOwnProperty.call(actual, field)
+      && (task.inspectionActualSource === "manual" || actual[field] !== firstValues[field])) {
+      task.inspectionActualOverrides[field] = true;
+    }
+  }
+  task.inspectionActualSource = "automatic";
+  persistTaskState();
+}
+
+function formatInspectionDateTimeInput(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+  return match ? `${match[1]}T${match[2]}` : "";
+}
+
+function updateInspectionActualField(fieldEl) {
+  const task = getTask(fieldEl.dataset.task);
+  const field = fieldEl.dataset.inspectionActualField;
+  const scope = fieldEl.dataset.inspectionActualScope || "task";
+  const collateralId = fieldEl.dataset.collateral || "";
+  if (!task || !["dateTime", "address", "executor"].includes(field)) return;
+  const value = fieldEl.value;
+  if (scope === "collateral") {
+    const override = task.inspectionActualByCollateral?.[collateralId];
+    if (!collateralId || !override?.enabled || isTaskCollateralExcluded(task, collateralId)) return;
+    override[field] = value;
+    task.inspectionPlanByCollateral = task.inspectionPlanByCollateral || {};
+    task.inspectionPlanByCollateral[collateralId] = {
+      ...(task.inspectionPlanByCollateral[collateralId] || {}),
+      enabled: true,
+      [field]: value
+    };
+    const visit = task.fieldInspectionResults?.[collateralId];
+    if (visit) {
+      if (field === "dateTime") visit.completedAt = value;
+      else visit[field] = value;
+    }
+  } else {
+    task.inspectionActual = task.inspectionActual || {};
+    ensureInspectionActualOverrideModel(task, getTaskCollaterals(task));
+    task.inspectionActualOverrides[field] = true;
+    task.inspectionActual[field] = value;
+    task.inspectionActualSource = "automatic";
+    task.inspectionPlan = task.inspectionPlan || {};
+    task.inspectionPlan[field] = value;
+    if (field === "dateTime") {
+      const [date, time = ""] = String(value || "").split("T");
+      task.inspectionVisitDate = date || "";
+      task.inspectionVisitTime = time.slice(0, 5);
+    } else if (field === "address") task.inspectionVisitAddress = value;
+    else task.inspectionVisitExecutor = value;
+  }
+  persistTaskState();
+}
+
+function toggleInspectionActualIndividual(taskId, collateralId, enabled) {
+  const task = getTask(taskId);
+  const collateral = getCollateral(collateralId);
+  if (!task || !collateral || !getTaskCollaterals(task).some((item) => item.id === collateralId)
+    || isTaskCollateralExcluded(task, collateralId)) return;
+  task.inspectionActualByCollateral = task.inspectionActualByCollateral || {};
+  task.inspectionPlanByCollateral = task.inspectionPlanByCollateral || {};
+  if (enabled) {
+    const common = getInspectionActualParameters(task);
+    const plan = getInspectionPlan(task, collateral, true);
+    const visit = task.fieldInspectionResults?.[collateralId] || {};
+    const existing = task.inspectionActualByCollateral[collateralId] || {};
+    const values = {
+      dateTime: existing.dateTime || common.dateTime || formatInspectionDateTimeInput(visit.completedAt) || plan.dateTime || "",
+      address: existing.address || common.address || visit.address || plan.address || "",
+      executor: existing.executor || common.executor || visit.executor || plan.executor || ""
+    };
+    task.inspectionActualByCollateral[collateralId] = { enabled: true, ...values };
+    task.inspectionPlanByCollateral[collateralId] = {
+      ...(task.inspectionPlanByCollateral[collateralId] || {}),
+      enabled: true,
+      ...values
+    };
+  } else {
+    delete task.inspectionActualByCollateral[collateralId];
+    if (task.inspectionPlanByCollateral[collateralId]) task.inspectionPlanByCollateral[collateralId].enabled = false;
+  }
+  persistTaskState();
+}
+
+function updateInspectionGeneralResultField(fieldEl) {
+  const task = getTask(fieldEl.dataset.task);
+  const field = fieldEl.dataset.inspectionGeneralResultField;
+  if (!task || !["result", "comment"].includes(field)) return;
+  ensureInspectionResultModel(task);
+  task.inspectionGeneralResult = task.inspectionGeneralResult || { result: "", comment: "" };
+  task.inspectionGeneralResult[field] = fieldEl.value;
+  persistTaskState();
+}
+
+function getInspectionActiveCollaterals(task, collaterals = getTaskCollaterals(task)) {
+  return collaterals.filter((collateral) => !isTaskCollateralExcluded(task, collateral.id));
+}
+
+function getInspectionOverallResultSummary(task, collaterals = getTaskCollaterals(task)) {
+  const counts = new Map();
+  for (const collateral of getInspectionActiveCollaterals(task, collaterals)) {
+    const result = getInspectionResolutionResultValue(null, task, collateral);
+    if (result) counts.set(result, (counts.get(result) || 0) + 1);
+  }
+  if (!counts.size) return "Результат пока не задан для объектов.";
+  return [...counts.entries()].map(([result, count]) => `${result} — ${count}`).join("; ");
+}
+
+function renderInspectionGeneralResultPanel(task, collaterals = getTaskCollaterals(task)) {
+  const general = task.inspectionGeneralResult || {};
+  const active = getInspectionActiveCollaterals(task, collaterals);
+  const inheritedCount = active.filter((collateral) => !hasIndividualInspectionResult(task, collateral)).length;
+  const appliedCount = general.result ? inheritedCount : 0;
+  const resultOptions = getInspectionResolutionResultOptions();
+  const attrs = (field) => `data-inspection-general-result-field="${field}" data-task="${escapeHtml(task.id)}"`;
+  return `
+    <section class="panel task-form-panel inspection-general-result-panel">
+      <div class="panel-title"><div><h2>Общий результат осмотра</h2></div></div>
+      <p class="inspection-result-scope">Результат применяется ко всем объектам задачи, кроме объектов с индивидуальным результатом.</p>
+      ${renderTaskFormGrid([
+        { label: "Общий результат осмотра", value: general.result || "", type: "select", options: resultOptions, emptyOption: true, attrs: attrs("result") },
+        { label: "Общий комментарий сотрудника при проведении осмотра", value: general.comment || "", textarea: true, attrs: attrs("comment") }
+      ], "task-form-grid compact inspection-general-result-grid")}
+      <div class="inspection-result-summary">
+        <span class="inspection-result-coverage">${general.result ? `Применён к ${appliedCount} из ${active.length} объектов` : `Результат не применяется: выберите общий результат. Индивидуальные результаты заданы для ${active.length - inheritedCount} из ${active.length} объектов.`}</span>
+        <span><strong>Автоматическая сводка по объектам:</strong> ${escapeHtml(getInspectionOverallResultSummary(task, collaterals))}</span>
+      </div>
+    </section>
+  `;
+}
+
+function renderInspectionExceptionsPanel(task, collaterals = getTaskCollaterals(task)) {
+  const rows = getInspectionExceptionRows(task, collaterals);
+  return `
+    <section class="panel table-panel inspection-exceptions-panel">
+      <div class="panel-title">
+        <div><h2>Исключения по объектам</h2></div>
+        <button class="btn btn-secondary btn-small" data-action="add-inspection-exception" data-task="${escapeHtml(task.id)}">Добавить исключение</button>
+      </div>
+      <div class="table-wrap compact-table inspection-exceptions-table-wrap">
+        <table class="inspection-exceptions-table">
+          <thead><tr><th>Объект залога</th><th>Индивидуальный результат</th><th>Маркер проблемности</th><th>Комментарий</th><th aria-label="Действия"></th></tr></thead>
+          <tbody>${rows.length ? rows.map((row) => renderInspectionExceptionRow(task, collaterals, row)).join("") : `<tr><td colspan="5" class="inspection-exceptions-empty">Исключений по объектам пока нет.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderInspectionExceptionRow(task, collaterals, row) {
+  const fieldAttrs = (field) => `data-inspection-exception-field="${field}" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(row.collateralId)}"`;
+  const objectListId = `inspection-exception-objects-${task.id}-${row.collateralId}`;
+  const selectedCollateral = collaterals.find((collateral) => collateral.id === row.collateralId);
+  const resultOptions = getInspectionResolutionResultOptions()
+    .map((value) => `<option value="${escapeHtml(value)}" ${row.result === value ? "selected" : ""}>${escapeHtml(value)}</option>`)
+    .join("");
+  const markerValues = Array.isArray(row.markers) ? row.markers : row.problematic ? ["другие признаки"] : [];
+  return `
+    <tr>
+      <td>
+        <input type="text" list="${escapeHtml(objectListId)}" value="${escapeHtml(selectedCollateral ? getCollateralChoiceLabel(selectedCollateral) : row.collateralId)}"
+          placeholder="${row.unresolved ? "Объект не найден — выберите объект" : "Начните вводить идентификатор или наименование"}" autocomplete="off"
+          data-inspection-exception-object-search ${fieldAttrs("collateralId")}>
+        <datalist id="${escapeHtml(objectListId)}">
+          ${collaterals.map((collateral) => `<option value="${escapeHtml(getCollateralChoiceLabel(collateral))}"></option>`).join("")}
+        </datalist>
+      </td>
+      <td><select ${fieldAttrs("resolutionResult")}><option value="">Выберите результат</option>${resultOptions}</select></td>
+      <td>${renderTaskMultiSelectField({ label: "", value: markerValues, options: INSPECTION_PROBLEM_MARKER_OPTIONS, placeholder: "Выберите маркеры", attrs: fieldAttrs("markers") }, "task-field-multiselect inspection-exception-markers")}</td>
+      <td><textarea placeholder="Комментарий" ${fieldAttrs("resultComment")}>${escapeHtml(row.comment || "")}</textarea></td>
+      <td><button class="btn btn-secondary btn-small" data-action="use-general-inspection-result" data-task="${escapeHtml(task.id)}" data-collateral="${escapeHtml(row.collateralId)}">Использовать общий результат</button></td>
+    </tr>
+  `;
+}
+
+function getInspectionExceptionRows(task, collaterals = getTaskCollaterals(task)) {
+  ensureInspectionResultModel(task, collaterals);
+  const activeRows = getInspectionActiveCollaterals(task, collaterals)
+    .filter((collateral) => hasIndividualInspectionResult(task, collateral))
+    .map((collateral) => {
+      const override = task.inspectionResolutions[collateral.id] || {};
+      return {
+        collateralId: collateral.id,
+        result: override.resolutionResult || "",
+        markers: override.markers || [],
+        comment: override.resultComment || ""
+      };
+    });
+  const collateralIds = new Set(collaterals.map((collateral) => collateral.id));
+  const unresolvedRows = Object.entries(task.inspectionResolutions || {})
+    .filter(([collateralId, override]) => override.individualResult && override.legacyUnmatched && !collateralIds.has(collateralId))
+    .map(([collateralId, override]) => ({
+      collateralId,
+      result: override.resolutionResult || "",
+      markers: override.markers || [],
+      comment: override.resultComment || "",
+      unresolved: true
+    }));
+  return [...activeRows, ...unresolvedRows];
+}
+
+function ensureInspectionResultModel(task, collaterals = getTaskCollaterals(task)) {
+  if (!task || Number(task.inspectionResultModelVersion) >= 3) return;
+  task.inspectionGeneralResult = task.inspectionGeneralResult || { result: "", comment: "" };
+  task.inspectionResolutions = task.inspectionResolutions || {};
+  for (const [collateralId, saved] of Object.entries(task.inspectionResolutions)) {
+    if (saved.resolutionResult) saved.individualResult = true;
+    if (saved.comment !== undefined && saved.observationComment === undefined) {
+      saved.observationComment = saved.comment;
+      delete saved.comment;
+    }
+  }
+  const validIds = new Set(collaterals.map((collateral) => collateral.id));
+  for (const [index, row] of (Array.isArray(task.inspectionExceptions) ? task.inspectionExceptions : []).entries()) {
+    if (!row || typeof row !== "object") continue;
+    const collateralId = String(row.collateralId || `legacy-exception-${index + 1}`).trim();
+    const saved = task.inspectionResolutions[collateralId] || (task.inspectionResolutions[collateralId] = {});
+    saved.individualResult = true;
+    if (row.result) saved.resolutionResult = row.result;
+    const legacyComment = String(row.comment || "").trim();
+    const existingComment = String(saved.resultComment || "").trim();
+    if (legacyComment && existingComment && legacyComment !== existingComment) {
+      saved.resultComment = `${existingComment}\n${legacyComment}`;
+    } else if (legacyComment) saved.resultComment = legacyComment;
+    else if (!existingComment && row.comment !== undefined) saved.resultComment = row.comment;
+    const markers = Array.isArray(row.markers) ? [...row.markers] : row.markers ? [row.markers] : [];
+    if (row.problematic && !markers.length) markers.push("другие признаки");
+    if (markers.length) saved.markers = uniqueItems([...(saved.markers || []), ...markers]);
+    if (!validIds.has(collateralId)) saved.legacyUnmatched = true;
+  }
+  task.inspectionExceptions = [];
+  task.inspectionResultModelVersion = 3;
+  persistTaskState();
+}
+
+function hasIndividualInspectionResult(task, collateral) {
+  ensureInspectionResultModel(task);
+  const collateralId = collateral?.id || "";
+  return Boolean(collateralId && task?.inspectionResolutions?.[collateralId]?.individualResult);
+}
+
+function addInspectionExceptionRow(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+  const collaterals = getInspectionActiveCollaterals(task);
+  ensureInspectionResultModel(task, collaterals);
+  const activeId = state.taskActiveCollateral[taskId] || task.collateralId || "";
+  const collateral = collaterals.find((item) => item.id === activeId && !hasIndividualInspectionResult(task, item))
+    || collaterals.find((item) => !hasIndividualInspectionResult(task, item));
+  if (collateral) setIndividualInspectionResult(taskId, collateral.id);
+}
+
+function setIndividualInspectionResult(taskId, collateralId) {
+  const task = getTask(taskId);
+  if (!task || !getTaskCollaterals(task).some((item) => item.id === collateralId) || isTaskCollateralExcluded(task, collateralId)) return;
+  ensureInspectionResultModel(task);
+  const override = task.inspectionResolutions[collateralId] || (task.inspectionResolutions[collateralId] = {});
+  if (!override.individualResult) {
+    override.resolutionResult = task.inspectionGeneralResult?.result || "";
+    override.resultComment = task.inspectionGeneralResult?.comment || "";
+  }
+  override.individualResult = true;
+  persistTaskState();
+}
+
+function useGeneralInspectionResult(taskId, collateralId) {
+  const task = getTask(taskId);
+  if (!task || !task.inspectionResolutions?.[collateralId]) return;
+  ensureInspectionResultModel(task);
+  const override = task.inspectionResolutions[collateralId];
+  delete override.individualResult;
+  delete override.resolutionResult;
+  delete override.resultComment;
+  delete override.legacyUnmatched;
+  if (!Object.keys(override).length) delete task.inspectionResolutions[collateralId];
+  persistTaskState();
+}
+
+function removeInspectionExceptionRow(taskId, collateralId) {
+  useGeneralInspectionResult(taskId, collateralId);
+}
+
+function updateInspectionExceptionField(fieldEl) {
+  const task = getTask(fieldEl.dataset.task);
+  const field = fieldEl.dataset.inspectionExceptionField;
+  const collateralId = fieldEl.dataset.collateral;
+  if (!task || !hasIndividualInspectionResult(task, { id: collateralId })) return;
+  if (!["collateralId", "resolutionResult", "markers", "resultComment"].includes(field)) return;
+  const override = task.inspectionResolutions[collateralId];
+  if (field === "markers") {
+    const multiselect = fieldEl.closest(".task-field-multiselect");
+    override.markers = [...(multiselect?.querySelectorAll("input[type='checkbox']:checked") || [])].map((input) => input.value);
+    updateTaskMultiSelectSummary(fieldEl.closest(".task-multi-select"));
+  } else if (field === "collateralId") {
+    const collateral = getTaskCollaterals(task).find((item) => item.id === String(fieldEl.value || "").trim() || getCollateralChoiceLabel(item) === String(fieldEl.value || "").trim());
+    if (!collateral || isTaskCollateralExcluded(task, collateral.id) || (collateral.id !== collateralId && hasIndividualInspectionResult(task, collateral))) return;
+    if (collateral.id !== collateralId) {
+      delete override.legacyUnmatched;
+      task.inspectionResolutions[collateral.id] = { ...(task.inspectionResolutions[collateral.id] || {}), ...override };
+      delete task.inspectionResolutions[collateralId];
+    }
+  } else override[field] = fieldEl.value;
+  persistTaskState();
 }
 
 function getTaskExpertAttachment(task) {
@@ -11066,6 +11891,21 @@ function renderTaskExpertAttachmentRow(task, attachment) {
 
 function getTaskExpertDefaults(task, collaterals = getTaskCollaterals(task)) {
   const scope = getTaskExpertCollateralScopeText(collaterals);
+  if (isInspectionTaskType(task.type)) {
+    const outcome = getInspectionTaskExpertConclusionOutcome(task, collaterals);
+    const summary = getInspectionOverallResultSummary(task, collaterals);
+    return {
+      result: outcome,
+      comment: task.expertComment || `Сводка результатов осмотра по объектам: ${summary}`,
+      conclusion: outcome === "Отрицательное"
+        ? `По объектам задачи ${task.id} зафиксированы отрицательные результаты или непроведённые осмотры.`
+        : outcome === "Положительное с замечаниями"
+          ? `По объектам задачи ${task.id} результат осмотра положительный с индивидуальными замечаниями.`
+          : outcome === "Положительное"
+            ? `По всем объектам задачи ${task.id} зафиксирован положительный результат осмотра.`
+            : `Итог будет рассчитан автоматически после заполнения результатов по объектам задачи ${task.id}.`
+    };
+  }
   if (isInspectionCardTaskType(task.type)) {
     const results = collaterals.length ? collaterals.map((collateral) => getInspectionResult(task, collateral)) : [getInspectionResult(task, null)];
     const hasCritical = results.some((result) => result.canAccept === "НЕТ" || result.criticalCount > 0);
@@ -11107,6 +11947,15 @@ function getTaskPrintResultOptions(task) {
   return ["Положительное", "Положительное с замечаниями", "Отрицательное"];
 }
 
+function getInspectionTaskExpertConclusionOutcome(task, collaterals = getTaskCollaterals(task)) {
+  const results = getInspectionActiveCollaterals(task, collaterals)
+    .map((collateral) => getInspectionResolutionResultValue(null, task, collateral));
+  if (!results.length || results.some((result) => !result)) return "";
+  if (results.some((result) => result === "Отрицательный" || result === "Осмотр не проведен")) return "Отрицательное";
+  if (results.includes("Условно-положительный")) return "Положительное с замечаниями";
+  return "Положительное";
+}
+
 function getTaskExpertConclusionOutcome(value) {
   const text = String(value || "").toLowerCase();
   if (/не подтвержден|отриц|ошибка|не готов|отказ/i.test(text)) return "Отрицательное";
@@ -11118,6 +11967,11 @@ function canGenerateTaskExpertConclusion(task, template = null, collaterals = ge
   if (!task || isReportingTaskType(task.type) || isPledgeOperationTaskType(task.type) || isDefectInspectionTaskType(task.type)) return false;
   if (isDocumentaryInspectionTask(task)) return false;
   if (isHeterogeneousExpertConclusionScope(task, collaterals)) return false;
+  if (isInspectionTaskType(task.type)) {
+    const resultIssues = getInspectionResultCompletionIssues(task);
+    if (resultIssues.missingResults.length || resultIssues.missingExceptions.length) return false;
+    if (isPhysicalInspectionVisitTask(task) && getInspectionChecklistMissingComments(task).length) return false;
+  }
   const selectedTemplate = template || getTaskExpertConclusionTemplate(task);
   return !/не формирует|отсутствует/i.test(String(selectedTemplate?.name || ""));
 }
@@ -11237,7 +12091,9 @@ function buildTaskExpertConclusionContent(task, collateral, collaterals, templat
   const dealCurrency = task.dealCurrency || application?.currency || contract?.currency || "RUB";
   const dealLimit = parseNumericInput(task.dealLimit ?? application?.limit ?? contract?.limit ?? 0);
   const defaults = getTaskExpertDefaults(task, taskCollaterals);
-  const expertOutcome = task.expertOutcome || getTaskExpertConclusionOutcome(defaults.result);
+  const expertOutcome = isInspectionTaskType(task.type)
+    ? getInspectionTaskExpertConclusionOutcome(task, taskCollaterals)
+    : task.expertOutcome || getTaskExpertConclusionOutcome(defaults.result);
   const negativeReason = expertOutcome === "Отрицательное" ? String(task.negativeConclusionReason || "").trim() : "";
   const objectList = taskCollaterals.length
     ? taskCollaterals.map((item) => `${item.id} - ${item.type} - ${item.description}`).join("; ")
@@ -11353,7 +12209,12 @@ function buildInspectionPrintContent(task, collateral) {
   const mismatchRows = getInspectionProblemChecklistRows(result, task, collateral);
   const reportFields = getInspectionReportFields(task, collateral).map((field) => printField(field.label, field.value));
   const contactFields = getInspectionContactRows(task, collateral).map((contact) =>
-    printField(contact.role, [contact.name, contact.phone, contact.comment].filter(Boolean).join("; "))
+    printField(contact.role, [
+      contact.name,
+      contact.phone,
+      contact.initiatorComment ? `Комментарий инициатора: ${contact.initiatorComment}` : "",
+      contact.executorComment ? `Комментарий исполнителя: ${contact.executorComment}` : ""
+    ].filter(Boolean).join("; "))
   );
   const photoRows = getCollateralPhotoAngles(collateral).map((angle) => {
     const photo = collateral ? getTaskPhotoValue(task, collateral.id, angle) : null;
@@ -11618,17 +12479,19 @@ function getTaskRouteText(task) {
 
 function getTaskRouteActionButtons(task) {
   const actions = [];
+  const canSplit = canSplitTaskByCollateral(task);
+  actions.push(`<button class="btn btn-secondary" data-action="open-subtask" data-task="${escapeHtml(task.id)}" ${canSplit ? "" : "disabled title=\"Разделение доступно до первого перевода задачи в работу, если есть связанная заявка и несколько активных объектов залога\""}>Разделить задачу</button>`);
   if (canUseRouteAction(task)) {
     actions.push(`<button class="btn btn-secondary" data-action="open-return-initiator" data-task="${escapeHtml(task.id)}">Вернуть на инициатора</button>`);
   }
   if (canUseRouteAction(task) && canSendTaskToRevision(getRole())) {
     actions.push(`<button class="btn btn-secondary" data-action="task-return" data-task="${escapeHtml(task.id)}">Отправить на доработку</button>`);
   }
-  if (canUseRouteAction(task)) {
-    actions.push(`<button class="btn btn-secondary" data-action="open-subtask" data-task="${escapeHtml(task.id)}">Создать задачу по заявке</button>`);
-  }
   if (canUseRouteAction(task) && (isInspectionTaskType(task.type) || isMonitoringTaskType(task.type))) {
     actions.push(`<button class="btn btn-secondary" data-action="create-followup-task" data-task="${escapeHtml(task.id)}" data-task-type="${escapeHtml(getRouteValuationTaskType(task))}">Создать задачу на оценку</button>`);
+  }
+  if (canUseRouteAction(task) && isValuationTaskType(task.type)) {
+    actions.push(`<button class="btn btn-secondary" data-action="create-followup-task" data-task="${escapeHtml(task.id)}" data-task-type="Первичный осмотр">Создать задачу на осмотр</button>`);
   }
   if (canUseRouteAction(task) && isMonitoringTaskType(task.type)) {
     actions.push(`<button class="btn btn-secondary" data-action="create-followup-task" data-task="${escapeHtml(task.id)}" data-task-type="Повторный осмотр">Создать задачу на осмотр</button>`);
@@ -13305,7 +14168,6 @@ function renderValuationInspectionProblemChecklist(prefill) {
     <div class="valuation-inspection-problems">
       <div class="valuation-inspection-problems-head">
         <strong>Проблемные пункты чек-листа осмотра</strong>
-        ${badge(rows.length ? `${rows.length} пункт(ов)` : "Не выявлены", rows.some((row) => row.tone === "danger") ? "danger" : rows.length ? "warn" : "ok")}
       </div>
       ${rows.length ? `
         <div class="table-wrap compact-table">
@@ -13314,7 +14176,7 @@ function renderValuationInspectionProblemChecklist(prefill) {
             <tbody>${rows.map((row) => `
               <tr>
                 <td>${escapeHtml(row.name)}</td>
-                <td>${badge(row.status, row.tone)}<small>${escapeHtml(row.value)}</small></td>
+                <td><span class="inspection-mismatch-status">${escapeHtml(row.status)}</span><small>${escapeHtml(row.value)}</small></td>
                 <td>${escapeHtml(row.marker || "другие признаки")}</td>
                 <td>${escapeHtml(row.comment)}</td>
               </tr>
@@ -18587,7 +19449,7 @@ function renderTaskCreate(query) {
           <h2>Основные параметры</h2>
         </div>
         <div class="form-grid task-context-grid">
-          <label>Номер заявки<input id="newTaskApplicationNumber" list="newTaskApplications" data-new-task-field="applicationNumber" value="${escapeHtml(draftContext.applicationNumber)}" placeholder="app-19062026-001"></label>
+          <label>Номер заявки<input id="newTaskApplicationNumber" list="newTaskApplications" data-new-task-field="applicationNumber" value="${escapeHtml(draftContext.applicationNumber)}" placeholder="app-0626-004"></label>
           <datalist id="newTaskApplications">${applicationOptions}</datalist>
           <label>Номер договора<input id="newTaskContractNumber" list="newTaskContracts" data-new-task-field="contractNumber" value="${escapeHtml(draftContext.contractNumber)}" placeholder="KM-26/148"></label>
           <datalist id="newTaskContracts">${contractOptions}</datalist>
@@ -19271,11 +20133,15 @@ function filterCollateralPickerRows(collaterals, filters = {}) {
 
 function renderCollateralRegistryPickerModal() {
   const isApplicationContext = state.modal.context === "application";
+  const isTaskCardContext = state.modal.context === "taskCard";
+  const task = isTaskCardContext ? getTask(state.modal.taskId) : null;
   const search = state.modal.search || "";
   const filters = state.filters.collateralPicker || {};
   const selected = new Set(isApplicationContext
     ? state.modal.selectedCollateralIds || state.newTask.selectedCollateralIds || []
-    : state.newTask.selectedCollateralIds || []);
+    : isTaskCardContext
+      ? state.modal.selectedCollateralIds || getTaskCollateralIds(task)
+      : state.newTask.selectedCollateralIds || []);
   const hasApplicationSearch = Object.values(filters).some((value) => String(value || "").trim());
   const rows = isApplicationContext
     ? hasApplicationSearch ? filterCollateralPickerRows(state.data.collaterals, filters) : []
@@ -19319,7 +20185,7 @@ function renderCollateralRegistryPickerModal() {
     <div class="modal-backdrop">
       <section class="modal wide">
         <div class="modal-head"><h2>Выбрать объект залога</h2><button class="btn btn-secondary" data-action="close-modal">Закрыть</button></div>
-        <p class="hint">Выбранные объекты будут привязаны к заявке в целом.</p>
+        <p class="hint">${isTaskCardContext ? "Выбранные объекты будут привязаны к текущей задаче." : "Выбранные объекты будут привязаны к заявке в целом."}</p>
         ${isApplicationContext ? `
           <div class="application-collateral-picker-filters">
             ${APPLICATION_COLLATERAL_PICKER_FILTERS.map(([key, label]) => `
@@ -19476,14 +20342,13 @@ function openNewCollateralModal(context = "registry", modalFields = {}) {
   state.newCollateralDraft = createNewCollateralDraft(context);
 }
 
-function openEditCollateralModal(collateralId) {
+function openEditCollateralModal(collateralId, { context = "applicationCreate", taskId = "" } = {}) {
   const collateral = getCollateral(collateralId);
   if (!collateral) {
-    addToast("Объект не найден", "Выберите строку залога в таблице заявки.", "warn");
+    addToast("Объект не найден", "Выберите объект залога в таблице.", "warn");
     return;
   }
-  const context = "applicationCreate";
-  state.modal = { type: "newCollateral", context, mode: "edit", collateralId };
+  state.modal = { type: "newCollateral", context, mode: "edit", collateralId, ...(taskId ? { taskId } : {}) };
   state.newCollateralDraft = createNewCollateralDraft(context, collateral);
 }
 
@@ -20363,6 +21228,7 @@ function renderModal() {
     const applicationNumber = parent ? getTaskApplicationNumber(parent) : "";
     const collateralSummary = parent ? getTaskCollaterals(parent).map((item) => item.id).join(", ") : "";
     const isInspection = isInspectionTaskType(state.modal.taskType);
+    const showInspectionMethod = isInspection && isValuationTaskType(parent?.type);
     const title = isInspection ? "Создать задачу на осмотр" : "Создать задачу на оценку";
     return `
       <div class="modal-backdrop">
@@ -20373,6 +21239,7 @@ function renderModal() {
             <label>Залоги<input value="${escapeHtml(collateralSummary || "-")}" readonly></label>
             <label>Исполнитель<select id="followupAssignee">${employees.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}</select></label>
             <label>Срок<input id="followupDue" type="date" value="2026-06-24"></label>
+            ${showInspectionMethod ? renderInspectionVisitMethodField("followupInspectionMethod", state.modal.inspectionVisitMethod || "") : ""}
           </div>
           <label>Комментарий<textarea id="followupComment">${escapeHtml(`${title} создана из маршрута ${state.modal.parentTaskId}.`)}</textarea></label>
           <div class="modal-actions"><button class="btn btn-primary" data-action="submit-followup">Создать</button></div>
@@ -20440,20 +21307,25 @@ function renderReturnToInitiatorModal() {
 
 function renderSubtaskModal() {
   const parent = getTask(state.modal.taskId);
-  if (!parent) return "";
-  const applicationNumber = getTaskApplicationNumber(parent);
-  const collaterals = getTaskCollaterals(parent);
+  if (!canSplitTaskByCollateral(parent)) return "";
+  const parentApplication = getTaskApplication(parent);
+  const applicationNumber = parentApplication?.number || getTaskApplicationNumber(parent);
+  const collaterals = getTaskSplitEligibleCollaterals(parent);
+  const inspectionMethodField = isInspectionTaskType(parent.type)
+    ? renderInspectionVisitMethodField("subtaskInspectionMethod", getInspectionVisitMethod(parent), parent)
+    : "";
   return `
     <div class="modal-backdrop">
       <section class="modal wide">
-        <div class="modal-head"><h2>Создать задачу по заявке</h2><button class="btn btn-secondary" data-action="close-modal">Закрыть</button></div>
-        <p class="hint">Задача создается в рамках той же заявки. Выберите объекты залога, которые нужно выделить в отдельную работу.</p>
+        <div class="modal-head"><h2>Разделить задачу</h2><button class="btn btn-secondary" data-action="close-modal">Закрыть</button></div>
+        <p class="hint">Выберите объекты для новой связанной задачи. Они будут удалены из состава исходной задачи; в исходной должен остаться минимум один активный объект.</p>
         <div class="form-grid">
           <label>Заявка<input value="${escapeHtml(applicationNumber || "-")}" readonly></label>
           <label>Родительская задача<input value="${escapeHtml(parent.id)}" readonly></label>
           <label>Тип задачи<input value="${escapeHtml(getTaskDisplayType(parent))}" readonly></label>
           <label>Исполнитель<select id="subtaskAssignee">${employees.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}</select></label>
           <label>Срок исполнения<input id="subtaskDue" type="date" value="${escapeHtml(String(parent.dueDate || "2026-06-24").slice(0, 10))}"></label>
+          ${inspectionMethodField}
         </div>
         <div class="table-wrap compact-table subtask-collateral-picker">
           <table>
@@ -20470,10 +21342,10 @@ function renderSubtaskModal() {
             `).join("")}</tbody>
           </table>
         </div>
-        <label>Комментарий<textarea id="subtaskComment">Создать задачу по заявке по выбранным объектам залога.</textarea></label>
+        <label>Комментарий<textarea id="subtaskComment">Разделение исходной задачи по выбранным объектам залога.</textarea></label>
         <div class="modal-actions">
           <button class="btn btn-secondary" data-action="close-modal">Назад</button>
-          <button class="btn btn-primary" data-action="submit-subtask" data-task="${escapeHtml(parent.id)}">Создать задачу по заявке</button>
+          <button class="btn btn-primary" data-action="submit-subtask" data-task="${escapeHtml(parent.id)}">Разделить задачу</button>
         </div>
       </section>
     </div>
@@ -20484,6 +21356,9 @@ function renderReassignModal() {
   const task = getTask(state.modal.taskId);
   if (!task) return "";
   const assignees = [...new Set([task.assignee, ...employees].filter(Boolean))];
+  const inspectionMethodField = isInspectionTaskType(task.type)
+    ? renderInspectionVisitMethodField("reassignInspectionMethod", getInspectionVisitMethod(task), task)
+    : "";
   return `
     <div class="modal-backdrop">
       <section class="modal">
@@ -20494,11 +21369,24 @@ function renderReassignModal() {
           <label>Новый исполнитель<select id="reassignAssignee">
             ${assignees.map((item) => `<option ${item === task.assignee ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
           </select></label>
+          ${inspectionMethodField}
         </div>
         <label>Комментарий<textarea id="reassignComment" placeholder="Комментарий к переназначению"></textarea></label>
         <div class="modal-actions"><button class="btn btn-primary" data-action="submit-reassign" data-task="${escapeHtml(task.id)}">Переназначить</button></div>
       </section>
     </div>
+  `;
+}
+
+function renderInspectionVisitMethodField(id, value = "", task = null) {
+  const options = [...INSPECTION_VISIT_METHOD_OPTIONS];
+  if (value === INSPECTION_VISIT_METHOD_WHITE_LIST && !options.includes(value)) options.unshift(value);
+  const fixedDocumentaryMethod = isDocumentaryInspectionTask(task) && value === INSPECTION_VISIT_METHOD_WHITE_LIST;
+  return `
+    <label>Способ проведения осмотра<select id="${escapeHtml(id)}" ${fixedDocumentaryMethod ? "disabled" : "required"}>
+      <option value="" ${value ? "" : "selected"}>Выберите способ</option>
+      ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+    </select></label>
   `;
 }
 
@@ -20619,13 +21507,19 @@ function ensureInspectionContactRows(task, collateralId) {
 function addInspectionContactRow(taskId, collateralId) {
   const task = getTask(taskId);
   if (!task || !collateralId) return;
-  const rows = ensureInspectionContactRows(task, collateralId);
-  rows.push({
+  task.inspectionTaskContacts = Array.isArray(task.inspectionTaskContacts) ? task.inspectionTaskContacts : [];
+  const contactId = `task-contact-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`;
+  task.inspectionTaskContacts.push({
+    id: contactId,
     role: "Контакт на объекте",
     name: "",
     phone: "",
+    initiatorComment: "",
+    executorComment: "",
     comment: "",
-    callDate: ""
+    callDate: "",
+    applyScope: "task",
+    applyValue: task.id
   });
   addTaskHistoryEvent(task, {
     action: "Добавление/редактирование контактного лица",
@@ -20637,8 +21531,23 @@ function addInspectionContactRow(taskId, collateralId) {
   addToast("Строка добавлена", `Контактные лица: ${collateralId}`, "ok");
 }
 
-function removeInspectionContactRow(taskId, collateralId, index) {
+function removeInspectionContactRow(taskId, collateralId, index, contactId = "", scope = "collateral") {
   const task = getTask(taskId);
+  if (scope === "task" && contactId) {
+    const taskRows = Array.isArray(task?.inspectionTaskContacts) ? task.inspectionTaskContacts : [];
+    const taskIndex = taskRows.findIndex((row) => row.id === contactId);
+    if (taskIndex < 0) return;
+    const [removed] = taskRows.splice(taskIndex, 1);
+    addTaskHistoryEvent(task, {
+      action: "Добавление/редактирование контактного лица",
+      oldValue: [removed?.role, removed?.name, removed?.phone].filter(Boolean).join(" · ") || contactId,
+      newValue: "Строка удалена",
+      comment: "Удалено контактное лицо, применявшееся к задаче."
+    });
+    persistTaskState();
+    addToast("Строка удалена", "Контактные лица", "warn");
+    return;
+  }
   const rows = ensureInspectionContactRows(task, collateralId);
   if (!Number.isInteger(index) || index < 0 || index >= rows.length) return;
   const [removed] = rows.splice(index, 1);
@@ -20657,19 +21566,49 @@ function updateInspectionContactField(fieldEl) {
   const collateralId = fieldEl.dataset.collateral;
   const field = fieldEl.dataset.inspectionContactField;
   if (!task || !collateralId || !field) return;
+  const contactId = fieldEl.dataset.contactId;
+  if (fieldEl.dataset.contactScope === "task" && contactId) {
+    const row = (task.inspectionTaskContacts || []).find((item) => item.id === contactId);
+    if (!row) return;
+    if (field === "applyBinding") {
+      const binding = parseApplicationContactBinding(fieldEl.value);
+      row.applyScope = binding.scope;
+      row.applyValue = binding.value;
+    } else if (["role", "name", "phone", "executorComment", "callDate"].includes(field)) {
+      row[field] = fieldEl.value;
+      if (field === "executorComment") row.comment = fieldEl.value;
+    }
+    else return;
+    persistTaskState();
+    return;
+  }
   const contactKey = fieldEl.dataset.contactKey;
   if (contactKey) {
-    if (!["role", "name", "phone", "comment", "callDate"].includes(field)) return;
+    if (field === "applyBinding") {
+      task.inspectionContactBindings = task.inspectionContactBindings || {};
+      task.inspectionContactBindings[contactKey] = fieldEl.value;
+      persistTaskState();
+      return;
+    }
+    if (!["role", "name", "phone", "executorComment", "callDate"].includes(field)) return;
     const store = getInspectionContactResultStore(task, collateralId);
     store[contactKey] = store[contactKey] || {};
     store[contactKey][field] = fieldEl.value;
+    if (field === "executorComment") store[contactKey].comment = fieldEl.value;
     persistTaskState();
     return;
   }
   const index = Number(fieldEl.dataset.index);
   const rows = ensureInspectionContactRows(task, collateralId);
   if (!field || !Number.isInteger(index) || index < 0 || index >= rows.length) return;
-  rows[index][field] = fieldEl.value;
+  if (field === "applyBinding") {
+    const binding = parseApplicationContactBinding(fieldEl.value);
+    rows[index].applyScope = binding.scope;
+    rows[index].applyValue = binding.value;
+  } else if (["role", "name", "phone", "executorComment", "callDate"].includes(field)) {
+    rows[index][field] = fieldEl.value;
+    if (field === "executorComment") rows[index].comment = fieldEl.value;
+  } else return;
   persistTaskState();
 }
 
@@ -20678,14 +21617,21 @@ function updateInspectionResolutionField(fieldEl) {
   const collateralId = fieldEl.dataset.collateral;
   const field = fieldEl.dataset.inspectionResolutionField;
   if (!task || !collateralId || !field) return;
+  ensureInspectionResultModel(task);
   task.inspectionResolutions = task.inspectionResolutions || {};
   task.inspectionResolutions[collateralId] = task.inspectionResolutions[collateralId] || {};
+  const resolution = task.inspectionResolutions[collateralId];
+  if (["resolutionResult", "resultComment", "markers"].includes(field) && !resolution.individualResult) return;
   if (field === "physicalWearPercent") {
     const normalized = normalizePhysicalWearPercent(fieldEl.value);
     if (normalized === "") delete task.inspectionResolutions[collateralId][field];
     else task.inspectionResolutions[collateralId][field] = normalized;
+  } else if (field === "markers") {
+    const multiselect = fieldEl.closest(".task-field-multiselect");
+    resolution.markers = [...(multiselect?.querySelectorAll("input[type='checkbox']:checked") || [])].map((input) => input.value);
+    updateTaskMultiSelectSummary(fieldEl.closest(".task-multi-select"));
   } else {
-    task.inspectionResolutions[collateralId][field] = fieldEl.value;
+    resolution[field] = fieldEl.value;
   }
   persistTaskState();
 }
@@ -20713,8 +21659,8 @@ function updateCollateralMonitoringField(fieldEl) {
 
 function createTask(payload) {
   const createdAt = payload.createdAt || formatTaskHistoryDate(new Date());
-  const id = getNextDailyObjectNumber("tsk", state.data.tasks, createdAt);
   const taskType = getUnifiedTaskType(payload.type);
+  const id = getNextMonthlyTaskNumber(taskType, state.data.tasks, createdAt);
   const collateral = getCollateral(payload.collateralId);
   const collaterals = (payload.collateralIds?.length ? payload.collateralIds : [payload.collateralId]).map(getCollateral).filter(Boolean);
   const shouldUseCollateralContract = !payload.contractId && !payload.contractNumber;
@@ -20767,12 +21713,14 @@ function createTask(payload) {
     history: [{ date: createdAt, user: historyUser, action: "Создание задачи", status: "Назначена", oldValue: "-", newValue: "Назначена", comment: historyComment }]
   };
   if (payload.inspectionFormat) task.inspectionFormat = payload.inspectionFormat;
+  const selectedInspectionMethod = normalizeInspectionVisitMethodForTask(task, payload.inspectionVisitMethod || "");
+  if (selectedInspectionMethod) task.inspectionVisitMethod = selectedInspectionMethod;
   if (payload.status) task.status = payload.status;
   if (payload.parentTaskId) task.parentTaskId = payload.parentTaskId;
   if (payload.mobileKind) task.mobileKind = payload.mobileKind;
   if (payload.clientContact) task.clientContact = payload.clientContact;
   state.data.tasks.unshift(task);
-  persistTaskState();
+  if (payload.deferPersist !== true) persistTaskState();
   return task;
 }
 
@@ -20922,6 +21870,10 @@ document.addEventListener("click", (event) => {
     const taskId = actionEl.dataset.task || "";
     if (taskId) state.taskCardTabs[taskId] = actionEl.dataset.tab || "main";
   }
+  if (action === "add-inspection-exception") addInspectionExceptionRow(actionEl.dataset.task);
+  if (action === "remove-inspection-exception") removeInspectionExceptionRow(actionEl.dataset.task, actionEl.dataset.collateral);
+  if (action === "set-individual-inspection-result") setIndividualInspectionResult(actionEl.dataset.task, actionEl.dataset.collateral);
+  if (action === "use-general-inspection-result") useGeneralInspectionResult(actionEl.dataset.task, actionEl.dataset.collateral);
   if (action === "collateral-tab") {
     updateCollateralTabRoute(actionEl.dataset.tab);
     return;
@@ -20945,8 +21897,9 @@ document.addEventListener("click", (event) => {
     }
   }
   if (action === "add-inspection-contact-row") addInspectionContactRow(actionEl.dataset.task, actionEl.dataset.collateral);
-  if (action === "remove-inspection-contact-row") removeInspectionContactRow(actionEl.dataset.task, actionEl.dataset.collateral, Number(actionEl.dataset.index));
+  if (action === "remove-inspection-contact-row") removeInspectionContactRow(actionEl.dataset.task, actionEl.dataset.collateral, Number(actionEl.dataset.index), actionEl.dataset.contactId, actionEl.dataset.contactScope);
   if (action === "launch-field-inspection") launchFieldInspection(actionEl.dataset.task, actionEl.dataset.collateral);
+  if (action === "launch-task-field-inspection") launchTaskFieldInspection(actionEl.dataset.task);
   if (action === "task-start") startTask(actionEl.dataset.task);
   if (action === "task-defer") state.modal = { type: "deferTask", taskId: actionEl.dataset.task };
   if (action === "submit-defer") deferTask(actionEl.dataset.task);
@@ -20962,7 +21915,7 @@ document.addEventListener("click", (event) => {
   if (action === "submit-return-initiator") submitReturnToInitiator(actionEl.dataset.task);
   if (action === "submit-application-return-response") submitApplicationReturnResponse(actionEl.dataset.task);
   if (action === "open-registration-instruction") addToast("Инструкция внешнего контура", "На этапе 1 переход и регистрационное действие выполняются вручную.", "info");
-  if (action === "open-subtask") state.modal = { type: "subtask", taskId: actionEl.dataset.task };
+  if (action === "open-subtask") openSubtask(actionEl.dataset.task);
   if (action === "submit-subtask") submitSubtask(actionEl.dataset.task);
   if (action === "add-approver") state.modal = { type: "approver", taskId: actionEl.dataset.task };
   if (action === "confirm-approver") confirmTaskApprover(actionEl.dataset.task);
@@ -20977,6 +21930,8 @@ document.addEventListener("click", (event) => {
   if (action === "open-collateral-registry-picker") {
     const dealIndex = parseApplicationDealIndex(actionEl.dataset.dealIndex);
     const context = actionEl.dataset.context || "taskCreate";
+    const taskId = context === "taskCard" ? actionEl.dataset.task : "";
+    const task = taskId ? getTask(taskId) : null;
     if (context === "application") {
       state.filters.collateralPicker = Object.fromEntries(APPLICATION_COLLATERAL_PICKER_FILTERS.map(([key]) => [key, ""]));
     }
@@ -20985,6 +21940,7 @@ document.addEventListener("click", (event) => {
       context,
       search: "",
       ...(context === "application" ? { selectedCollateralIds: [...(state.newTask.selectedCollateralIds || [])] } : {}),
+      ...(context === "taskCard" ? { taskId, selectedCollateralIds: getTaskCollateralIds(task) } : {}),
       ...(dealIndex >= 0 ? { dealIndex } : {})
     };
   }
@@ -20997,6 +21953,7 @@ document.addEventListener("click", (event) => {
     openNewCollateralModal(actionEl.dataset.context || "taskCreate", dealIndex >= 0 ? { dealIndex } : {});
   }
   if (action === "edit-application-collateral") openEditCollateralModal(actionEl.dataset.collateral);
+  if (action === "edit-task-collateral") openEditCollateralModal(actionEl.dataset.collateral, { context: "taskCard", taskId: actionEl.dataset.task });
   if (action === "add-new-collateral-pledgor") addNewCollateralPledgorRow();
   if (action === "remove-new-collateral-pledgor") removeNewCollateralPledgorRow(Number(actionEl.dataset.index));
   if (action === "add-new-collateral-pledge-contract") addNewCollateralPledgeContractRow();
@@ -21132,6 +22089,31 @@ document.addEventListener("input", (event) => {
   const newCollateralPledgor = event.target.closest("[data-new-collateral-pledgor-field]");
   if (newCollateralPledgor && newCollateralPledgor.tagName !== "SELECT") {
     updateNewCollateralPledgorField(newCollateralPledgor);
+    return;
+  }
+  const inspectionPlanField = event.target.closest("[data-inspection-plan-field]");
+  if (inspectionPlanField && inspectionPlanField.tagName !== "SELECT") {
+    updateInspectionPlanField(inspectionPlanField);
+    return;
+  }
+  const inspectionActualField = event.target.closest("[data-inspection-actual-field]");
+  if (inspectionActualField && inspectionActualField.tagName !== "SELECT") {
+    updateInspectionActualField(inspectionActualField);
+    return;
+  }
+  const inspectionGeneralResultField = event.target.closest("[data-inspection-general-result-field]");
+  if (inspectionGeneralResultField && inspectionGeneralResultField.tagName !== "SELECT") {
+    updateInspectionGeneralResultField(inspectionGeneralResultField);
+    return;
+  }
+  const inspectionExceptionField = event.target.closest("[data-inspection-exception-field]");
+  if (inspectionExceptionField && inspectionExceptionField.tagName !== "SELECT" && inspectionExceptionField.type !== "checkbox") {
+    updateInspectionExceptionField(inspectionExceptionField);
+    return;
+  }
+  const inspectionChecklistComment = event.target.closest("[data-inspection-checklist-comment]");
+  if (inspectionChecklistComment) {
+    updateTaskInspectionChecklistComment(inspectionChecklistComment);
     return;
   }
   const inspectionContactField = event.target.closest("[data-inspection-contact-field]");
@@ -21349,7 +22331,7 @@ document.addEventListener("change", (event) => {
     return;
   }
   const collateralPickerChoice = event.target.closest("[data-modal-collateral-choice]");
-  if (collateralPickerChoice && state.modal?.context === "application") {
+  if (collateralPickerChoice && ["application", "taskCard"].includes(state.modal?.context)) {
     updateCollateralPickerSelection(state.modal, collateralPickerChoice.dataset.modalCollateralChoice, collateralPickerChoice.checked);
     return;
   }
@@ -21379,19 +22361,57 @@ document.addEventListener("change", (event) => {
     }
     return;
   }
-  const activeCollateralSelect = event.target.closest("[data-task-active-collateral]");
-  if (activeCollateralSelect) {
-    const task = getTask(activeCollateralSelect.dataset.task);
-    const collateralId = activeCollateralSelect.value;
-    if (task && getTaskCollaterals(task).some((collateral) => collateral.id === collateralId) && !isTaskCollateralExcluded(task, collateralId)) {
-      state.taskActiveCollateral[task.id] = collateralId;
-      render();
-    }
+  const activeCollateralSearch = event.target.closest("[data-task-active-collateral-search]");
+  if (activeCollateralSearch) {
+    const task = getTask(activeCollateralSearch.dataset.task);
+    const selected = task && getTaskCollaterals(task)
+      .filter((collateral) => !isTaskCollateralExcluded(task, collateral.id))
+      .find((collateral) => getCollateralChoiceLabel(collateral) === String(activeCollateralSearch.value || "").trim());
+    if (task && selected) state.taskActiveCollateral[task.id] = selected.id;
+    render();
+    return;
+  }
+  const inspectionActualToggle = event.target.closest("[data-inspection-actual-individual-toggle]");
+  if (inspectionActualToggle) {
+    toggleInspectionActualIndividual(inspectionActualToggle.dataset.task, inspectionActualToggle.dataset.collateral, inspectionActualToggle.checked);
+    render();
+    return;
+  }
+  const inspectionResultToggle = event.target.closest("[data-inspection-individual-result-toggle]");
+  if (inspectionResultToggle) {
+    if (inspectionResultToggle.checked) setIndividualInspectionResult(inspectionResultToggle.dataset.task, inspectionResultToggle.dataset.collateral);
+    else useGeneralInspectionResult(inspectionResultToggle.dataset.task, inspectionResultToggle.dataset.collateral);
+    render();
+    return;
+  }
+  const inspectionPlanField = event.target.closest("[data-inspection-plan-field]");
+  if (inspectionPlanField?.tagName === "SELECT") {
+    updateInspectionPlanField(inspectionPlanField);
+    render();
+    return;
+  }
+  const inspectionActualField = event.target.closest("[data-inspection-actual-field]");
+  if (inspectionActualField) {
+    updateInspectionActualField(inspectionActualField);
+    render();
+    return;
+  }
+  const inspectionGeneralResultField = event.target.closest("[data-inspection-general-result-field]");
+  if (inspectionGeneralResultField) {
+    updateInspectionGeneralResultField(inspectionGeneralResultField);
+    render();
+    return;
+  }
+  const inspectionExceptionField = event.target.closest("[data-inspection-exception-field]");
+  if (inspectionExceptionField && (inspectionExceptionField.tagName === "SELECT" || inspectionExceptionField.type === "checkbox" || inspectionExceptionField.matches("[data-inspection-exception-object-search]"))) {
+    updateInspectionExceptionField(inspectionExceptionField);
+    if (inspectionExceptionField.tagName === "SELECT" || inspectionExceptionField.matches("[data-inspection-exception-object-search]")) render();
     return;
   }
   const inspectionContactField = event.target.closest("[data-inspection-contact-field]");
   if (inspectionContactField) {
     updateInspectionContactField(inspectionContactField);
+    if (inspectionContactField.tagName === "SELECT") render();
     return;
   }
   const taskCollateralExcluded = event.target.closest("[data-task-collateral-excluded]");
@@ -21414,12 +22434,6 @@ document.addEventListener("change", (event) => {
   const registrationField = event.target.closest("[data-registration-field]");
   if (registrationField) {
     updateRegistrationField(registrationField);
-    render();
-    return;
-  }
-  const inspectionVisitMethod = event.target.closest("[data-inspection-visit-method]");
-  if (inspectionVisitMethod) {
-    updateInspectionVisitMethod(inspectionVisitMethod);
     render();
     return;
   }
@@ -21606,7 +22620,7 @@ function formatTaskHistoryDate(date = new Date()) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function addTaskHistoryEvent(task, event = {}) {
+function addTaskHistoryEvent(task, event = {}, options = {}) {
   if (!task) return;
   const {
     action,
@@ -21626,7 +22640,7 @@ function addTaskHistoryEvent(task, event = {}) {
     newValue: event.newValue ?? event.valueAfter ?? event.result ?? "",
     comment
   });
-  persistTaskState();
+  if (options.persist !== false) persistTaskState();
 }
 
 const taskHistoryFocusedValues = new WeakMap();
@@ -21641,7 +22655,7 @@ function getTaskHistoryFieldTask(fieldEl) {
 function isTaskHistoryAuditableControl(fieldEl) {
   if (!(fieldEl instanceof HTMLInputElement || fieldEl instanceof HTMLSelectElement || fieldEl instanceof HTMLTextAreaElement)) return false;
   if (fieldEl.disabled || fieldEl.readOnly || fieldEl.type === "file" || !getTaskHistoryFieldTask(fieldEl)) return false;
-  if (fieldEl.matches("[data-task-active-collateral]")) return false;
+  if (fieldEl.matches("[data-task-active-collateral-search]")) return false;
   if (fieldEl.matches("[data-inspection-contact-field]")) return true;
   if (fieldEl.matches("[data-doc-meta-field], [data-doc-relation-field], [data-doc-relation-option]")) {
     return fieldEl.dataset.docContext === "task";
@@ -21685,7 +22699,9 @@ function getTaskHistoryControlLabel(fieldEl) {
     role: "Роль",
     name: "ФИО / наименование",
     phone: "Телефон контактного лица",
-    comment: "Комментарий",
+    applyBinding: "Применяется к",
+    initiatorComment: "Комментарий инициатора",
+    executorComment: "Комментарий исполнителя",
     callDate: "Дата звонка"
   };
   if (fieldEl.matches("[data-inspection-contact-field]")) {
@@ -21902,6 +22918,24 @@ function submitApplicationReturnResponse(taskId) {
 function completeTask(taskId) {
   const task = getTask(taskId);
   if (!task || isTaskClosed(task) || !canCompleteTask(task)) return;
+  if (isInspectionTaskType(task.type)) {
+    const validation = getInspectionResultCompletionIssues(task);
+    if (validation.missingResults.length || validation.missingExceptions.length) {
+      const details = [
+        validation.missingResults.length ? `Нет результата: ${validation.missingResults.slice(0, 3).join(", ")}${validation.missingResults.length > 3 ? " и другие" : ""}.` : "",
+        validation.missingExceptions.length ? `Заполните результат, комментарий и необходимые маркеры исключений: ${validation.missingExceptions.slice(0, 3).join(", ")}${validation.missingExceptions.length > 3 ? " и другие" : ""}.` : ""
+      ].filter(Boolean).join(" ");
+      addToast("Нельзя завершить осмотр", details, "warn");
+      return;
+    }
+  }
+  if (isInspectionCardTaskType(task.type) && !isDocumentaryInspectionTask(task)) {
+    const missingComments = getInspectionChecklistMissingComments(task);
+    if (missingComments.length) {
+      addToast("Заполните комментарии чек-листа", `Комментарий обязателен для отрицательных результатов: ${missingComments.slice(0, 3).join("; ")}${missingComments.length > 3 ? ` и еще ${missingComments.length - 3}` : ""}.`, "warn");
+      return;
+    }
+  }
   const previousStatus = task.status;
   task.status = "Завершена";
   addTaskHistoryEvent(task, {
@@ -21912,6 +22946,42 @@ function completeTask(taskId) {
     comment: "Задача переведена в статус Завершена."
   });
   addToast("Задача завершена", `${taskId}: Завершена`, "ok");
+}
+
+function getInspectionResultCompletionIssues(task) {
+  const collaterals = getInspectionActiveCollaterals(task);
+  const missingResults = [];
+  const missingExceptions = [];
+  for (const collateral of collaterals) {
+    const result = getInspectionResolutionResultValue(null, task, collateral);
+    const label = getCollateralObjectIdentifier(collateral) || collateral.id;
+    if (!result) {
+      missingResults.push(label);
+      continue;
+    }
+    const override = getInspectionResolutionOverrides(task, collateral);
+    if (!override.individualResult) continue;
+    if (!override.resolutionResult || !String(override.resultComment || "").trim()
+      || (override.resolutionResult === "Отрицательный" && !(override.markers || []).length)
+      || (override.resolutionResult === "Осмотр не проведен" && !String(override.resultComment || "").trim())) {
+      missingExceptions.push(label);
+    }
+  }
+  if (!collaterals.length) missingResults.push("нет активных объектов");
+  return { missingResults, missingExceptions };
+}
+
+function getInspectionChecklistMissingComments(task) {
+  return getTaskCollaterals(task)
+    .filter((collateral) => !isTaskCollateralExcluded(task, collateral.id))
+    .flatMap((collateral) => getInspectionFactorGroups(collateral, task).flatMap((group) =>
+      (group.items || []).flatMap((factor) => {
+        const selected = getInspectionSelectedOption(task, collateral, factor);
+        if (!isInspectionChecklistNegative({ ...factor, selected })) return [];
+        const comment = task?.inspectionChecklistComments?.[collateral.id]?.[factor.code];
+        return String(comment || "").trim() ? [] : [`${collateral.id}: ${factor.name}`];
+      })
+    ));
 }
 
 function shouldSendTaskToApprover(task) {
@@ -21957,9 +23027,17 @@ function submitTaskReassign(taskId) {
   const assignee = document.getElementById("reassignAssignee")?.value || task.assignee;
   const comment = document.getElementById("reassignComment")?.value.trim() || "";
   const oldAssignee = task.assignee || "-";
+  const oldMethod = getInspectionVisitMethod(task);
+  const methodField = document.getElementById("reassignInspectionMethod");
+  const nextMethod = methodField ? normalizeInspectionVisitMethodForTask(task, methodField.value) : oldMethod;
+  if (methodField && !nextMethod) {
+    addToast("Выберите способ осмотра", "Для осмотровой задачи необходимо указать способ проведения осмотра.", "warn");
+    return;
+  }
   task.assignee = assignee;
   task.assignmentComment = comment;
   task.reassignmentComment = comment;
+  if (methodField) task.inspectionVisitMethod = nextMethod;
   if (oldAssignee !== assignee) {
     addTaskHistoryEvent(task, {
       action: "Изменение исполнителя",
@@ -21969,6 +23047,16 @@ function submitTaskReassign(taskId) {
       comment: `Исполнитель: ${oldAssignee} -> ${assignee}.${comment ? ` ${comment}` : ""}`
     });
   }
+  if (methodField && oldMethod !== nextMethod) {
+    addTaskHistoryEvent(task, {
+      action: "Изменение способа проведения осмотра",
+      status: task.status,
+      oldValue: oldMethod || "-",
+      newValue: nextMethod,
+      comment
+    });
+  }
+  persistTaskState();
   state.modal = null;
   addToast("Задача переназначена", `${taskId}: ${assignee}`, "ok");
 }
@@ -22009,6 +23097,14 @@ function submitFollowup() {
   const collaterals = getTaskCollaterals(parent);
   const collateralIds = collaterals.map((item) => item.id);
   const primaryCollateralId = parent.collateralId || collateralIds[0] || "";
+  const needsInspectionMethod = isInspectionTaskType(state.modal.taskType) && isValuationTaskType(parent.type);
+  const selectedInspectionMethod = needsInspectionMethod
+    ? normalizeInspectionVisitMethod(document.getElementById("followupInspectionMethod")?.value || "")
+    : "";
+  if (needsInspectionMethod && !selectedInspectionMethod) {
+    addToast("Выберите способ осмотра", "Укажите способ проведения осмотра для новой задачи.", "warn");
+    return;
+  }
   if (!applicationNumber) {
     addToast("Заявка не указана", "Связанная задача должна создаваться в рамках заявки родительской задачи.", "warn");
     return;
@@ -22032,6 +23128,8 @@ function submitFollowup() {
     participantName: parent?.participantName,
     participantInn: parent?.participantInn,
     applicationSource: parent?.applicationSource || getTaskApplication(parent)?.source,
+    inspectionFormat: parent.inspectionFormat || getTaskApplicationSubtypeValue(parent),
+    inspectionVisitMethod: selectedInspectionMethod,
     assignee: document.getElementById("followupAssignee")?.value || employees[0],
     dueDate: document.getElementById("followupDue")?.value,
     comment: document.getElementById("followupComment")?.value,
@@ -22042,7 +23140,7 @@ function submitFollowup() {
     addTaskHistoryEvent(parent, {
       action: "Создана связанная задача",
       status: parent.status,
-      comment: `Создана связанная задача ${task.id}: ${task.type}. Исполнитель: ${task.assignee}.`
+      comment: `Создана связанная задача ${task.id}: ${task.type}.${task.inspectionVisitMethod ? ` Способ осмотра: ${task.inspectionVisitMethod}.` : ""} Исполнитель: ${task.assignee}.`
     });
   }
   state.modal = null;
@@ -22050,51 +23148,162 @@ function submitFollowup() {
   addToast("Связанная задача создана", task.id, "ok");
 }
 
+function openSubtask(taskId) {
+  const task = getTask(taskId);
+  if (!task || isTaskClosed(task)) return;
+  if (!hasTaskApplicationRecord(task)) {
+    addToast("Связанная заявка не найдена", "Разделение доступно только при подтвержденной связи с существующей заявкой.", "warn");
+    return;
+  }
+  if (hasTaskEnteredWork(task)) {
+    addToast("Разделение недоступно", "Задачу можно разделить только до первого перевода в статус «В работе».", "warn");
+    return;
+  }
+  if (getTaskSplitEligibleCollaterals(task).length < 2) {
+    addToast("Недостаточно объектов", "Для разделения в исходной задаче должно быть не менее двух активных объектов залога.", "warn");
+    return;
+  }
+  state.modal = { type: "subtask", taskId: task.id };
+}
+
 function submitSubtask(parentTaskId) {
   const parent = getTask(parentTaskId);
   if (!parent || isTaskClosed(parent)) return;
-  const applicationNumber = getTaskApplicationNumber(parent);
-  const selectedIds = [...document.querySelectorAll("[data-subtask-collateral]:checked")]
+  if (hasTaskEnteredWork(parent)) {
+    state.modal = null;
+    addToast("Разделение недоступно", "Задачу можно разделить только до первого перевода в статус «В работе».", "warn");
+    return;
+  }
+  const parentApplication = getTaskApplication(parent);
+  const applicationNumber = parentApplication?.number || getTaskApplicationNumber(parent);
+  const selectedIds = uniqueItems([...document.querySelectorAll("[data-subtask-collateral]:checked")]
     .map((item) => item.dataset.subtaskCollateral)
-    .filter(Boolean);
-  if (!applicationNumber) {
-    addToast("Заявка не указана", "Задача по заявке создается только в рамках заявки родительской задачи.", "warn");
+    .filter(Boolean));
+  const sourceCollaterals = getTaskSplitEligibleCollaterals(parent);
+  const sourceIds = sourceCollaterals.map((item) => item.id);
+  const sourceIdSet = new Set(sourceIds);
+  const applicationByNumber = applicationNumber ? getApplicationByNumber(applicationNumber) : null;
+  if (!parentApplication || !applicationNumber || applicationByNumber !== parentApplication) {
+    addToast("Связанная заявка не найдена", "Разделение отменено: исходную заявку не удалось подтвердить.", "warn");
+    return;
+  }
+  if (sourceIds.length < 2) {
+    addToast("Разделение недоступно", "Для разделения в исходной задаче должно быть не менее двух активных объектов залога.", "warn");
     return;
   }
   if (!selectedIds.length) {
     addToast("Выберите объект залога", "Для задачи по заявке нужен хотя бы один предмет залога.", "warn");
     return;
   }
-  const task = createTask({
-    type: parent.type,
-    title: `Задача по заявке: ${getTaskDisplayType(parent)} (${selectedIds.length} ${pluralize(selectedIds.length, "объект", "объекта", "объектов")})`,
-    collateralId: selectedIds[0],
-    collateralIds: selectedIds,
-    applicationNumber,
-    contractId: parent.contractId,
-    contractNumber: parent.contractNumber,
-    dealClientName: parent.dealClientName,
-    dealClientInn: parent.dealClientInn,
-    dealProduct: normalizeApplicationDealProduct(parent.dealProduct),
-    dealLimit: parent.dealLimit,
-    dealCurrency: parent.dealCurrency,
-    participantName: parent.participantName,
-    participantInn: parent.participantInn,
-    applicationSource: parent.applicationSource || getTaskApplication(parent)?.source,
-    assignee: document.getElementById("subtaskAssignee")?.value || employees[0],
-    dueDate: document.getElementById("subtaskDue")?.value,
-    comment: document.getElementById("subtaskComment")?.value,
-    source: "Маршрут",
-    parentTaskId: parent.id
-  });
-  addTaskHistoryEvent(parent, {
-    action: "Создана задача по заявке",
-    status: parent.status,
-    comment: `Создана задача по заявке ${task.id} по объектам: ${selectedIds.join(", ")}. Исполнитель: ${task.assignee}.`
-  });
+  if (selectedIds.some((id) => !sourceIdSet.has(id))) {
+    addToast("Состав задачи изменился", "Обновите карточку и выберите только активные объекты исходной задачи.", "warn");
+    return;
+  }
+  if (selectedIds.length >= sourceIds.length) {
+    addToast("Нельзя передать все объекты", "В исходной задаче должен остаться хотя бы один активный объект залога.", "warn");
+    return;
+  }
+  const needsInspectionMethod = isInspectionTaskType(parent.type);
+  const selectedInspectionMethod = needsInspectionMethod
+    ? normalizeInspectionVisitMethodForTask(parent, document.getElementById("subtaskInspectionMethod")?.value || "")
+    : "";
+  if (needsInspectionMethod && !selectedInspectionMethod) {
+    addToast("Выберите способ осмотра", "Укажите способ проведения осмотра для новой задачи.", "warn");
+    return;
+  }
+  const parentSnapshot = clone(parent);
+  const applicationSnapshot = clone(parentApplication);
+  const activeMap = state.taskActiveCollateral || (state.taskActiveCollateral = {});
+  const hadParentActive = Object.hasOwn(activeMap, parent.id);
+  const previousParentActive = activeMap[parent.id];
+  let task = null;
+  const rollbackSplit = () => {
+    if (task) state.data.tasks = state.data.tasks.filter((item) => item !== task && item.id !== task.id);
+    for (const key of Object.keys(parent)) delete parent[key];
+    Object.assign(parent, parentSnapshot);
+    for (const key of Object.keys(parentApplication)) delete parentApplication[key];
+    Object.assign(parentApplication, applicationSnapshot);
+    if (hadParentActive) activeMap[parent.id] = previousParentActive;
+    else delete activeMap[parent.id];
+    if (task?.id) delete activeMap[task.id];
+    state.modal = { type: "subtask", taskId: parent.id };
+  };
+
+  try {
+    task = createTask({
+      type: parent.type,
+      title: `Разделенная задача: ${getTaskDisplayType(parent)} (${selectedIds.length} ${pluralize(selectedIds.length, "объект", "объекта", "объектов")})`,
+      collateralId: selectedIds[0],
+      collateralIds: selectedIds,
+      applicationNumber,
+      contractId: parent.contractId,
+      contractNumber: parent.contractNumber,
+      dealClientName: parent.dealClientName,
+      dealClientInn: parent.dealClientInn,
+      dealProduct: normalizeApplicationDealProduct(parent.dealProduct),
+      dealLimit: parent.dealLimit,
+      dealCurrency: parent.dealCurrency,
+      participantName: parent.participantName,
+      participantInn: parent.participantInn,
+      applicationSource: parent.applicationSource || parentApplication.source,
+      inspectionFormat: parent.inspectionFormat || getTaskApplicationSubtypeValue(parent),
+      inspectionVisitMethod: selectedInspectionMethod,
+      assignee: document.getElementById("subtaskAssignee")?.value || employees[0],
+      dueDate: document.getElementById("subtaskDue")?.value,
+      comment: document.getElementById("subtaskComment")?.value,
+      source: "Маршрут",
+      parentTaskId: parent.id,
+      deferPersist: true
+    });
+    const applicationTaskIds = uniqueItems([...(parentApplication.taskIds || []), task.id]);
+    for (const key of Object.keys(parentApplication)) delete parentApplication[key];
+    Object.assign(parentApplication, applicationSnapshot);
+    parentApplication.taskIds = applicationTaskIds;
+
+    const selectedIdSet = new Set(selectedIds);
+    const linkedIds = getTaskCollateralIds(parent);
+    const remainingIds = linkedIds.filter((id) => !selectedIdSet.has(id));
+    const remainingActiveIds = sourceIds.filter((id) => !selectedIdSet.has(id));
+    parent.collateralId = remainingActiveIds[0];
+    parent.collateralIds = remainingIds.length > 1 ? remainingIds : undefined;
+    activeMap[parent.id] = remainingActiveIds.includes(activeMap[parent.id])
+      ? activeMap[parent.id]
+      : remainingActiveIds[0];
+    activeMap[task.id] = selectedIds[0];
+
+    const changedAt = formatTaskHistoryDate();
+    const transferredLabel = selectedIds.join(", ");
+    addTaskHistoryEvent(parent, {
+      action: "Разделение задачи",
+      date: changedAt,
+      status: parent.status,
+      oldValue: linkedIds.join(", "),
+      newValue: remainingIds.join(", "),
+      comment: `В задачу ${task.id} переданы объекты: ${transferredLabel}. В исходной задаче оставлены: ${remainingActiveIds.join(", ")}.`
+    }, { persist: false });
+    addTaskHistoryEvent(task, {
+      action: "Разделение задачи",
+      date: changedAt,
+      status: task.status,
+      oldValue: "-",
+      newValue: transferredLabel,
+      comment: `Получены из задачи ${parent.id} объекты: ${transferredLabel}.`
+    }, { persist: false });
+  } catch (error) {
+    rollbackSplit();
+    console.warn("Не удалось выполнить разделение задачи", error);
+    addToast("Разделение не выполнено", "Состояние задачи не изменено. Проверьте данные и повторите действие.", "warn");
+    return;
+  }
+
+  if (!persistTaskState()) {
+    rollbackSplit();
+    addToast("Разделение не сохранено", "Изменения отменены. Проверьте доступность хранилища и повторите действие.", "warn");
+    return;
+  }
   state.modal = null;
   window.location.hash = getTaskCardRoute(task);
-  addToast("Задача по заявке создана", task.id, "ok");
+  addToast("Задача разделена", `Создана связанная задача ${task.id}. Объекты удалены из исходной задачи.`, "ok");
 }
 
 function openMobileInspectionTask(taskId) {
@@ -22109,6 +23318,29 @@ function submitMobileInspectionTask() {
 function mergeCollateralPickerSelection() {
   const checked = [...document.querySelectorAll("[data-modal-collateral-choice]:checked")].map((item) => item.dataset.modalCollateralChoice);
   const isApplicationContext = state.modal?.context === "application";
+  const isTaskCardContext = state.modal?.context === "taskCard";
+  if (isTaskCardContext) {
+    const task = getTask(state.modal.taskId);
+    if (!task) return [];
+    const previousIds = getTaskCollateralIds(task);
+    const selected = [...new Set([...previousIds, ...(state.modal.selectedCollateralIds || []), ...checked])];
+    const addedIds = selected.filter((id) => !previousIds.includes(id));
+    task.collateralIds = selected;
+    if (!task.collateralId || !selected.includes(task.collateralId)) task.collateralId = selected[0] || "";
+    if (!selected.includes(state.taskActiveCollateral[task.id])) {
+      state.taskActiveCollateral[task.id] = selected[0] || "";
+    }
+    if (addedIds.length) {
+      addTaskHistoryEvent(task, {
+        action: "Изменение состава объектов залога задачи",
+        oldValue: previousIds.join(", ") || "Объекты не выбраны",
+        newValue: selected.join(", ") || "Объекты не выбраны",
+        comment: `К задаче добавлены объекты залога: ${addedIds.join(", ")}.`
+      });
+    }
+    persistTaskState();
+    return selected;
+  }
   const selected = isApplicationContext
     ? [...new Set([...(state.modal.selectedCollateralIds || state.newTask.selectedCollateralIds || []), ...checked])]
     : [...new Set([...(state.newTask.selectedCollateralIds || []), ...checked])];
@@ -22124,8 +23356,10 @@ function mergeCollateralPickerSelection() {
 
 function submitCollateralPicker() {
   const selected = mergeCollateralPickerSelection();
+  const isTaskCardContext = state.modal?.context === "taskCard";
+  const taskId = state.modal?.taskId;
   state.modal = null;
-  addToast("Пул объектов обновлен", selected.length ? `Выбрано объектов: ${selected.length}` : "Объекты не выбраны", selected.length ? "ok" : "warn");
+  addToast(isTaskCardContext ? "Состав объектов задачи обновлен" : "Пул объектов обновлен", selected.length ? `Выбрано объектов: ${selected.length}${isTaskCardContext ? ` · ${taskId}` : ""}` : "Объекты не выбраны", selected.length ? "ok" : "warn");
 }
 
 function submitNewCollateral() {
@@ -22135,11 +23369,13 @@ function submitNewCollateral() {
   const isEditing = state.modal?.mode === "edit";
   const collateral = result.updatedCollateral || result.existingCollateral || result;
   const isRegistryContext = state.modal?.context === "registry";
+  const isTaskCardContext = state.modal?.context === "taskCard";
+  const taskCardTaskId = state.modal?.taskId || "";
   if (isEditing) {
     const index = state.data.collaterals.findIndex((item) => item.id === collateral.id);
     if (index >= 0) state.data.collaterals[index] = collateral;
   } else if (!isExisting) state.data.collaterals.push(collateral);
-  if (!isRegistryContext) {
+  if (!isRegistryContext && !isTaskCardContext) {
     state.newTask.selectedCollateralIds = [...new Set([...(state.newTask.selectedCollateralIds || []), collateral.id])];
     state.newTask.applicationSelectedCollateralId = collateral.id;
     hydrateNewTaskContextFromSelectedCollaterals();
@@ -22149,6 +23385,15 @@ function submitNewCollateral() {
   state.modal = null;
   state.newCollateralDraft = null;
   if (isRegistryContext) window.location.hash = `/app/collaterals/${collateral.id}`;
+  if (isTaskCardContext) {
+    const task = getTask(taskCardTaskId);
+    if (task) addTaskHistoryEvent(task, {
+      action: "Редактирование объекта залога",
+      oldValue: collateral.id,
+      newValue: collateral.id,
+      comment: "Изменены данные объекта залога из карточки задачи."
+    });
+  }
   addToast(isEditing ? "Объект залога обновлен" : isExisting ? "Объект уже есть в системе" : "Объект залога добавлен", collateral.id, isExisting && !isEditing ? "warn" : "ok");
 }
 
@@ -22892,7 +24137,7 @@ function showApplicationValidationToast(missing = []) {
   return true;
 }
 
-function createInitialTaskForApplication(application, collateralIds, contracts = [], deals = []) {
+function createInitialTaskForApplication(application, collateralIds, contracts = [], deals = [], taskCreatedAt = formatTaskHistoryDate(new Date())) {
   const ids = uniqueItems(collateralIds || []).filter((id) => getCollateral(id));
   if (!application || !ids.length) return null;
   const taskType = getApplicationInitialTaskType(application.applicationType, application.applicationSubtype);
@@ -22902,7 +24147,7 @@ function createInitialTaskForApplication(application, collateralIds, contracts =
     || getContractByNumber(primaryDeal.contractNumber)
     || contracts[0]
     || getContract(primaryCollateral?.contractIds?.[0]);
-  const createdAt = application.createdAt || formatTaskHistoryDate(new Date());
+  const createdAt = taskCreatedAt;
   return createTask({
     type: taskType,
     title: `${taskType} по заявке ${application.number || application.id}`,
@@ -23233,7 +24478,7 @@ function generateConclusion(taskId) {
   try {
     const defaults = getTaskExpertDefaults(task, collaterals);
     if (!task.expertComment) task.expertComment = defaults.comment;
-    if (!task.expertOutcome) task.expertOutcome = getTaskExpertConclusionOutcome(defaults.result);
+    if (!isInspectionTaskType(task.type) && !task.expertOutcome) task.expertOutcome = getTaskExpertConclusionOutcome(defaults.result);
     task.expertConclusion = getGeneratedExpertConclusionText(task, collaterals);
     const documentRow = buildTaskExpertConclusionDocument(task, collaterals);
     upsertTaskExpertConclusionDocument(task, documentRow);

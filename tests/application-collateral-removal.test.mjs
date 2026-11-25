@@ -40,7 +40,8 @@ test("application collateral rows get a rightmost remove action only in unsent a
   assert.equal(appComponent({}, [], null, { status: "Черновик" }).allowApplicationRemove, true);
   assert.equal(appComponent({}, [], null, { status: "Новая" }).allowApplicationRemove, false);
   assert.match(appSource, /const allowApplicationRemove = options\.allowApplicationRemove === true/);
-  assert.match(appSource, /\(showExclusionColumn \? 13 : 12\) \+ \(allowApplicationRemove \? 1 : 0\)/);
+  assert.match(appSource, /remove: \{ key: "remove", label: "Действия", width: 48 \}/);
+  assert.match(appSource, /const columnCount = tableColumns\.length/);
 
   const rowContext = {
     escapeHtml,
@@ -60,11 +61,18 @@ test("application collateral rows get a rightmost remove action only in unsent a
     formatFullMoney: (value) => String(value),
     getCollateralLiquidity: () => "Высокая",
     formatRegistryDateTime: (value) => value,
-    state: {}
+    state: {},
+    getTaskCollateralColumns: ({ showExclusionColumn, allowApplicationRemove } = {}) => [
+      ...Array.from({ length: 12 }, (_, index) => ({ key: `column-${index}`, width: 100 })),
+      ...(showExclusionColumn ? [{ key: "excluded", width: 68 }] : []),
+      ...(allowApplicationRemove ? [{ key: "remove", width: 48 }] : [])
+    ],
+    getTaskCollateralVisibleColumns: (options) => rowContext.getTaskCollateralColumns(options),
+    renderTaskCollateralVisibleCells: (columns, cells) => columns.map(({ key }) => cells[key]).join("")
   };
   const renderRow = extractFunction("function renderTaskCollateralRow", "\nfunction canMarkTaskCollateralExcluded", rowContext, "renderTaskCollateralRow");
   const rowHtml = renderRow({ id: "new-task-draft" }, { id: "COL-1" }, null, { selectable: false, allowApplicationRemove: true });
-  assert.match(rowHtml, /class="task-collateral-remove-cell">\s*<button[^>]+data-action="remove-application-collateral"[^>]*>×<\/button>/);
+  assert.match(rowHtml, /data-task-collateral-column="remove"[^>]*class="task-collateral-remove-cell"[^>]*>\s*<button[^>]+data-action="remove-application-collateral"[^>]*>×<\/button>/);
   assert.ok(rowHtml.lastIndexOf("task-collateral-remove-cell") > rowHtml.lastIndexOf("task-collateral-money"));
   assert.doesNotMatch(renderRow({ id: "TSK-1" }, { id: "COL-1" }, null, { selectable: false }), /remove-application-collateral/);
 
@@ -81,7 +89,7 @@ test("application collateral rows get a rightmost remove action only in unsent a
     types: [{ key: "type:a", type: "Оборудование", count: 1, pledgeValue: 10, items: [{ id: "COL-1" }] }]
   }], null, { columnCount: 13, groupStateId: "application-create" });
   assert.equal((groupHtml.match(/colspan="13"/g) || []).length, 2);
-  assert.match(stylesSource, /\.task-collateral-info\.has-application-remove-column th:last-child,[\s\S]*?\.task-collateral-info\.has-application-remove-column td:last-child\s*\{[^}]*width:\s*48px/s);
+  assert.match(stylesSource, /\.task-collateral-info \[data-task-collateral-column="remove"\]\s*\{[^}]*width:\s*48px/s);
 });
 
 test("removing a collateral changes only the draft application links and related pledge-contract links", () => {
@@ -272,4 +280,3 @@ test("remove action rejects sent applications, non-application contexts, and unl
   state.newTask.key = "task-create";
   assert.equal(context.canRemove(), false);
 });
-

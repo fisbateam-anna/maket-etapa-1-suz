@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { initialData, resolveCollateralSubtype } from "../src/data.js";
 
-const addedTaskPrefix = "tsk-09112026-";
-const addedApplicationPrefix = "app-09112026-";
 const stage1TaskTypes = [
   "Первичный осмотр",
   "Повторный осмотр",
@@ -35,7 +33,7 @@ const identityFields = [
 ];
 
 test("screenshot data adds at least three tasks for each Stage 1 type except defect inspection", () => {
-  const addedTasks = initialData.tasks.filter((task) => task.id.startsWith(addedTaskPrefix));
+  const addedTasks = initialData.tasks.filter((task) => task.screenshotFixtureKey?.startsWith("screenshot-task-"));
   assert.equal(addedTasks.length, 21);
   for (const type of stage1TaskTypes) {
     assert.equal(addedTasks.filter((task) => task.type === type).length, 3, `${type} should have three added tasks`);
@@ -45,8 +43,8 @@ test("screenshot data adds at least three tasks for each Stage 1 type except def
 });
 
 test("added applications and tasks have reciprocal links and populated initiator segments", () => {
-  const addedApplications = initialData.applications.filter((application) => application.id.startsWith(addedApplicationPrefix));
-  const addedTasks = initialData.tasks.filter((task) => task.id.startsWith(addedTaskPrefix));
+  const addedApplications = initialData.applications.filter((application) => application.screenshotFixtureKey?.startsWith("screenshot-application-"));
+  const addedTasks = initialData.tasks.filter((task) => task.screenshotFixtureKey?.startsWith("screenshot-task-"));
   assert.equal(addedApplications.length, 12);
 
   for (const application of initialData.applications) {
@@ -82,8 +80,8 @@ test("added applications and tasks have reciprocal links and populated initiator
 });
 
 test("new task and application creation times follow their daily sequence", () => {
-  const addedTasks = initialData.tasks.filter((task) => task.id.startsWith(addedTaskPrefix));
-  const addedApplications = initialData.applications.filter((application) => application.id.startsWith(addedApplicationPrefix));
+  const addedTasks = initialData.tasks.filter((task) => task.screenshotFixtureKey?.startsWith("screenshot-task-"));
+  const addedApplications = initialData.applications.filter((application) => application.screenshotFixtureKey?.startsWith("screenshot-application-"));
   const isOrdered = (records) => records.every((record, index) => index === 0 || records[index - 1].createdAt <= record.createdAt);
   assert.ok(isOrdered(addedTasks), "task timestamps should increase with task sequence");
   assert.ok(isOrdered(addedApplications), "application timestamps should increase with application sequence");

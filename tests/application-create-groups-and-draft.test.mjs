@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import { getNextMonthlyTaskNumber } from "../src/object-numbering.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 const stylesSource = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
@@ -304,7 +305,7 @@ test("explicitly blank deal currency stays blank through save normalization", ()
 });
 
 test("blank deal currency is passed to the auto-created task without a fallback", () => {
-  const taskBuilder = sourceBlock("function createInitialTaskForApplication(application, collateralIds, contracts = [], deals = [])", "\nfunction buildApplicationFromForm(status, existingApplication = null)");
+  const taskBuilder = sourceBlock("function createInitialTaskForApplication(", "\nfunction buildApplicationFromForm(status, existingApplication = null)");
   const context = {
     uniqueItems: (values) => [...new Set(values)],
     clone: (value) => value,
@@ -330,6 +331,41 @@ test("blank deal currency is passed to the auto-created task without a fallback"
   assert.equal(task.dealCurrency, "");
   const taskFactory = sourceBlock("function createTask(payload)", "\ndocument.addEventListener(\"click\", (event) => {");
   assert.match(taskFactory, /const dealCurrency = payload\.dealCurrency \?\? application\?\.currency \?\? contract\?\.currency \?\? "RUB"/);
+});
+
+test("first task from a saved draft uses its submission month, not the draft creation month", () => {
+  const taskBuilder = sourceBlock("function createInitialTaskForApplication(", "\nfunction buildApplicationFromForm(status, existingApplication = null)");
+  let dueDateInput = "";
+  const context = {
+    uniqueItems: (values) => [...new Set(values)],
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    getCollateral: (id) => id === "COL-1" ? { id, contractIds: [] } : null,
+    getApplicationInitialTaskType: () => "Первичный осмотр",
+    getContract: () => null,
+    getContractByNumber: () => null,
+    formatTaskHistoryDate: () => "01.11.2026 00:05:00",
+    getDefaultTaskAssigneeForType: () => "Исполнитель",
+    getDefaultInitialTaskDueDate: (value) => { dueDateInput = value; return "2026-11-04"; },
+    normalizeApplicationDealProduct: (value) => value || "Кредит",
+    getApplicationInitialInspectionFormat: () => "Физический осмотр",
+    isRegistrationTaskType: () => false,
+    REGISTRATION_SCENARIO_MOVABLE: "",
+    getNextMonthlyTaskNumber,
+    createTask: (payload) => ({ ...payload, id: getNextMonthlyTaskNumber(payload.type, [], payload.createdAt) })
+  };
+  vm.runInNewContext(`${taskBuilder}\nglobalThis.createInitial = createInitialTaskForApplication;`, context);
+  const task = context.createInitial({
+    createdAt: "31.10.2026 23:59:00",
+    number: "app-31102026-001",
+    applicationType: "Осмотр имущества",
+    applicationSubtype: "Первичный осмотр",
+    clientName: "ООО Клиент",
+    clientInn: "7700000000"
+  }, ["COL-1"]);
+
+  assert.equal(task.createdAt, "01.11.2026 00:05:00");
+  assert.equal(task.id, "s-1126-0001");
+  assert.equal(dueDateInput, "01.11.2026 00:05:00");
 });
 
 test("new application selects have a blank option and registry action resets stale draft", () => {
@@ -363,7 +399,7 @@ test("new application selects have a blank option and registry action resets sta
 test("empty application draft can be saved; submission still validates and creates its initial task", () => {
   const validation = sourceBlock("function getApplicationParameterValidation(params, collateralIds = [])", "\nfunction showApplicationValidationToast");
   const validationToast = sourceBlock("function showApplicationValidationToast(missing = [])", "\nfunction createInitialTaskForApplication");
-  const taskCreation = sourceBlock("function createInitialTaskForApplication(application, collateralIds, contracts = [], deals = [])", "\nfunction buildApplicationFromForm");
+  const taskCreation = sourceBlock("function createInitialTaskForApplication(", "\nfunction buildApplicationFromForm");
   const lifecycle = sourceBlock("function buildApplicationFromForm(status, existingApplication = null)", "\nfunction saveApplicationCard(applicationId)");
   const hydrateDraft = sourceBlock("function ensureApplicationCardDraft(application)", "\nfunction renderApplicationCard");
   const applications = [];

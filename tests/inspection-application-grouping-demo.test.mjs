@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { initialData } from "../src/data.js";
+import { initialData, seedTaskNumberAliases } from "../src/data.js";
 import { resolveTaskAuthorName } from "../src/task-author.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
-const applicationId = "app-27102026-001";
-const vehicleTaskId = "tsk-27102026-004";
+const applicationId = "app-1026-002";
+const vehicleTaskId = seedTaskNumberAliases["tsk-27102026-004"];
 
 function getGroupingKey(collateral) {
   const pledgor = collateral.pledgors?.find((item) => item.role === "Залогодатель") || collateral.pledgors?.[0];

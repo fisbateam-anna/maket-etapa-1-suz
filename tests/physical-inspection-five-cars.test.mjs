@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { initialData } from "../src/data.js";
+import { initialData, seedTaskNumberAliases } from "../src/data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 
 test("showcase physical inspection includes exactly five vehicles", () => {
-  const task = initialData.tasks.find((item) => item.id === "tsk-27102026-001");
+  const task = initialData.tasks.find((item) => item.id === seedTaskNumberAliases["tsk-27102026-001"]);
   assert.ok(task, "showcase task must exist");
   assert.equal(task.type, "Первичный осмотр");
   assert.equal(task.inspectionFormat, "Физический осмотр");
@@ -32,5 +32,6 @@ test("showcase task uses the application's direct task-card route", () => {
   assert.notEqual(end, -1);
   const sandbox = { legacyObjectNumberAliases: {} };
   vm.runInNewContext(`${appSource.slice(start, end)}\nglobalThis.route = getTaskCardRoute;`, sandbox);
-  assert.equal(sandbox.route("tsk-27102026-001"), "/app/tasks/tsk-27102026-001");
+  const taskId = seedTaskNumberAliases["tsk-27102026-001"];
+  assert.equal(sandbox.route(taskId), `/app/tasks/${taskId}`);
 });

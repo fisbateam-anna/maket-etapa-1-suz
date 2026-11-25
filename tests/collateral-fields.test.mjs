@@ -262,7 +262,7 @@ test("property card preserves both identification numbers regardless of cadastra
 
   const noCadastral = sandbox.readFields({
     type: "Недвижимость",
-    profileIdentifier: "col-102026-001",
+    profileIdentifier: "col-1026-001",
     profileIdentifierType: "Номер карточки залога",
     fields: { "Условный номер": "54-54-01/001/2010-123" }
   });
@@ -774,7 +774,7 @@ test("v8 import row maps S to the user-confirmed property characteristic and ret
     getCollateralTypeCodeFromLabel: collateralTypeCode,
     getContractByNumber: () => null,
     getNextCollateralId: () => "COL-IMPORT-01",
-    getNextMonthlyCollateralNumber: () => "col-102026-001",
+    getNextMonthlyCollateralNumber: () => "col-1026-001",
     getNewCollateralProfileFieldLabels: (type) => type === "Объекты недвижимости" ? ["Кадастровый номер"] : [],
     getCollateralUnitDefault: () => "Квадратный метр (м²)",
     isAffirmativeValue: (value) => /^(да|true|1)$/i.test(String(value || "").trim()),

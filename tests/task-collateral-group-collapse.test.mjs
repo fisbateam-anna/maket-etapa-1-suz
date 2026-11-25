@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { initialData } from "../src/data.js";
+import { initialData, seedTaskNumberAliases } from "../src/data.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
-const taskId = "tsk-16112026-001";
-const applicationId = "app-16112026-001";
+const taskId = seedTaskNumberAliases["tsk-16112026-001"];
+const applicationId = "app-1126-013";
 
 function hasValidLegalEntityInn(value) {
   const digits = String(value || "").replace(/\D/g, "");
